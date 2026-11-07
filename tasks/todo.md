@@ -1,6 +1,6 @@
 # M1b task list
 
-Next: M1b done (user accepted 2026-11-07). Merge `feat/m1b` into `main`, then start M1c (spec-driven-development on PLAN.md §5 M1c, then a new task list). Earlier T4 notes: saved vertical placement wins over the derived one (`placementFor` in `src/state/vertical.ts`); the plane field has a Reset.
+Next: M1b merged to main (733cc6f). M1c spec drafted in PLAN.md §5 M1c on branch `feat/m1c`; waiting for user approval, then planning-and-task-breakdown → new tasks/plan.md + tasks/todo.md.
 Known issue (camera, deferred by the user as minor): switching "Widok z góry" ↔ "Widok 3D" resets both cameras' position.
 Note (spec): data facts and the expected result per sheet are in PLAN.md §5 M1b. Sheet y = height rel. ±0.00, no scale.
 M1a task notes are in git history (`tasks/todo.md` at 032c110).
