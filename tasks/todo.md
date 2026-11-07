@@ -29,8 +29,8 @@ Every task: typecheck, lint and build green, and a "verify in browser" checklist
 Keep the handle in IndexedDB. On reload, show the remembered folder name and a "Przywróć dostęp" button
 that re-requests permission.
 **Acceptance criteria:**
-- [ ] Picking `dwg/` lists the 12 DWGs and 1 PDF
-- [ ] After a reload, one click restores the list without the picker
+- [x] Picking `dwg/` lists the 12 DWGs and 1 PDF
+- [x] After a reload, one click restores the list without the picker
 - [x] Extensions are matched case-insensitively (`.DWG` also listed)
 **Verification:** user checks pick and reload in Chrome.
 **Dependencies:** T1
