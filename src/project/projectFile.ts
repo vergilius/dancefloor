@@ -1,7 +1,8 @@
 // The project JSON (`dancefloor.json`) next to the DWGs: our own source of truth (PLAN.md §2, §4).
-// Sheets are referenced by filename. Fields from §4 that later tasks need (vertical placement,
-// transform) are added when those tasks land; unknown fields are rejected, not guessed.
+// Sheets are referenced by filename. Fields from §4 that later tasks need (transform) are added when
+// those tasks land; unknown fields are rejected, not guessed.
 import { GROUP_IDS, type GroupId, type Groups, type LayerOverrides } from './layerGroups';
+import type { VerticalPlacement } from './vertical';
 
 export const PROJECT_FILE = 'dancefloor.json';
 
@@ -13,8 +14,8 @@ export type Placement = { type: 'horizontal'; z: number };
 export type Sheet = {
   file: string;
   kind: SheetKind;
-  /** Plans only, for now (T7). m rel. ±0.00. */
-  placement?: Placement;
+  /** Plans: horizontal (m rel. ±0.00). Elevations/sections: vertical, saved once derived (M1b). */
+  placement?: Placement | VerticalPlacement;
   /** Only layers the user turned off (T9). */
   layers?: LayerOverrides;
 };
@@ -23,6 +24,21 @@ export type ProjectFile = { version: 1; sheets: Sheet[]; groups?: Partial<Groups
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 
+const isVec2 = (v: unknown): v is { x: number; y: number } => isObj(v) && Number.isFinite(v.x) && Number.isFinite(v.y);
+
+function parsePlacement(p: unknown, kind: SheetKind, where: string): Placement | VerticalPlacement {
+  if (kind === 'plan') {
+    if (!isObj(p) || p.type !== 'horizontal' || !Number.isFinite(p.z)) throw new Error(`${where}: expected { type: "horizontal", z: number }`);
+    return { type: 'horizontal', z: p.z as number };
+  }
+  if (kind === 'elevation' || kind === 'section') {
+    if (!isObj(p) || p.type !== 'vertical' || !isVec2(p.origin) || !isVec2(p.dir) || Math.abs(Math.hypot(p.dir.x, p.dir.y) - 1) > 1e-6)
+      throw new Error(`${where}: expected { type: "vertical", origin: { x, y }, dir: unit { x, y } }`);
+    return { type: 'vertical', origin: { x: p.origin.x, y: p.origin.y }, dir: { x: p.dir.x, y: p.dir.y } };
+  }
+  throw new Error(`${where}: a ${kind} sheet has no placement`);
+}
+
 function parseSheet(v: unknown, i: number): Sheet {
   const where = `sheets[${i}]`;
   if (!isObj(v)) throw new Error(`${where}: not an object`);
@@ -30,11 +46,7 @@ function parseSheet(v: unknown, i: number): Sheet {
   if (typeof file !== 'string' || !file) throw new Error(`${where}.file: expected a filename`);
   if (!SHEET_KINDS.includes(kind as SheetKind)) throw new Error(`${where}.kind: unknown "${String(kind)}"`);
   const sheet: Sheet = { file, kind: kind as SheetKind };
-  if (placement !== undefined) {
-    if (!isObj(placement) || placement.type !== 'horizontal' || !Number.isFinite(placement.z))
-      throw new Error(`${where}.placement: expected { type: "horizontal", z: number }`);
-    sheet.placement = { type: 'horizontal', z: placement.z as number };
-  }
+  if (placement !== undefined) sheet.placement = parsePlacement(placement, sheet.kind, `${where}.placement`);
   if (layers !== undefined) {
     if (!isObj(layers)) throw new Error(`${where}.layers: expected an object`);
     sheet.layers = {};

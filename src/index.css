@@ -10,6 +10,7 @@ html, body, #root { height: 100%; margin: 0; }
 .viewport { position: relative; min-width: 0; }
 .view-bar { position: absolute; top: 12px; right: 12px; z-index: 1; display: flex; gap: 8px; }
 .view-bar button { font: inherit; padding: 6px 12px; border: 1px solid #8c959f; border-radius: 6px; background: #f6f8fa; cursor: pointer; }
+.view-bar button[aria-pressed='true'] { background: #ddf4ff; border-color: #0969da; }
 .sidebar h2 { font-size: 14px; margin: 16px 0 8px; word-break: break-all; }
 .sidebar button { font: inherit; padding: 6px 12px; border: 1px solid #8c959f; border-radius: 6px; background: #f6f8fa; cursor: pointer; }
 .sidebar button:hover { background: #eaeef2; }

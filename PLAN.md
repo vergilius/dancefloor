@@ -99,8 +99,8 @@ placed in 3D. They supply parameters only.
   Chromium-only is accepted (personal tool).
 - **UI language: Polish.** Code, identifiers, comments and docs stay in English.
 - **Elevation/section placement:** automatic by matching `S-GRID-IDEN` labels between the sheet and the
-  ground plan. Manual fallback when that fails: pick 2 grid lines on the sheet and the matching 2 on the
-  plan.
+  ground plan. When that fails the sheet is flagged with a reason; a manual fallback (pick 2 grid lines on
+  the sheet and the matching 2 on the plan) is deferred until a real sheet needs it (M1b, 2026-11-07).
 
 ## 3. Stack
 
@@ -138,11 +138,13 @@ type Sheet = { id; file: string;
       | 'detail';           // PAB-11/12: parameters only, not drawn in 3D (placement/transform unused)
   placement:
     | { type: 'horizontal'; z: number }                 // m rel. ±0.00; e.g. ground 0, attic 3.29, roof 9.12
-    | { type: 'vertical'; line: [Vec2, Vec2] };         // standing on a plan line (façade / section cut)
+    | { type: 'vertical'; origin: Vec2; dir: Vec2 };    // M1b: sheet point (x, y) → plan point origin + x·dir
+                                                        //  (dir = unit vector, may point "backwards" = mirror),
+                                                        //  height y rel. ±0.00. Viewer looks along (−dir.y, dir.x).
   transform: Similarity2D;  // sheet coords → reference plan coords (metres)
                             //  plan: identity (S-GRID-1 coincides)
                             //  site, pdf: from 2-point alignment
-                            //  elevation, section: from S-GRID-1 lines (x along `line`; y = height rel. ±0.00)
+                            //  elevation, section: unused (M1b: scale 1 and the axis mapping live in `placement`)
   layers: Record<string, { visible: boolean; color?: string }> };  // T9: only layers turned off are stored
 // Project-level: groups: Record<'layout'|'levels'|'grid'|'details'|'other', boolean>  (T9; applies to all sheets)
 type Similarity2D = { scale: number; rotation: number /* rad */; translate: Vec2 };
@@ -176,13 +178,47 @@ don't redefine here).
 - ✅ Each of the 12 DWGs parses in the worker in < 2 s; PAB-01/02/03 stack with `S-GRID-1` lines
   coinciding (< 1 mm); layer toggles work; reopening the app restores the folder after one permission click.
 
-**M1b — Elevations and sections on their lines**
-- Read `S-GRID-IDEN` labels + their grid lines on the sheet and on the ground plan; match labels;
-  derive `placement.line` and `transform` (x along the line, y = height rel. ±0.00).
-- If fewer than 2 labels match, or they're ambiguous → manual fallback: pick 2 grid lines on the
-  sheet + the 2 matching ones on the plan.
-- ✅ PAB-04..10 placed automatically (or flagged with a reason); grid lines on each vertical sheet coincide
-  with the plan's grid lines (< 1 cm in plan); ±0.00 on the sheet sits at z = 0.
+**M1b — Elevations and sections on their lines** — done 2026-11-07 (spec sharpened 2026-11-07 on the real files)
+
+Facts (analysed on PAB-01, PAB-04..10 after normalize):
+- Every vertical sheet has `S-GRID-1` as 14 vertical stubs (2 per grid line) and 7 `S-GRID-IDEN` labels of one
+  family. Sheet x of each grid line is **exactly** the plan coordinate, up to sign/axis (Revit shared coordinates):
+
+  | Sheet | Labels | Sheet x = | `dir` | Looks | Plane (perpendicular position) |
+  |---|---|---|---|---|---|
+  | PAB-04 A-A | A–G | −plan y | (0, −1) | east | x = 6.712 (cut line) |
+  | PAB-05 B-B | 1–7 | plan x | (1, 0) | north | y = −6.363 (longest part of a jogged cut, other part y = −5.626) |
+  | PAB-06 C-C | 1–7 | −plan x | (−1, 0) | south | y = −0.063 (cut line) |
+  | PAB-07 N | 1–7 | −plan x | (−1, 0) | south | y = 3.051 (max `A-WALL` y) |
+  | PAB-08 E | A–G | plan y | (0, 1) | west | x = 15.124 (max `A-WALL` x) |
+  | PAB-09 W | A–G | −plan y | (0, −1) | east | x = 0.034 (min `A-WALL` x) |
+  | PAB-10 S | 1–7 | plan x | (1, 0) | north | y = −14.966 (min `A-WALL` y: the terrace and the SW cornice out to the terrace columns, user) |
+- Sheet y is already the height in metres rel. ±0.00 (level labels sit at value + 0.42 on every sheet; grid
+  stubs end at y = −0.775 on all 7). So there is no y offset and no scale to solve.
+- Section cut lines on PAB-01: `G-ANNO-SYMB-2` LINEs (5 segments: A-A one line, B-B a 3-segment jog, C-C one
+  line); their letters are MTEXT `A`/`B`/`C` on `G-ANNO-SYMB` next to the line start. Elevations have no line
+  in the plan (only arrows `Elewacja - Strzałka…` on `G-ANNO-SYMB`).
+
+Requirements:
+- **Axis mapping from grid labels:** for each vertical sheet, take each `S-GRID-IDEN` label's nearest sheet
+  `S-GRID-1` grid line, match the label to the same label on the reference plan (PAB-01: digits = vertical plan
+  lines → plan x, letters = horizontal → plan y), and fit sheet x = s·p + t with s = ±1 (least squares,
+  both signs tried). Result: `dir` (axis + sign), the along-line offset `t`, matched label count, max residual.
+- **Perpendicular position:** sections: the cut-line segment(s) on `G-ANNO-SYMB-2` nearest the section's letter
+  (letter taken from the filename `PRZEKRÓJ X-X`); for a jog, the longest segment parallel to `dir`. Elevations:
+  the ground plan's outermost `A-WALL` extent on the viewer's side. The value is shown and editable (number, m)
+  in the sheet list, with a Reset back to the derived value.
+- **Flag, don't guess:** < 2 matched labels, |s| fit residual > 5 mm, or no cut line for a section → the sheet is
+  not drawn and the sheet list shows the reason. No manual 2-line picking tool in M1b (all 7 sheets resolve
+  automatically; build it only when a real sheet needs it).
+- Draw vertical sheets like plans (same layer panel/groups), standing on their plane; texts face the viewer
+  side (−look direction). The derived placement is saved in `dancefloor.json` with "Zapisz" (like plan z), and
+  re-derived only when the sheet has no saved placement.
+- Sheet list shows per vertical sheet: matched labels (e.g. `7/7`), max residual in mm, look direction, plane position.
+
+✅ PAB-04..10 placed automatically (or flagged with a reason); each shows 7/7 labels and residual < 1 mm;
+in the 3D view the grid stubs of each vertical sheet stand on the plan's grid lines (< 1 cm, top view);
+the ±0.00 line of each elevation lies at z = 0 (on PAB-01); placement survives save + reload.
 
 **M1c — 2-point alignment (site plan, PDF)**
 - Tool: pick 2 points on the sheet → 2 points on the reference plan → `Similarity2D` (show the

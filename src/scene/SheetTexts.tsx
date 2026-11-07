@@ -1,6 +1,6 @@
 import { Text } from '@react-three/drei';
 import type { NormalizedText } from '../dwg/types';
-import { toScene } from './coords';
+import { sheetToWorld, toScene, type SheetPlacement } from './coords';
 import { FONT_URL } from './font';
 
 // MTEXT attachment point 1–9 (1 = top left … 9 = bottom right) → troika anchors.
@@ -12,21 +12,35 @@ const ANCHOR_Y = ['top-cap', 'middle', 'bottom-baseline'] as unknown as ('top' |
 /** fontSize / MTEXT height. Picked by eye (user, T8): between 1.0 (too small) and 1.4 (cap-height match, too big). */
 const TEXT_SCALE = 1.2;
 
-type Props = { texts: NormalizedText[]; z: number; color: string; visible: (layer: string) => boolean };
+type Props = { texts: NormalizedText[]; placement: SheetPlacement; color: string; visible: (layer: string) => boolean };
 
-/** Plan texts lying flat at z. Keys are the text's index, so hiding a layer doesn't re-create the others. */
-export function SheetTexts({ texts, z, color, visible }: Props) {
+/** Lifts texts this far off their sheet towards the viewer, so lines don't cut through them. */
+const LIFT = 0.002;
+
+/**
+ * Plans: texts lie flat, text up = north. Vertical sheets: texts stand in the plane with their x along `dir`
+ * and up = world up, so they face the viewer (−look) unmirrored. Scene rotation about +y by atan2(dir.y, dir.x)
+ * takes local x to dir and local z (the text normal) to −look (PLAN.md §4).
+ * Keys are the text's index, so hiding a layer doesn't re-create the others.
+ */
+export function SheetTexts({ texts, placement: p, color, visible }: Props) {
+  const yaw = p.type === 'vertical' ? Math.atan2(p.dir.y, p.dir.x) : 0;
+  // Towards the viewer: up on plans, −look = (dir.y, −dir.x) on vertical sheets.
+  const lift: [number, number, number] =
+    p.type === 'vertical' ? [p.dir.y * LIFT, -p.dir.x * LIFT, 0] : [0, 0, LIFT];
   return (
     <group>
       {texts.map((t, i) => {
         if (!visible(t.layer)) return null;
         const a = Math.min(Math.max(t.attach, 1), 9) - 1;
+        const [x, y, z] = sheetToWorld(p, t.x, t.y);
         return (
           <Text
             key={i}
-            position={toScene(t.x, t.y, z + 0.002)}
-            // Flat on the plan (text up = north), then the MTEXT rotation about the vertical axis.
-            rotation={[-Math.PI / 2, t.rotation, 0, 'YXZ']}
+            position={toScene(x + lift[0], y + lift[1], z + lift[2])}
+            // Plan: flat (text up = north), then the MTEXT rotation about the vertical axis.
+            // Vertical: in-plane MTEXT rotation first (local z), then the yaw onto the plane.
+            rotation={p.type === 'vertical' ? [0, yaw, t.rotation, 'YXZ'] : [-Math.PI / 2, t.rotation, 0, 'YXZ']}
             font={FONT_URL}
             fontSize={t.height * TEXT_SCALE}
             anchorX={ANCHOR_X[a % 3]}

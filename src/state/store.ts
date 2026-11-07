@@ -4,6 +4,7 @@ import { listSourceFiles, type SourceFile } from '../project/folder';
 import { DEFAULT_GROUPS, type GroupId, type Groups } from '../project/layerGroups';
 import { readProjectFile, writeProjectFile, type Sheet, type SheetKind } from '../project/projectFile';
 import { suggest } from '../project/suggest';
+import type { VerticalPlacement } from '../project/vertical';
 import { parseDwg } from '../worker/client';
 import type { ParseSummary } from '../worker/protocol';
 
@@ -15,7 +16,7 @@ export type ParseState =
   | { status: 'done'; summary: ParseSummary }
   | { status: 'error'; message: string };
 
-type ProjectState = {
+export type ProjectState = {
   dir?: FileSystemDirectoryHandle;
   sheets: SheetRow[];
   dirty: boolean;
@@ -28,11 +29,19 @@ type ProjectState = {
   open(dir: FileSystemDirectoryHandle): Promise<void>;
   setKind(file: string, kind: SheetKind): void;
   setZ(file: string, z: number): void;
+  /** Elevations/sections: sets the (edited) placement, which then wins over the derived one. */
+  setVertical(file: string, placement: VerticalPlacement): void;
+  /** Elevations/sections: drops the saved placement, so it is derived again. */
+  resetVertical(file: string): void;
   setGroup(group: GroupId, visible: boolean): void;
   setLayer(file: string, layer: string, visible: boolean): void;
-  save(): Promise<void>;
+  /** `derived`: placements of vertical sheets with none saved yet, written with them. */
+  save(derived?: Record<string, VerticalPlacement>): Promise<void>;
   parse(file: string): Promise<void>;
 };
+
+/** Kinds parsed as soon as the folder opens (or the kind is chosen): they are placed in 3D. */
+const AUTO_PARSE = new Set<SheetKind>(['plan', 'elevation', 'section']);
 
 const errText = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
@@ -81,8 +90,8 @@ export const useProject = create<ProjectState>()((set, get) => ({
       ...saved.filter((s) => !present.has(s.file)).map((s) => ({ ...s, source: 'saved' as const, missing: true })),
     ];
     set({ dir, sheets, groups, dirty: false, loadError, saveError: undefined, parsed: {} });
-    // Plans are drawn in 3D (T8), so parse them right away. The worker handles one file at a time.
-    for (const s of sheets) if (s.kind === 'plan' && s.type === 'dwg' && !s.missing) void get().parse(s.file);
+    // Plans and vertical sheets are placed in 3D, so parse them right away. The worker handles one file at a time.
+    for (const s of sheets) if (AUTO_PARSE.has(s.kind) && s.type === 'dwg' && !s.missing) void get().parse(s.file);
   },
 
   setKind(file, kind) {
@@ -90,12 +99,12 @@ export const useProject = create<ProjectState>()((set, get) => ({
       dirty: true,
       sheets: edit(st.sheets, file, ({ placement, ...r }) => {
         if (kind !== 'plan') return { ...r, kind };
-        const z = placement?.z ?? (r.type ? suggest({ name: file, type: r.type }).z : undefined) ?? 0;
+        const z = (placement?.type === 'horizontal' ? placement.z : undefined) ?? (r.type ? suggest({ name: file, type: r.type }).z : undefined) ?? 0;
         return { ...r, kind, placement: { type: 'horizontal', z } };
       }),
     }));
     const row = get().sheets.find((r) => r.file === file);
-    if (kind === 'plan' && row?.type === 'dwg' && !row.missing && !get().parsed[file]) void get().parse(file);
+    if (AUTO_PARSE.has(kind) && row?.type === 'dwg' && !row.missing && !get().parsed[file]) void get().parse(file);
   },
 
   setZ(file, z) {
@@ -103,6 +112,14 @@ export const useProject = create<ProjectState>()((set, get) => ({
       dirty: true,
       sheets: edit(st.sheets, file, (r) => ({ ...r, placement: { type: 'horizontal', z } })),
     }));
+  },
+
+  setVertical(file, placement) {
+    set((st) => ({ dirty: true, sheets: edit(st.sheets, file, (r) => ({ ...r, placement })) }));
+  },
+
+  resetVertical(file) {
+    set((st) => ({ dirty: true, sheets: edit(st.sheets, file, (r) => ({ ...r, placement: undefined })) }));
   },
 
   setGroup(group, visible) {
@@ -121,9 +138,10 @@ export const useProject = create<ProjectState>()((set, get) => ({
     }));
   },
 
-  async save() {
-    const { dir, sheets, groups, loadError } = get();
+  async save(derived = {}) {
+    const { dir, groups, loadError } = get();
     if (!dir || loadError) return;
+    const sheets = get().sheets.map((r) => (!r.placement && derived[r.file] ? { ...r, placement: derived[r.file] } : r));
     const out: Sheet[] = sheets.map(({ file, kind, placement, layers }) => ({
       file,
       kind,
@@ -132,11 +150,8 @@ export const useProject = create<ProjectState>()((set, get) => ({
     }));
     try {
       await writeProjectFile(dir, { version: 1, sheets: out, groups });
-      set((st) => ({
-        dirty: false,
-        saveError: undefined,
-        sheets: st.sheets.map((r) => ({ ...r, source: 'saved' })),
-      }));
+      // Keep the written placements on the rows, so they are used (not re-derived) from now on.
+      set({ dirty: false, saveError: undefined, sheets: sheets.map((r) => ({ ...r, source: 'saved' })) });
     } catch (err) {
       set({ saveError: errText(err) });
     }
