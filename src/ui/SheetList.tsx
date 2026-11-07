@@ -11,12 +11,20 @@ export function SheetList() {
   const loadError = useProject((s) => s.loadError);
   const saveError = useProject((s) => s.saveError);
   const save = useProject((s) => s.save);
+  const parsed = useProject((s) => s.parsed);
+  const parse = useProject((s) => s.parse);
   const [saving, setSaving] = useState(false);
 
   const onSave = () => {
     setSaving(true);
     void save().finally(() => setSaving(false));
   };
+  // The worker queues files one at a time and times each parse itself, so queueing doesn't skew `ms`.
+  const onParseAll = () => {
+    for (const s of sheets) if (s.type === 'dwg' && !s.missing && !parsed[s.file]) void parse(s.file);
+  };
+  const done = Object.entries(parsed).flatMap(([file, p]) => (p.status === 'done' ? [{ file, ms: p.summary.ms }] : []));
+  const slowest = done.reduce<(typeof done)[number] | undefined>((a, b) => (!a || b.ms > a.ms ? b : a), undefined);
 
   return (
     <>
@@ -25,6 +33,16 @@ export function SheetList() {
           {t.save}
         </button>{' '}
         <span className={dirty ? 'error' : 'muted'}>{dirty ? t.unsaved : t.saved}</span>
+      </div>
+      <div className="save-bar">
+        <button type="button" onClick={onParseAll}>
+          {t.parseAll}
+        </button>{' '}
+        {slowest && (
+          <span className={slowest.ms < 2000 ? 'muted' : 'error'}>
+            {done.length} · {t.slowest}: {slowest.file} {slowest.ms} ms
+          </span>
+        )}
       </div>
       {loadError && (
         <p className="error">

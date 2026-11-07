@@ -23,6 +23,8 @@ export const t = {
   texts: 'Teksty',
   textLeftovers: 'z nieznanymi kodami',
   save: 'Zapisz',
+  parseAll: 'Wczytaj wszystkie DWG',
+  slowest: 'najdłużej',
   saved: 'Zapisano',
   unsaved: 'Niezapisane zmiany',
   loadError: 'Nie można odczytać pliku projektu (zapis zablokowany, aby go nie nadpisać)',
