@@ -56,5 +56,10 @@ None yet. When scaffolding, add `dev`, `build`, `test` (Vitest), `lint`, `typech
   - Use `source-driven-development` for three/r3f/drei/libredwg-web/pdfjs APIs.
   - **The user does browser verification.** Don't drive a browser. At the end of a slice, give a short
     "verify in browser" checklist (what to open, what to click, what you should see) and wait for the result.
+  - **Checkpoint routine (so the user can `/clear` between phases):** at every checkpoint in `tasks/todo.md`,
+    and before any long session ends: (1) tick the finished boxes; (2) update the `Next:` line at the top of
+    `tasks/todo.md` with the next task, plus any non-obvious finding not yet written down (put it in the
+    relevant file); (3) commit; (4) tell the user it's safe to clear. To resume: read `tasks/todo.md` and
+    continue with the first unchecked task.
   - Deviations from PLAN.md need an ADR (`documentation-and-adrs`, `docs/adr/`).
   - Commits: small and atomic, on a branch, never straight to `main` (`git-workflow-and-versioning`).

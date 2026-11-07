@@ -1,5 +1,7 @@
 # M1a task list
 
+Next: T1 (scaffold) on branch `feat/m1a`.
+
 Commands (once T1 is done): `pnpm test`, `pnpm build`, `pnpm lint`, `pnpm typecheck`, `pnpm dev`.
 Every task: tests pass, build is clean, and a "verify in browser" checklist goes to the user (CLAUDE.md).
 
