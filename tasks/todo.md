@@ -1,6 +1,6 @@
 # M1a task list
 
-Next: T9 browser check (layer panel + groups, built). Then T10. T5's layer-0 criterion is checked in T9 (toggle a block's INSERT layer).
+Next: T10 (M1a acceptance on the real files). T9 passed the user's browser check (incl. T5 layer-0).
 Note (T9): `.gitignore` had `dwg/` unanchored, so `src/dwg/` was never committed until 4dbb1b4; now `/dwg/`.
 Note (T8): texts = one drei `<Text>` per label, local Noto Sans (latin default via troika `configureTextBuilder`, latin-ext as `font`); anchors `top-cap`/`middle`/`bottom-baseline` (drei's type lacks `top-cap`, cast); size = MTEXT height × 1.2 (by eye). Plans auto-parse on open.
 Note (T6): only MTEXT in the files (4962; no TEXT/ATTRIB, no `\P`); codes used: `\f…;` `\W…;` `\L`. Some words are split into two MTEXTs at diacritics in the source (`KRAW`+`ĘŻNIK`): not ours to fix. Branch `feat/m1a`.
@@ -82,7 +82,7 @@ metres (×0.001), grouped by layer. Unknown types are counted in `skipped`. Inpu
 rotation, nesting. Entities on layer `0` inside a block take the INSERT's layer.
 **Acceptance criteria:**
 - [x] Translated, rotated, mirrored (sx = −1) and nested blocks land in the right place (user checked in T8)
-- [ ] Layer-0 entities inside a block take the INSERT's layer
+- [x] Layer-0 entities inside a block take the INSERT's layer
 - [x] Recursion is guarded (a cycle or a depth > 16 stops with a counted error)
 **Verification:** checked in the browser once T8 draws sheets (doors, windows, grid bubbles in the right place on PAB-01).
 **Dependencies:** T4
@@ -138,10 +138,10 @@ from PLAN.md §1 (`G-ANNO-*` except `G-ANNO-DIMS*`, `PZT_WYMIARY-1`, `I-FURN*`, 
 Visibility is saved in the project JSON. Folded in (user): project-wide layer groups (Layout / Levels / Grid /
 Details / Other, PLAN.md §1) so "Details" off leaves walls, doors and windows; door swing arcs go to Details.
 **Acceptance criteria:**
-- [ ] On PAB-01 the noise layers start hidden and walls, grid and levels start visible
-- [ ] Details off: no furniture, sanitary, labels or door swings; walls, doors and windows remain
-- [ ] Toggling a layer hides it immediately in 3D; the state survives save and reload
-- [ ] The skipped entity counts from T4 are shown per sheet
+- [x] On PAB-01 the noise layers start hidden and walls, grid and levels start visible
+- [x] Details off: no furniture, sanitary, labels or door swings; walls, doors and windows remain
+- [x] Toggling a layer hides it immediately in 3D; the state survives save and reload
+- [x] The skipped entity counts from T4 are shown per sheet
 **Verification:** user toggles `A-WALL` and reloads.
 **Dependencies:** T8
 **Files:** `src/project/layerGroups.ts`, `src/dwg/layers.ts`, `src/dwg/normalize.ts`, `src/project/projectFile.ts`, `src/ui/LayerPanel.tsx`, `src/state/store.ts`, `src/scene/*`
