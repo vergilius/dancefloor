@@ -1,6 +1,6 @@
 # M1c task list
 
-Next: Task 5 (PDF underlay) implemented, awaiting the user's browser check; then tick it and start Task 6. T1–T4 and Checkpoint A verified 2026-11-08.
+Next: Task 6 (2-point tool). T1–T5 and Checkpoint A verified in browser 2026-11-08 (T5: map at identity sits with the house at its bottom-left corner; real placement comes from T6).
 Note (T5): pdfjs-dist 6.x: `isEvalSupported` is gone and teardown is `loadingTask.destroy()`. pdfjs is a lazy chunk (`src/pdf/render.ts`), render state is `pdfs` in the store (not `parsed`).
 Note (T4): obstacle colour = `OBSTACLE_COLOR` via `layerColor()` in `src/project/layerGroups.ts` (lines and texts). Groups are
 global by layer name, so `A-DETL-2` is an obstacle on every sheet.
@@ -70,8 +70,8 @@ rotation/scale. `Viewport` draws site sheets at z 0 with the derived transform (
 **Description:** Add `pdfjs-dist`. Render page 1 to a texture (~200 dpi, clamped to max texture size) and draw it as
 a quad at z −0.02 through the PDF's transform (placeholder 1:500 sheet coords). The sheet list shows the rendered size.
 **Acceptance criteria:**
-- [ ] The survey map shows in the top view, near the house at roughly the right size, under the lines
-- [ ] The sheet list shows the rendered pixel size; no console errors
+- [x] The survey map shows in the top view, near the house at roughly the right size, under the lines
+- [x] The sheet list shows the rendered pixel size; no console errors
 **Verification:** `pnpm check` (bundle budget); user checks the top view.
 **Dependencies:** T2
 **Files:** `package.json`, `src/pdf/render.ts`, `src/scene/PdfObject.tsx`, `src/scene/Viewport.tsx`, `src/ui/SheetList.tsx`
