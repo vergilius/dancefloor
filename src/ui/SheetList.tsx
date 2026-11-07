@@ -3,6 +3,7 @@ import type { NormalizedSheet } from '../dwg/types';
 import { SHEET_KINDS, type SheetKind } from '../project/projectFile';
 import { useProject, type SheetRow } from '../state/store';
 import { planeValue, withPlane } from '../project/vertical';
+import { deriveSite } from '../state/site';
 import { deriveVertical, isVertical, placementFor, unsavedPlacements, useReference, type VerticalKind } from '../state/vertical';
 import type { ParseSummary } from '../worker/protocol';
 import { GroupToggles, SheetLayers } from './LayerPanel';
@@ -107,6 +108,7 @@ function SheetItem({ sheet: s }: { sheet: SheetRow }) {
           {isVertical(s.kind) && (
             <AxisFitLine row={s} kind={s.kind} sheet={p.summary.sheet} />
           )}
+          {s.kind === 'site' && <AlignLine sheet={p.summary.sheet} />}
           <Summary s={p.summary} />
           <SheetLayers row={s} sheet={p.summary.sheet} />
         </>
@@ -175,6 +177,33 @@ function AxisFitLine({ row, kind, sheet }: { row: SheetRow; kind: VerticalKind; 
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function AlignLine({ sheet }: { sheet: NormalizedSheet }) {
+  const ref = useReference();
+  if (!ref) return <div className="error">{t.axis.noReference}</div>;
+  const a = deriveSite(sheet, ref);
+  const pct = (v: number) => `${(v * 100).toFixed(0)} %`;
+  if (!a.ok)
+    return (
+      <div className="error">
+        {t.align.title}: {t.align.reasons[a.reason]}
+        {a.share !== undefined && ` (${pct(a.share)})`}
+      </div>
+    );
+  const { scale, rotation, translate } = a.transform;
+  return (
+    <div>
+      {t.align.title}: {t.align.rotation} <strong>{((rotation * 180) / Math.PI).toFixed(3)}°</strong> · {t.align.scale}{' '}
+      <strong>{scale.toFixed(3)}</strong> · {t.align.translation}{' '}
+      <strong>
+        ({translate.x.toFixed(3)}, {translate.y.toFixed(3)}) m
+      </strong>{' '}
+      <span className="muted">
+        ({t.align.auto} · {t.align.share} {pct(a.share)} = {a.matched}/{a.total} · {ref.file})
+      </span>
     </div>
   );
 }

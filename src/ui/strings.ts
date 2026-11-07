@@ -59,6 +59,19 @@ export const t = {
       residual: 'odchyłka dopasowania > 5 mm',
     },
   },
+  align: {
+    title: 'Wyrównanie',
+    rotation: 'obrót',
+    scale: 'skala',
+    translation: 'przesunięcie',
+    share: 'dopasowane końce ścian',
+    auto: 'auto z A-WALL',
+    reasons: {
+      noSiteWalls: 'brak ścian A-WALL na arkuszu',
+      noRefWalls: 'brak ścian A-WALL na rzucie odniesienia',
+      lowShare: 'mniej niż 50 % końców ścian rzutu pasuje',
+    },
+  },
   plane: {
     title: 'Płaszczyzna',
     cut: 'linia cięcia',

@@ -41,7 +41,7 @@ export type ProjectState = {
 };
 
 /** Kinds parsed as soon as the folder opens (or the kind is chosen): they are placed in 3D. */
-const AUTO_PARSE = new Set<SheetKind>(['plan', 'elevation', 'section']);
+const AUTO_PARSE = new Set<SheetKind>(['plan', 'elevation', 'section', 'site']);
 
 const errText = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
