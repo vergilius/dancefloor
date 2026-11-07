@@ -1,6 +1,8 @@
 # M1c task list
 
-Next: Task 4 (obstacles group). T1–T3 and Checkpoint A verified in browser 2026-11-08.
+Next: Task 5 (PDF underlay). T1–T4 and Checkpoint A verified in browser 2026-11-08.
+Note (T4): obstacle colour = `OBSTACLE_COLOR` via `layerColor()` in `src/project/layerGroups.ts` (lines and texts). Groups are
+global by layer name, so `A-DETL-2` is an obstacle on every sheet.
 Note (T3): `Sheet.transform` (rotation in rad) is a sheet field, not part of `placement`. A saved one wins over auto
 (list + 3D); "Zapisz" writes `unsavedTransforms()` (`src/state/site.ts`); a kind change drops the transform.
 Note (T2): site sheets without a successful auto-alignment are drawn with identity. "Dopasuj widok" frames only
@@ -56,8 +58,8 @@ rotation/scale. `Viewport` draws site sheets at z 0 with the derived transform (
 **Description:** New layer group `obstacles` ("Przeszkody"): `PZT_GAZ*`, `PZT_WODA P`, `PZT_KAN*`, `PZT_PRĄD`,
 `A-DETL-2`, before the `details` rule. Its layers are drawn in one warning colour.
 **Acceptance criteria:**
-- [ ] The tank rectangle shows at plan x 8.8–11.8, y −15.8…−13.4 in the obstacle colour, with the utility lines
-- [ ] The group toggles on/off and is saved like the other groups
+- [x] The tank rectangle shows at plan x 8.8–11.8, y −15.8…−13.4 in the obstacle colour, with the utility lines
+- [x] The group toggles on/off and is saved like the other groups
 **Verification:** `pnpm check`; user checks the top view and the layer panel.
 **Dependencies:** T2
 **Files:** `src/project/layerGroups.ts`, `src/scene/SheetObject.tsx`, `src/scene/Viewport.tsx`, `src/ui/strings.ts`
