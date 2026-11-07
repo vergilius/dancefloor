@@ -43,7 +43,7 @@ version). `src/worker/dwg.worker.ts` receives a file's bytes, parses and convert
 `{ entityCounts, layerNames, insunits, ms }`. Use a typed message protocol in `src/worker/protocol.ts`.
 Clicking a file in the list shows its counts.
 **Acceptance criteria:**
-- [ ] Clicking PAB-01 shows INSUNITS 4 and ~1898 entities, with no main-thread freeze
+- [x] Clicking PAB-01 shows INSUNITS 4 and ~1898 entities, with no main-thread freeze
 - [x] libredwg is imported only in `src/worker/` (lint rule `no-restricted-imports` elsewhere; probe import fails lint)
 - [x] Parse errors come back as a message, not as an uncaught worker error (worker crash also rejects pending requests)
 **Verification:** the lint rule fails on a deliberate import elsewhere (then revert it); user clicks through all 12 files and sees counts and parse time.
