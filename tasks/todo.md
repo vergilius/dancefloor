@@ -1,6 +1,6 @@
 # M1a task list
 
-Next: T10 (M1a acceptance on the real files). T9 passed the user's browser check (incl. T5 layer-0).
+Next: T5 layer-0 browser check (still open), then T10 (M1a acceptance). T9 passed the user's browser check.
 Note (T9): `.gitignore` had `dwg/` unanchored, so `src/dwg/` was never committed until 4dbb1b4; now `/dwg/`.
 Note (T8): texts = one drei `<Text>` per label, local Noto Sans (latin default via troika `configureTextBuilder`, latin-ext as `font`); anchors `top-cap`/`middle`/`bottom-baseline` (drei's type lacks `top-cap`, cast); size = MTEXT height × 1.2 (by eye). Plans auto-parse on open.
 Note (T6): only MTEXT in the files (4962; no TEXT/ATTRIB, no `\P`); codes used: `\f…;` `\W…;` `\L`. Some words are split into two MTEXTs at diacritics in the source (`KRAW`+`ĘŻNIK`): not ours to fix. Branch `feat/m1a`.
@@ -82,7 +82,7 @@ metres (×0.001), grouped by layer. Unknown types are counted in `skipped`. Inpu
 rotation, nesting. Entities on layer `0` inside a block take the INSERT's layer.
 **Acceptance criteria:**
 - [x] Translated, rotated, mirrored (sx = −1) and nested blocks land in the right place (user checked in T8)
-- [x] Layer-0 entities inside a block take the INSERT's layer
+- [ ] Layer-0 entities inside a block take the INSERT's layer
 - [x] Recursion is guarded (a cycle or a depth > 16 stops with a counted error)
 **Verification:** checked in the browser once T8 draws sheets (doors, windows, grid bubbles in the right place on PAB-01).
 **Dependencies:** T4
