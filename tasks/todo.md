@@ -1,6 +1,6 @@
 # M1b task list
 
-Next: T1 (grid-label axis mapping, shown in the sheet list).
+Next: T2 (plane position from cut lines / wall extent). T1 done and checked by the user.
 Known issue (camera, deferred by the user as minor): switching "Widok z góry" ↔ "Widok 3D" resets both cameras' position.
 Note (spec): data facts and the expected result per sheet are in PLAN.md §5 M1b. Sheet y = height rel. ±0.00, no scale.
 M1a task notes are in git history (`tasks/todo.md` at 032c110).
@@ -16,9 +16,9 @@ sheet; match a vertical sheet's labels to the reference plan's (plan with z = 0)
 Vertical sheets (elevation/section) auto-parse on open. The sheet list shows, per vertical sheet, matched labels,
 max residual (mm) and look direction (N/E/S/W), or the reason it failed.
 **Acceptance criteria:**
-- [ ] PAB-04..10 each show `7/7` and a residual < 1 mm
-- [ ] Look directions match the PLAN.md M1b table (A-A east, B-B north, C-C south, N south, E west, W east, S north)
-- [ ] A sheet with < 2 matches or residual > 5 mm shows a reason (e.g. kind set to elevation on a detail sheet)
+- [x] PAB-04..10 each show `7/7` and a residual < 1 mm
+- [x] Look directions match the PLAN.md M1b table (A-A east, B-B north, C-C south, N south, E west, W east, S north)
+- [x] A sheet with < 2 matches or residual > 5 mm shows a reason (e.g. kind set to elevation on a detail sheet)
 **Verification:** `pnpm check`; user opens the folder and reads the values in the sheet list.
 **Dependencies:** none
 **Files:** `src/project/vertical.ts`, `src/state/store.ts`, `src/ui/SheetList.tsx`, `src/ui/strings.ts`
