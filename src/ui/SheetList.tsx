@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import type { NormalizedSheet } from '../dwg/types';
 import { SHEET_KINDS, type SheetKind } from '../project/projectFile';
+import { fitAxis, planGrid, type PlanGrid } from '../project/vertical';
 import { useProject, type SheetRow } from '../state/store';
 import type { ParseSummary } from '../worker/protocol';
 import { GroupToggles, SheetLayers } from './LayerPanel';
@@ -101,11 +103,45 @@ function SheetItem({ sheet: s }: { sheet: SheetRow }) {
       {p?.status === 'error' && <div className="error">{p.message}</div>}
       {p?.status === 'done' && (
         <>
+          {(s.kind === 'elevation' || s.kind === 'section') && <AxisFitLine sheet={p.summary.sheet} />}
           <Summary s={p.summary} />
           <SheetLayers row={s} sheet={p.summary.sheet} />
         </>
       )}
     </li>
+  );
+}
+
+/** The reference plan's grid: the first parsed plan at z = 0 (PLAN.md §5 M1b). */
+function useReferenceGrid(): { file: string; grid: PlanGrid } | undefined {
+  const ref = useProject((st) => {
+    const row = st.sheets.find((r) => r.kind === 'plan' && r.placement?.z === 0);
+    const p = row && st.parsed[row.file];
+    return p?.status === 'done' ? p.summary : undefined;
+  });
+  return useMemo(() => ref && { file: ref.name, grid: planGrid(ref.sheet) }, [ref]);
+}
+
+function AxisFitLine({ sheet }: { sheet: NormalizedSheet }) {
+  const ref = useReferenceGrid();
+  const fit = useMemo(() => ref && fitAxis(sheet, ref.grid), [ref, sheet]);
+  if (!ref || !fit) return <div className="error">{t.axis.noReference}</div>;
+  const mm = (v: number) => (v * 1000).toFixed(2);
+  if (!fit.ok)
+    return (
+      <div className="error">
+        {t.axis.title}: {fit.matched}/{fit.labels} · {t.axis.reasons[fit.reason]}
+        {fit.residual !== undefined && ` (${mm(fit.residual)} mm)`}
+      </div>
+    );
+  return (
+    <div>
+      {t.axis.title}: <strong>{fit.matched}/{fit.labels}</strong> · {t.axis.residual} <strong>{mm(fit.residual)} mm</strong> ·{' '}
+      {t.axis.looks} <strong>{t.axis.look[fit.look]}</strong>{' '}
+      <span className="muted">
+        (x = {fit.sign < 0 ? '−' : ''}plan {fit.axis} {fit.offset < 0 ? '−' : '+'} {Math.abs(fit.offset).toFixed(3)} · {ref.file})
+      </span>
+    </div>
   );
 }
 

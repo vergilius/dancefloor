@@ -42,6 +42,19 @@ export const t = {
     pdf: 'Mapa (PDF)',
     detail: 'Detal',
   },
+  axis: {
+    title: 'Osie siatki',
+    residual: 'odchyłka',
+    looks: 'widok na',
+    look: { N: 'północ', E: 'wschód', S: 'południe', W: 'zachód' },
+    noReference: 'Brak wczytanego rzutu z z = 0 (odniesienie dla osi siatki)',
+    reasons: {
+      noLabels: 'brak etykiet osi (S-GRID-IDEN) na arkuszu',
+      tooFewMatches: 'mniej niż 2 etykiety pasują do rzutu',
+      mixedAxes: 'etykiety z obu kierunków siatki (cyfry i litery)',
+      residual: 'odchyłka dopasowania > 5 mm',
+    },
+  },
   folderUnsupported:
     'Ta przeglądarka nie obsługuje dostępu do folderów (File System Access API). Użyj Chrome lub Edge.',
   fileCount: (n: number) => `${n} ${n === 1 ? 'plik' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'pliki' : 'plików'}`,

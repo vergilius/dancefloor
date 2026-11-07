@@ -34,6 +34,9 @@ type ProjectState = {
   parse(file: string): Promise<void>;
 };
 
+/** Kinds parsed as soon as the folder opens (or the kind is chosen): they are placed in 3D. */
+const AUTO_PARSE = new Set<SheetKind>(['plan', 'elevation', 'section']);
+
 const errText = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
 function fromSuggestion(f: SourceFile): SheetRow {
@@ -81,8 +84,8 @@ export const useProject = create<ProjectState>()((set, get) => ({
       ...saved.filter((s) => !present.has(s.file)).map((s) => ({ ...s, source: 'saved' as const, missing: true })),
     ];
     set({ dir, sheets, groups, dirty: false, loadError, saveError: undefined, parsed: {} });
-    // Plans are drawn in 3D (T8), so parse them right away. The worker handles one file at a time.
-    for (const s of sheets) if (s.kind === 'plan' && s.type === 'dwg' && !s.missing) void get().parse(s.file);
+    // Plans and vertical sheets are placed in 3D, so parse them right away. The worker handles one file at a time.
+    for (const s of sheets) if (AUTO_PARSE.has(s.kind) && s.type === 'dwg' && !s.missing) void get().parse(s.file);
   },
 
   setKind(file, kind) {
@@ -95,7 +98,7 @@ export const useProject = create<ProjectState>()((set, get) => ({
       }),
     }));
     const row = get().sheets.find((r) => r.file === file);
-    if (kind === 'plan' && row?.type === 'dwg' && !row.missing && !get().parsed[file]) void get().parse(file);
+    if (AUTO_PARSE.has(kind) && row?.type === 'dwg' && !row.missing && !get().parsed[file]) void get().parse(file);
   },
 
   setZ(file, z) {
