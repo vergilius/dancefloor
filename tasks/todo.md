@@ -1,6 +1,7 @@
 # M1a task list
 
-Next: T4 (normalize). Branch `feat/m1a`.
+Next: T5 (INSERT expansion). Branch `feat/m1a`.
+Note (T4): DWG closed LWPOLYLINE = `flag & 0x200`; ARC angles are radians; PAB-01 paper space isn't in `db.entities` (no `(paper space)` count).
 Note: the WASM is loaded by the glue's own `new URL(…, import.meta.url)` (Vite bundles it); no copy script, no `public/wasm/`.
 
 Commands: `pnpm dev`, `pnpm build`, `pnpm lint`, `pnpm typecheck`. No automated tests (CLAUDE.md).
@@ -64,9 +65,9 @@ Clicking a file in the list shows its counts.
 **Description:** `normalize()` for LINE, ARC, CIRCLE, LWPOLYLINE (including bulge), SPLINE → segments in
 metres (×0.001), grouped by layer. Unknown types are counted in `skipped`. Input types come from `src/dwg/types.ts`.
 **Acceptance criteria:**
-- [ ] Coordinates in metres (PAB-01 extents shown as ~0.3–15.1 × −12.3–3.0 m); arcs/circles tessellated with ≤ 1 mm chord error; LWPOLYLINE bulges and closed flags handled
-- [ ] HATCH/DIMENSION and unknown types counted, not drawn
-- [ ] The worker returns a `NormalizedSheet` (transferable buffers)
+- [x] Coordinates in metres (PAB-01 sheet extents −7.56…22.26 × −19.47…6.56 m, user checked; `A-WALL` alone is 0.34…15.12 × −12.27…3.05 m, so the house is right and the grid lines/annotations extend past it); arcs/circles tessellated with ≤ 1 mm chord error; LWPOLYLINE bulges and closed flags handled
+- [x] HATCH/DIMENSION and unknown types counted, not drawn
+- [x] The worker returns a `NormalizedSheet` (transferable buffers)
 **Verification:** user sees the extents and the skipped counts per file in the sheet panel.
 **Dependencies:** T3
 **Files:** `src/dwg/types.ts`, `src/dwg/normalize.ts`, `src/worker/parse.ts`
