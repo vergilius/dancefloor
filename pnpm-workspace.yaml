@@ -1,0 +1,2 @@
+minimumReleaseAgeExclude:
+  - '@mlightcad/libredwg-web@0.8.6'

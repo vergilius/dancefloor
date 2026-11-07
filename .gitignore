@@ -149,9 +149,10 @@ vite.config.ts.timestamp-*
 .turbo
 
 # Project: architect drawings contain personal data — never commit
-dwg/
+/dwg/
 *.dwg
 *.dxf
 
 # macOS
 .DS_Store
+
