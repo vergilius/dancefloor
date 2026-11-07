@@ -1,6 +1,8 @@
 # M1c task list
 
-Next: Task 3 (save the transform, Reset). T1 and T2 verified in browser 2026-11-08.
+Next: Task 4 (obstacles group). T1–T3 and Checkpoint A verified in browser 2026-11-08.
+Note (T3): `Sheet.transform` (rotation in rad) is a sheet field, not part of `placement`. A saved one wins over auto
+(list + 3D); "Zapisz" writes `unsavedTransforms()` (`src/state/site.ts`); a kind change drops the transform.
 Note (T2): site sheets without a successful auto-alignment are drawn with identity. "Dopasuj widok" frames only
 non-site sheets (the building); a site-only project frames everything (`FrameOnSheets` in `src/scene/Viewport.tsx`).
 Note (T1): autoAlign votes with an even sample of ~200 reference endpoints (`VOTERS` in `src/project/align.ts`) to keep it fast.
@@ -40,15 +42,15 @@ rotation/scale. `Viewport` draws site sheets at z 0 with the derived transform (
 **Description:** `projectFile.ts` accepts and validates `transform` (and horizontal `placement`) for `site` and `pdf`.
 "Zapisz" writes the derived transform if none is saved; a saved one wins. Reset in the sheet list (site: back to auto).
 **Acceptance criteria:**
-- [ ] After save + reload PZT-01 uses the saved transform (not re-derived); the JSON holds `{ scale, rotation, translate }`
-- [ ] Reset removes the saved transform and marks the project dirty
+- [x] After save + reload PZT-01 uses the saved transform (not re-derived); the JSON holds `{ scale, rotation, translate }`
+- [x] Reset removes the saved transform and marks the project dirty
 **Verification:** `pnpm check`; user saves, reloads, inspects `dancefloor.json`.
 **Dependencies:** T2
 **Files:** `src/project/projectFile.ts`, `src/state/store.ts`, `src/state/site.ts`, `src/ui/SheetList.tsx`
 **Scope:** S
 
 ### Checkpoint A (after T1–T3)
-- [ ] `pnpm check` green; PZT-01 aligned automatically and the alignment survives reload (user check)
+- [x] `pnpm check` green; PZT-01 aligned automatically and the alignment survives reload (user check)
 
 ### Task 4: Obstacles group
 **Description:** New layer group `obstacles` ("Przeszkody"): `PZT_GAZ*`, `PZT_WODA P`, `PZT_KAN*`, `PZT_PRĄD`,
