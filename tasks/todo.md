@@ -1,6 +1,7 @@
 # M1a task list
 
-Next: T8 (draw plan sheets in 3D; T7 passed the user's browser check). T5/T6 placement and readability checks wait for T8.
+Next: T9 (layer panel). T8 passed the user's browser check. T5's layer-0 criterion is checked in T9 (toggle a block's INSERT layer).
+Note (T8): texts = one drei `<Text>` per label, local Noto Sans (latin default via troika `configureTextBuilder`, latin-ext as `font`); anchors `top-cap`/`middle`/`bottom-baseline` (drei's type lacks `top-cap`, cast); size = MTEXT height × 1.2 (by eye). Plans auto-parse on open.
 Note (T6): only MTEXT in the files (4962; no TEXT/ATTRIB, no `\P`); codes used: `\f…;` `\W…;` `\L`. Some words are split into two MTEXTs at diacritics in the source (`KRAW`+`ĘŻNIK`): not ours to fix. Branch `feat/m1a`.
 Note (T5): all 12 DWGs expand with no missing/cyclic/too-deep blocks. ELLIPSE added to normalize (user request; 756 on PAB-02, mostly inside blocks).
 Note (T4): DWG closed LWPOLYLINE = `flag & 0x200`; ARC angles are radians. Paper space IS in `db.entities` and `isInPaperSpace` is never set: filter by `ownerBlockRecordSoftId` = *Model_Space handle (fixed in T6; PAB-01 has 268 paper-space entities).
@@ -79,7 +80,7 @@ metres (×0.001), grouped by layer. Unknown types are counted in `skipped`. Inpu
 **Description:** Recursively expand INSERT block references: base point, scale (including negative/mirrored),
 rotation, nesting. Entities on layer `0` inside a block take the INSERT's layer.
 **Acceptance criteria:**
-- [ ] Translated, rotated, mirrored (sx = −1) and nested blocks land in the right place
+- [x] Translated, rotated, mirrored (sx = −1) and nested blocks land in the right place (user checked in T8)
 - [ ] Layer-0 entities inside a block take the INSERT's layer
 - [x] Recursion is guarded (a cycle or a depth > 16 stops with a counted error)
 **Verification:** checked in the browser once T8 draws sheets (doors, windows, grid bubbles in the right place on PAB-01).
@@ -122,9 +123,9 @@ dropdown and a z input. "Zapisz" writes `dancefloor.json` to the folder; it load
 `src/scene/coords.ts` (x, y, z) → (x, z, −y). drei `CameraControls`, with the camera framed on the
 loaded sheets. Texts via drei `<Text>`.
 **Acceptance criteria:**
-- [ ] Axes are right: north/east match the plan view (not mirrored), heights go up
-- [ ] PAB-01/02/03 appear stacked at 0 / 3.29 / 9.12 m
-- [ ] Orbiting stays smooth with all three plans loaded (user's judgement; measured in M3)
+- [x] Axes are right: north/east match the plan view (not mirrored), heights go up
+- [x] PAB-01/02/03 appear stacked at 0 / 3.29 / 9.12 m
+- [x] Orbiting stays smooth with all three plans loaded (user's judgement; measured in M3)
 **Verification:** user checks the stacked view.
 **Dependencies:** T6, T7
 **Files:** `src/scene/coords.ts`, `src/scene/SheetObject.tsx`, `src/scene/Viewport.tsx`
