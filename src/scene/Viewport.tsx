@@ -6,6 +6,7 @@ import type { NormalizedSheet } from '../dwg/types';
 import { useProject } from '../state/store';
 import { planBox } from './coords';
 import { SheetObject } from './SheetObject';
+import { SheetTexts } from './SheetTexts';
 
 // One colour per stacked plan, in sheet order, so the levels are easy to tell apart.
 const PLAN_COLORS = ['#1f6feb', '#d1242f', '#1a7f37', '#8250df', '#bf8700'];
@@ -31,9 +32,15 @@ export function Viewport() {
       <ambientLight intensity={0.8} />
       <Grid args={[100, 100]} cellSize={1} sectionSize={10} infiniteGrid fadeDistance={150} />
       <axesHelper args={[2]} />
-      {plans.map((p, i) => (
-        <SheetObject key={p.file} sheet={p.sheet} z={p.z} color={PLAN_COLORS[i % PLAN_COLORS.length]!} />
-      ))}
+      {plans.map((p, i) => {
+        const color = PLAN_COLORS[i % PLAN_COLORS.length]!;
+        return (
+          <group key={p.file}>
+            <SheetObject sheet={p.sheet} z={p.z} color={color} />
+            <SheetTexts texts={p.sheet.texts} z={p.z} color={color} />
+          </group>
+        );
+      })}
       <CameraControls makeDefault />
       <FrameOnPlans plans={plans} />
     </Canvas>

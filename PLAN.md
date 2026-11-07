@@ -102,6 +102,7 @@ placed in 3D. They supply parameters only.
 | Build/UI | Vite + React + TypeScript |
 | 3D | `three`, `@react-three/fiber`, `@react-three/drei` (CameraControls, Grid, TransformControls, Html) |
 | DWG | `@mlightcad/libredwg-web` in a worker (WASM bundled by Vite from the glue's `new URL(…, import.meta.url)`) |
+| Sheet texts | drei `<Text>` with local `@fontsource/noto-sans` (latin + latin-ext woff); `troika-three-text` direct dep only for `configureTextBuilder` (default font). Glyphs missing from both fall back to troika's CDN (user decision, M1a T8) |
 | Picking/snapping | `three-mesh-bvh` |
 | Terrain seed | `delaunator`, only to rasterize survey points into the grid |
 | PDF underlay | `pdfjs-dist` (survey map until a DWG version exists) |

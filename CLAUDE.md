@@ -13,7 +13,7 @@ changes, update PLAN.md in the same change.
 - Track milestone/task progress in PLAN.md (or a `tasks/` file created via `planning-and-task-breakdown`).
 
 ## Stack (planned, see PLAN.md §3)
-Vite + React + TypeScript · three / @react-three/fiber / drei · `@mlightcad/libredwg-web` (in a Web Worker,
+Vite + React + TypeScript · three / @react-three/fiber / drei (+ troika-three-text, @fontsource/noto-sans for texts) · `@mlightcad/libredwg-web` (in a Web Worker,
 WASM bundled by Vite) · three-mesh-bvh · delaunator · pdfjs-dist · zustand (+ command stack for undo).
 Node 24, **pnpm 12** (pinned via `packageManager`). Don't use npm or yarn.
 
@@ -43,7 +43,8 @@ TypeScript is pinned to `~6.0` because typescript-eslint 8 doesn't support TS 7 
 
 ## Boundaries
 - **Never commit anything from `dwg/`** (DWG/PDF title blocks contain personal data). It is gitignored.
-- No backend and no network calls at runtime. Everything runs in the browser.
+- No backend and no network calls at runtime. Everything runs in the browser. (Exception: troika's CDN font
+  fallback for glyphs missing from the local Noto Sans, user decision.)
 - Ask before adding a dependency that isn't in the planned stack.
 - Out of scope (PLAN.md §7): DWG editing, dimensioning, printing, multi-user, MEP, structural accuracy.
 
