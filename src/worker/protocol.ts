@@ -1,4 +1,5 @@
 // Messages between the app and the DWG worker. No libredwg types here: only our own.
+import type { NormalizedSheet } from '../dwg/types';
 
 export type ParseRequest = { id: number; name: string; bytes: ArrayBuffer };
 
@@ -9,6 +10,7 @@ export type ParseSummary = {
   entityCounts: Record<string, number>;
   layerNames: string[];
   ms: number;
+  sheet: NormalizedSheet;
 };
 
 export type ParseResponse =

@@ -50,8 +50,16 @@ export function FileList({ dir, files }: Props) {
   );
 }
 
+const counts = (r: Record<string, number>) =>
+  Object.entries(r)
+    .sort((a, b) => b[1] - a[1])
+    .map(([k, v]) => `${k} ${v}`)
+    .join(', ') || '—';
+const m = (v: number) => v.toFixed(2);
+
 function Summary({ s }: { s: ParseSummary }) {
   const types = Object.entries(s.entityCounts).sort((a, b) => b[1] - a[1]);
+  const { extents: x, drawn, skipped, segmentCount } = s.sheet;
   return (
     <div className="summary">
       <div>
@@ -59,6 +67,18 @@ function Summary({ s }: { s: ParseSummary }) {
         {s.insunits !== 4 && <span className="error"> ({t.notMm})</span>} · {s.ms} ms
       </div>
       <div className="muted">{types.map(([k, v]) => `${k} ${v}`).join(', ')}</div>
+      <div>
+        {t.extents}:{' '}
+        <strong>
+          {x ? `x ${m(x.minX)}…${m(x.maxX)} m · y ${m(x.minY)}…${m(x.maxY)} m` : t.noGeometry}
+        </strong>
+      </div>
+      <div className="muted">
+        {t.drawn} ({segmentCount} {t.segments}): {counts(drawn)}
+      </div>
+      <div className="muted">
+        {t.skipped}: {counts(skipped)}
+      </div>
       <div className="muted">
         {t.layers} ({s.layerNames.length}): {s.layerNames.join(', ')}
       </div>

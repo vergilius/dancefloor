@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 // The ONLY module allowed to import libredwg-web (GPL-3.0, PLAN.md §2). Enforced by ESLint.
 import { Dwg_File_Type, LibreDwg } from '@mlightcad/libredwg-web';
+import { normalize } from '../dwg/normalize';
 import type { ParseRequest, ParseResponse, ParseSummary } from './protocol';
 
 declare const self: DedicatedWorkerGlobalScope;
@@ -28,6 +29,7 @@ async function parse({ name, bytes }: ParseRequest): Promise<ParseSummary> {
       entityCount: db.entities.length,
       entityCounts,
       layerNames: [...layers].sort((a, b) => a.localeCompare(b, 'pl')),
+      sheet: normalize(db.entities),
       ms: Math.round(performance.now() - t0),
     };
   } finally {
@@ -43,5 +45,6 @@ self.onmessage = async (ev: MessageEvent<ParseRequest>) => {
   } catch (err) {
     res = { id, ok: false, error: err instanceof Error ? err.message : String(err) };
   }
-  self.postMessage(res);
+  // Transfer the segment buffers instead of copying them.
+  self.postMessage(res, res.ok ? res.summary.sheet.layers.map((l) => l.segments.buffer) : []);
 };
