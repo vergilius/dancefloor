@@ -7,7 +7,7 @@ import { layerVisible, type LayerOverrides } from '../project/layerGroups';
 import { useProject } from '../state/store';
 import { deriveVertical, isVertical, useReference } from '../state/vertical';
 import { sheetBox, type SheetPlacement } from './coords';
-import { loadView, storeView, type SavedView } from './savedView';
+import { loadView, storeView, type SavedView, type Side } from './savedView';
 import { SheetObject } from './SheetObject';
 import { SheetTexts } from './SheetTexts';
 import { t } from '../ui/strings';
@@ -43,8 +43,44 @@ type Controls = ComponentRef<typeof CameraControls>;
 type Vec3 = [number, number, number];
 
 const DEFAULT_DIR = new Vector3(20, 18, 20).normalize().toArray() as Vec3;
-/** The top (ortho) camera sits this far above its target; well inside its far plane. */
+/** The ortho camera sits this far from its target; well inside its far plane. */
 const TOP_ALTITUDE = 500;
+
+/** Orthographic views: from above, or level from one side. */
+type Ortho = 'top' | Side;
+/**
+ * [azimuth, polar] in camera-controls terms: azimuth 0 = camera on scene +z = world south (coords.ts),
+ * +π/2 = scene +x = east; polar 0 = straight down, π/2 = level.
+ */
+const ORTHO_ANGLES: Record<Ortho, [number, number]> = {
+  top: [0, 0],
+  south: [0, Math.PI / 2],
+  east: [Math.PI / 2, Math.PI / 2],
+  north: [Math.PI, Math.PI / 2],
+  west: [-Math.PI / 2, Math.PI / 2],
+};
+const ORTHO_BUTTONS: [Ortho, string][] = [
+  ['top', t.viewTop],
+  ['north', t.viewNorth],
+  ['east', t.viewEast],
+  ['south', t.viewSouth],
+  ['west', t.viewWest],
+];
+const savedOrtho = (v?: SavedView): Ortho | null => (v?.top ? (v.side ?? 'top') : null);
+
+/** Unit offset target → camera for an ortho view. */
+function orthoOffset(o: Ortho): Vector3 {
+  const [az, polar] = ORTHO_ANGLES[o];
+  return new Vector3(Math.sin(az) * Math.sin(polar), Math.cos(polar), Math.cos(az) * Math.sin(polar));
+}
+
+/** Rotation limits: top keeps polar 0 (azimuth free, as before); side views are locked level on their side. */
+function orthoLimits(o: Ortho | null) {
+  if (!o) return { minPolarAngle: 0, maxPolarAngle: Math.PI, minAzimuthAngle: -Infinity, maxAzimuthAngle: Infinity };
+  if (o === 'top') return { minPolarAngle: 0, maxPolarAngle: 0, minAzimuthAngle: -Infinity, maxAzimuthAngle: Infinity };
+  const [az, polar] = ORTHO_ANGLES[o];
+  return { minPolarAngle: polar, maxPolarAngle: polar, minAzimuthAngle: az, maxAzimuthAngle: az };
+}
 const SAVE_DELAY_MS = 500;
 
 export function Viewport() {
@@ -59,8 +95,9 @@ function Scene({ project }: { project?: string }) {
   // Read once per folder. With a saved view the plans aren't auto-framed: the user's camera wins.
   const [saved] = useState(() => (project ? loadView(project) : undefined));
   const view = useRef<SavedView | undefined>(saved);
-  // Top view = orthographic camera looking straight down, so stacked plans can be compared without parallax.
-  const [top, setTop] = useState(saved?.top ?? false);
+  // Ortho views (no parallax): from above to compare stacked plans, from a side to compare with elevations.
+  const [ortho, setOrtho] = useState<Ortho | null>(() => savedOrtho(saved));
+  const top = ortho !== null;
   const [fitTick, setFitTick] = useState(0);
   return (
     <>
@@ -68,9 +105,14 @@ function Scene({ project }: { project?: string }) {
         <button type="button" onClick={() => setFitTick((n) => n + 1)}>
           {t.fitView}
         </button>
-        <button type="button" onClick={() => setTop((v) => !v)}>
-          {top ? t.view3d : t.viewTop}
+        <button type="button" aria-pressed={!top} onClick={() => setOrtho(null)}>
+          {t.view3d}
         </button>
+        {ORTHO_BUTTONS.map(([o, label]) => (
+          <button key={o} type="button" aria-pressed={ortho === o} onClick={() => setOrtho(o)}>
+            {label}
+          </button>
+        ))}
       </div>
       <Canvas>
         {top ? (
@@ -91,10 +133,9 @@ function Scene({ project }: { project?: string }) {
             </group>
           );
         })}
-        {/* Polar angle 0 = looking straight down; locked in top view. */}
-        <CameraControls makeDefault maxPolarAngle={top ? 0 : Math.PI} />
-        <CameraSync view={view} top={top} project={project} />
-        <FrameOnSheets sheets={drawn} top={top} auto={!saved} tick={fitTick} />
+        <CameraControls makeDefault {...orthoLimits(ortho)} />
+        <CameraSync view={view} ortho={ortho} project={project} />
+        <FrameOnSheets sheets={drawn} ortho={ortho} auto={!saved} tick={fitTick} />
       </Canvas>
     </>
   );
@@ -103,23 +144,26 @@ function Scene({ project }: { project?: string }) {
 const isOrtho = (c: Controls) => c.camera instanceof OrthographicCameraImpl;
 
 /** Visible world height (m) and look direction of the controls' camera. */
-function readView(c: Controls, prevDir: Vec3): SavedView {
+function readView(c: Controls, prevDir: Vec3, ortho: Ortho | null): SavedView {
   const target = c.getTarget(new Vector3());
   const cam = c.camera;
   if (cam instanceof OrthographicCameraImpl) {
-    return { top: true, target: target.toArray(), height: (cam.top - cam.bottom) / cam.zoom, dir: prevDir };
+    const height = (cam.top - cam.bottom) / cam.zoom;
+    const side = ortho && ortho !== 'top' ? ortho : undefined;
+    return { top: true, side, target: target.toArray(), height, dir: prevDir };
   }
   const offset = c.getPosition(new Vector3()).sub(target);
   const height = 2 * offset.length() * Math.tan(MathUtils.degToRad(cam.fov) / 2);
   return { top: false, target: target.toArray(), height, dir: offset.normalize().toArray() };
 }
 
-/** Puts the controls' camera on the view's target at the view's scale (works across camera types). */
-function applyView(c: Controls, v: SavedView) {
+/** Puts the controls' camera on the view's target at the view's scale (works across camera types and ortho views). */
+function applyView(c: Controls, v: SavedView, ortho: Ortho | null) {
   const [tx, ty, tz] = v.target;
   const cam = c.camera;
   if (cam instanceof OrthographicCameraImpl) {
-    void c.setLookAt(tx, ty + TOP_ALTITUDE, tz, tx, ty, tz, false);
+    const o = orthoOffset(ortho ?? 'top').multiplyScalar(TOP_ALTITUDE);
+    void c.setLookAt(tx + o.x, ty + o.y, tz + o.z, tx, ty, tz, false);
     void c.zoomTo((cam.top - cam.bottom) / v.height, false);
   } else {
     const d = v.height / (2 * Math.tan(MathUtils.degToRad(cam.fov) / 2));
@@ -132,14 +176,14 @@ function applyView(c: Controls, v: SavedView) {
  * Keeps `view` in sync with the camera and saves it (debounced) per folder. When the camera type
  * changes, the new controls take over the same target and scale instead of jumping.
  */
-function CameraSync({ view, top, project }: { view: RefObject<SavedView | undefined>; top: boolean; project?: string }) {
+function CameraSync({ view, ortho, project }: { view: RefObject<SavedView | undefined>; ortho: Ortho | null; project?: string }) {
   const controls = useThree((s) => s.controls) as Controls | null;
   useEffect(() => {
     // Until the new camera's controls arrive, `controls` may still be the old camera's.
-    if (!controls || isOrtho(controls) !== top) return;
-    if (view.current) applyView(controls, view.current);
-    else if (top) void controls.rotateTo(0, 0, false);
-  }, [controls, top, view]);
+    if (!controls || isOrtho(controls) !== (ortho !== null)) return;
+    if (view.current) applyView(controls, view.current, ortho);
+    else if (ortho) void controls.rotateTo(...ORTHO_ANGLES[ortho], false);
+  }, [controls, ortho, view]);
 
   useEffect(() => {
     if (!controls) return;
@@ -151,7 +195,7 @@ function CameraSync({ view, top, project }: { view: RefObject<SavedView | undefi
       if (project && view.current) storeView(project, view.current);
     };
     const onUpdate = () => {
-      view.current = readView(controls, view.current?.dir ?? DEFAULT_DIR);
+      view.current = readView(controls, view.current?.dir ?? DEFAULT_DIR, ortho);
       window.clearTimeout(timer);
       timer = window.setTimeout(flush, SAVE_DELAY_MS);
     };
@@ -160,7 +204,7 @@ function CameraSync({ view, top, project }: { view: RefObject<SavedView | undefi
       controls.removeEventListener('update', onUpdate);
       flush();
     };
-  }, [controls, project, view]);
+  }, [controls, ortho, project, view]);
   return null;
 }
 
@@ -168,20 +212,20 @@ function CameraSync({ view, top, project }: { view: RefObject<SavedView | undefi
  * Frames the camera on the drawn sheets: automatically when the set of sheets (or their placement) changes and
  * there was no saved view, and whenever "Dopasuj widok" is clicked. Switching cameras doesn't re-frame.
  */
-function FrameOnSheets({ sheets, top, auto, tick }: { sheets: DrawnSheet[]; top: boolean; auto: boolean; tick: number }) {
+function FrameOnSheets({ sheets, ortho, auto, tick }: { sheets: DrawnSheet[]; ortho: Ortho | null; auto: boolean; tick: number }) {
   const controls = useThree((s) => s.controls) as Controls | null;
   // Compare keys, not the `sheets` array, which is new on every store change (that would fight orbiting).
   const framed = useRef({ key: '', tick: 0 });
   useEffect(() => {
     const key = sheets.map((d) => `${d.file}@${JSON.stringify(d.placement)}`).join('|');
-    if (!controls || isOrtho(controls) !== top) return;
+    if (!controls || isOrtho(controls) !== (ortho !== null)) return;
     if (!(auto && key !== framed.current.key) && tick === framed.current.tick) return;
     framed.current = { key, tick };
-    // fitToBox snaps the rotation to the nearest 90°, so polar 0 stays a top view.
-    if (top) void controls.rotateTo(0, 0, false);
+    // fitToBox snaps the rotation to the nearest 90°, so ortho views stay exact.
+    if (ortho) void controls.rotateTo(...ORTHO_ANGLES[ortho], false);
     const box = new Box3();
     for (const d of sheets) if (d.sheet.extents) box.union(sheetBox(d.sheet.extents, d.placement));
     if (!box.isEmpty()) void controls.fitToBox(box, true, { paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1 });
-  }, [controls, sheets, top, auto, tick]);
+  }, [controls, sheets, ortho, auto, tick]);
   return null;
 }

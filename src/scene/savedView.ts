@@ -2,8 +2,13 @@
 // doesn't go through the explicit "Zapisz" of dancefloor.json). Storage can be missing or throw: then
 // the app just frames the plans as before.
 
+/** Ortho views from the side, named by where the camera stands (world y = north). */
+export type Side = 'north' | 'east' | 'south' | 'west';
+
 export type SavedView = {
+  /** Orthographic camera: from above, or from `side` when set. */
   top: boolean;
+  side?: Side;
   /** Scene point the camera looks at. */
   target: [number, number, number];
   /** Visible world height in metres: the scale shared by the perspective and the top (ortho) camera. */
