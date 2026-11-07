@@ -42,6 +42,27 @@ All AC1021, mm, pure 2D, parse in 0.1–0.5 s each.
 | Site elements | PZT-01: `PZT_UTWARDZENIA` (paving), `PZT_OGRODZENIE` (fence), `PZT_ZAKRES` (investment area), utilities `PZT_GAZ*`, `PZT_WODA P`, `PZT_KAN*`, `PZT_PRĄD` | Underlay + "don't dig here" overlay for utilities |
 | ⚠ PZT-01 registration | `A-WALL` bbox in PZT (x 1.69–17.16, y −10.74–4.56 m) ≠ floor plans (x 0.34–15.12, y −12.27–3.05 m); no `S-GRID` in PZT | Likely translated (maybe rotated) — **needs 2-point alignment** to the ground-floor plan |
 
+File names in `dwg/`: the site plan is `PROJEKT ZAGOSPODAROWANIA TERENU.dwg` ("PZT-01" in this document).
+Total: 12 DWG + 1 PDF.
+
+### Third batch: PAB-11 (path & driveway), PAB-12 (rainwater tank) — analysed 2026-11-07
+Both are **construction details** in their own local coordinates (no `S-GRID`, no `A-WALL`). They are not
+placed in 3D. They supply parameters only.
+
+| Fact | Source | Consequence |
+|---|---|---|
+| Paving build-up **T1** (path + driveway): concrete pavers 8 cm, sand bed 3 cm, base 0/31.5 20 cm, sub-base 31.5/63 20 cm → **51 cm**. Cross-fall 1.5 %, drive-over kerb on a concrete footing | PAB-11, `G-ANNO-TEXT`, `PZT_OPIS`, `PZT_TEREN PROJEKTOWANY` | Paving platforms (M4) have an excavation depth below the finished surface (default T1 = 0.51 m) and a default cross-fall of 1.5 % |
+| Sealed rainwater tank, concrete C35/45, **10 m³**, dimensions 2.4 × 3.0 m, 1.7 (height), on ≥ 20 cm sand bed, ≥ 50 cm above groundwater; emptied by truck from the fence line | PAB-12, `G-ANNO-TEXT`, `PZT_WYMIARY-1` (DIMENSION values) | "Don't dig here" obstacle with depth. **Location not in PAB-12**: take it from PZT-01 (label "PROJEKTOWANY ZBIORNIK SZCZELNY…" exists there, symbol still to be identified in M1c). Truck access to the fence line is a garden constraint |
+
+### Grid labels (for automatic elevation placement)
+- Grid bubbles are `INSERT` blocks `Siatka - AA_Grot siatki - Okrąg-…-<VIEW>` on `S-GRID-IDEN`, each with
+  an MTEXT label on the same layer (`\fArial…;\W.8;A`).
+- Ground plan: 14 labels × 2 bubbles each: `1`–`7` and `A`–`G`.
+- Each elevation or section shows one family: e.g. PAB-04 (A-A) and PAB-08 (E) show `A`–`G`; PAB-07 (N)
+  shows `1`–`7`. That is enough to match labels on the sheet to the plan's grid lines.
+- The suffix of the block name names the view (`-POZIOM 0`, `-WSCH`, …), which is a possible hint for
+  which façade a sheet is.
+
 ### Survey map (mapa do celów projektowych) — PDF only
 - 1 page A2, vector, 4 MB. Survey map with the PZT drawn over it.
 - **All map text is converted to outlines**: `pdftotext` returns only the title block, so there are
@@ -63,6 +84,14 @@ All AC1021, mm, pure 2D, parse in 0.1–0.5 s each.
   grid; cut/fill = Σ(Δh × cell area). Avoids constrained triangulation and mesh booleans.
 - **GPL isolation:** run libredwg-web in a dedicated Web Worker (GPL-3.0); rest of app any license.
   Irrelevant for private use, cheap to keep clean.
+- **File access:** the user picks the project folder (the one holding the DWGs/PDF) with the File System
+  Access API directory picker. The directory handle is persisted in IndexedDB, so reopening needs only
+  one permission click. The project JSON lives in that folder and references sheets **by filename**.
+  Chromium-only is accepted (personal tool).
+- **UI language: Polish.** Code, identifiers, comments and docs stay in English.
+- **Elevation/section placement:** automatic by matching `S-GRID-IDEN` labels between the sheet and the
+  ground plan. Manual fallback when that fails: pick 2 grid lines on the sheet and the matching 2 on the
+  plan.
 
 ## 3. Stack
 
@@ -75,7 +104,7 @@ All AC1021, mm, pure 2D, parse in 0.1–0.5 s each.
 | Terrain seed | `delaunator`, only to rasterize survey points into the grid |
 | PDF underlay | `pdfjs-dist` (survey map until a DWG version exists) |
 | State | `zustand` (+ simple command stack for undo/redo) |
-| Persistence | File System Access API (project JSON next to the DWGs), IndexedDB fallback |
+| Persistence | File System Access API (directory handle, project JSON next to the DWGs); IndexedDB stores the handle only |
 | Later/optional | `web-ifc` (IFC house), `manifold-3d` (only if real booleans are ever needed) |
 
 No CAD framework (cad-viewer/realdwg-web) — too broad for this scope; can be used as a reference
@@ -91,9 +120,21 @@ type Project = {
   features: Feature[];             // ordered; applied on top of terrain.base
   house?: { source: 'massing' | 'ifc'; ... };
 };
-type Sheet = { id; file: string; role: 'ground' | 'attic' | 'roof' | 'site';
-  elevation: number;               // m, where the sheet is drawn in 3D (e.g. 0, 3.29, 9.12)
+// A sheet has three independent aspects: what kind of drawing it is, how it is placed in 3D,
+// and how its own 2D coordinates map onto the reference (ground-floor plan) coordinates.
+// Storey (ground/attic/roof) is NOT a kind — those are all `plan` sheets at different z.
+type Sheet = { id; file: string;
+  kind: 'plan' | 'elevation' | 'section' | 'site' | 'pdf'    // pdf = survey map underlay
+      | 'detail';           // PAB-11/12: parameters only, not drawn in 3D (placement/transform unused)
+  placement:
+    | { type: 'horizontal'; z: number }                 // m rel. ±0.00; e.g. ground 0, attic 3.29, roof 9.12
+    | { type: 'vertical'; line: [Vec2, Vec2] };         // standing on a plan line (façade / section cut)
+  transform: Similarity2D;  // sheet coords → reference plan coords (metres)
+                            //  plan: identity (S-GRID-1 coincides)
+                            //  site, pdf: from 2-point alignment
+                            //  elevation, section: from S-GRID-1 lines (x along `line`; y = height rel. ±0.00)
   layers: Record<string, { visible: boolean; color?: string }> };
+type Similarity2D = { scale: number; rotation: number /* rad */; translate: Vec2 };
 type Feature =
   | { kind: 'platform'; polygon: Vec2[]; z: number; material: 'grass'|'paving'|'gravel' }
   | { kind: 'slope'; from: FeatureId | Edge; ratio: number /* 1:n */ }
@@ -104,15 +145,39 @@ Designed surface = evaluate features in order over the grid. Never mutate `terra
 
 ## 5. Milestones (each with acceptance criteria)
 
-**M1 — DWG underlay viewer**
-- Worker parses DWG → normalized geometry (LINE, ARC, CIRCLE, LWPOLYLINE, SPLINE→polyline,
+**M1 — DWG underlay viewer** (three sub-milestones, each shippable on its own).
+Sheets are positioned by `kind`, `placement` and `transform` as defined in §4 (single source of truth,
+don't redefine here).
+
+**M1a — Worker, normalization, stacked plans**
+- Open the project folder (§2 File access); list the DWGs in it. Auto-suggest `kind` from the filename
+  (`RZUT` → plan, `ELEWACJA` → elevation, `PRZEKRÓJ` → section, `ZAGOSPODAROWANIA` → site, otherwise
+  detail) and default `z` for plans (`PARTERU` 0, `PODDASZA` 3.29, `DACHU` 9.12). The user confirms or
+  fixes these once in the sheet list, and the result is saved in the project JSON.
+- Worker parses DWG → normalized geometry in metres (LINE, ARC, CIRCLE, LWPOLYLINE, SPLINE→polyline,
   INSERT expanded with transforms, MTEXT as text sprites; skip HATCH/DIMENSION at first).
-- Layer panel with per-layer toggle; default-hidden noise layers from §1.
-- Each sheet placed at its `elevation`; sheets stack correctly (grids coincide).
-- Sheet roles: `plan` (horizontal, at Z) | `elevation`/`section` (vertical plane; placed on a façade
-  line, x calibrated by `S-GRID-1`, y = height rel. ±0.00) | `site` (horizontal, needs alignment).
-- 2-point alignment tool (pick 2 points on sheet → 2 points on reference sheet) for PZT-01.
-- ✅ All 11 files open in < 2 s each; plans stack; elevations stand on their façades; PZT aligned.
+- Layer panel with per-layer toggle; noise layers from §1 hidden by default.
+- Plan sheets (PAB-01/02/03) drawn horizontally at their `z` with identity `transform`.
+- ✅ Each of the 12 DWGs parses in the worker in < 2 s; PAB-01/02/03 stack with `S-GRID-1` lines
+  coinciding (< 1 mm); layer toggles work; reopening the app restores the folder after one permission click.
+
+**M1b — Elevations and sections on their lines**
+- Read `S-GRID-IDEN` labels + their grid lines on the sheet and on the ground plan; match labels;
+  derive `placement.line` and `transform` (x along the line, y = height rel. ±0.00).
+- If fewer than 2 labels match, or they're ambiguous → manual fallback: pick 2 grid lines on the
+  sheet + the 2 matching ones on the plan.
+- ✅ PAB-04..10 placed automatically (or flagged with a reason); grid lines on each vertical sheet coincide
+  with the plan's grid lines (< 1 cm in plan); ±0.00 on the sheet sits at z = 0.
+
+**M1c — 2-point alignment (site plan, PDF)**
+- Tool: pick 2 points on the sheet → 2 points on the reference plan → `Similarity2D` (show the
+  resulting scale; for DWG→DWG it should be 1.000).
+- Apply to PZT-01 and the survey PDF (rendered to a texture via `pdfjs-dist`). Persist in the project JSON.
+- Identify the rainwater tank (PAB-12) outline in PZT-01, and show it with utilities as an obstacle.
+- ✅ PZT-01 `A-WALL` lines lie on the ground-plan walls within 2 cm; PDF house outline visibly matches;
+  alignment survives reload.
+
+PAB-11 and PAB-12 are detail sheets: no placement, used only for the parameters recorded in §1.
 
 **M2 — Levels & references**
 - Extract labels (strip MTEXT formatting first):
@@ -137,7 +202,10 @@ Designed surface = evaluate features in order over the grid. Never mutate `terra
 - ✅ Terrain around the house matches all Ti values within 2 cm; contour lines every 0.25 m; 60 fps.
 
 **M4 — Garden tools (core value)**
-- Platform: draw polygon snapped to underlay vertices/edges, set Z numerically.
+- Platform: draw polygon snapped to underlay vertices/edges, set Z numerically. Paving platforms have a
+  build-up depth (default T1 = 0.51 m, PAB-11) for excavation volume, and a cross-fall (default 1.5 %).
+- Obstacles: utilities and the rainwater tank (PAB-12, 10 m³, depth ~1.7 m + 0.2 m bed) warn when a cut
+  reaches them. Keep truck access from the fence line to the tank.
 - Slope: from platform edge down/up to terrain with ratio 1:n; retaining wall alternative.
 - Undo/redo, edit vertices, delete.
 - Cut/fill readout (m³) per feature and total; height-difference colour map (designed − existing).
@@ -161,7 +229,8 @@ Designed surface = evaluate features in order over the grid. Never mutate `terra
   associate by proximity if needed.
 - Walls are segmented LINEs with gaps at openings; loop detection (M5) needs tolerance + manual fallback.
 - Default libredwg-web build has DXF read disabled — if the site map arrives as DXF, use a small DXF
-  parser or convert to DWG; don't rebuild the WASM.
+  parser or convert to DWG; don't rebuild the WASM. (Verified in practice; the 0.8.6 README claims
+  DXF read works in the default build, which is not true for the published WASM.)
 - Utilities (`PZT_GAZ*`, `PZT_WODA P`, `PZT_KAN*`, `PZT_PRĄD`): show as an overlay and warn when a
   cut feature crosses them.
 - Title block contains personal data — never commit sample DWGs to a public repo.
@@ -169,3 +238,4 @@ Designed surface = evaluate features in order over the grid. Never mutate `terra
 
 ## 7. Out of scope
 Editing/saving DWG, dimensioning, printing sheets, multi-user, MEP, structural accuracy.
+For now: handling revised DWGs (same filename, changed content). Saved settings are simply reused.

@@ -9,7 +9,7 @@ acceptance criteria, and risks. Read only the section you need for the current t
 changes, update PLAN.md in the same change.
 
 ## Status
-- Pre-scaffold: no app code yet. Next step is **M1 (DWG underlay viewer)**.
+- Pre-scaffold: no app code yet. Next step is **M1a (worker, normalization, stacked plans)**.
 - Track milestone/task progress in PLAN.md (or a `tasks/` file created via `planning-and-task-breakdown`).
 
 ## Stack (planned, see PLAN.md §3)
@@ -47,13 +47,14 @@ None yet. When scaffolding, add `dev`, `build`, `test` (Vitest), `lint`, `typech
   Check for a matching skill before starting work, and follow skill steps in order, including verification.
 - Its core behaviors apply: surface assumptions, stop on confusion, push back, keep it simple, stay in
   scope, verify instead of assuming.
-- Definition of Done: tests pass, no regressions, behavior verified at runtime (in the browser), docs/PLAN.md updated.
+- Definition of Done: tests pass, no regressions, behavior verified at runtime (in the browser, by the user, see below), docs/PLAN.md updated.
 - Project-specific notes:
   - Spec = PLAN.md. Use `spec-driven-development` to sharpen a milestone's section, then
     `planning-and-task-breakdown`.
   - No quality bar is written yet. Run `constraint-driven-development` once after scaffolding (→ `CONSTRAINTS.md`).
   - Test-first targets: DWG normalization, MTEXT stripping, label regexes, grid evaluation, cut/fill volumes.
-  - Use `source-driven-development` for three/r3f/drei/libredwg-web/pdfjs APIs, and
-    `browser-testing-with-devtools` to check the 3D view.
+  - Use `source-driven-development` for three/r3f/drei/libredwg-web/pdfjs APIs.
+  - **The user does browser verification.** Don't drive a browser. At the end of a slice, give a short
+    "verify in browser" checklist (what to open, what to click, what you should see) and wait for the result.
   - Deviations from PLAN.md need an ADR (`documentation-and-adrs`, `docs/adr/`).
   - Commits: small and atomic, on a branch, never straight to `main` (`git-workflow-and-versioning`).
