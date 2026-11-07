@@ -1,7 +1,9 @@
-# DanceFloor — DWG-based 3D site planner for garden levels (web)
+# DanceFloor — build a 3D project from DWG sheets, then edit it (web)
 
-Personal tool: load the architect's DWG sheets, see the house + plot in 3D, and design garden
-levels (terraces, slopes, retaining walls) with exact heights. Not a general CAD editor.
+Personal tool: load a set of the architect's DWG sheets (plans, elevations, sections, site plan) and turn
+them into a 3D project of the house and plot. Then edit that project: the first editing features are
+garden levels (terraces, slopes, retaining walls) with exact heights and cut/fill volumes. The DWGs stay
+read-only; edits live in DanceFloor's own project file. Not a general CAD editor.
 
 ## 1. Input analysis (done on the real files, 2026-11-07)
 

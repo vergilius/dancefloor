@@ -1,8 +1,8 @@
 # DanceFloor (repo: dancefloor)
 
-Personal, local-only web app: load the architect's DWG sheets as a read-only underlay, show house + plot
-in 3D, and design garden levels (platforms, slopes, retaining walls) with exact heights and cut/fill volumes.
-Not a CAD editor.
+Personal, local-only web app: build a 3D project (house + plot) from the architect's DWG sheets, then edit
+it. The first editing features are garden levels (platforms, slopes, retaining walls) with exact heights and
+cut/fill volumes. DWGs are a read-only source; edits live in our own project JSON. Not a general CAD editor.
 
 **`PLAN.md` is the spec.** It holds the input-file analysis, decisions, data model, milestones M1–M6 with
 acceptance criteria, and risks. Read only the section you need for the current task. When a decision
