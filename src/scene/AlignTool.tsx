@@ -1,11 +1,13 @@
 // 2-point tool (PLAN.md §5 M1c), top view only: A on the sheet → A′ on the reference → B → B′.
 import { useEffect, useMemo, useState } from 'react';
 import { useThree, type ThreeEvent } from '@react-three/fiber';
+import { Html } from '@react-three/drei';
 import { BufferAttribute, BufferGeometry, OrthographicCamera } from 'three';
 import type { NormalizedSheet } from '../dwg/types';
 import { apply, IDENTITY, invert, type Similarity2D, type Vec2 } from '../project/align';
 import { layerVisible, type LayerOverrides } from '../project/layerGroups';
 import { useProject } from '../state/store';
+import { t } from '../ui/strings';
 import { toScene, type SheetPlacement } from './coords';
 import { endpoints, nearest, type Endpoints } from './snap';
 
@@ -94,7 +96,18 @@ export function AlignTool({ drawn }: { drawn: Drawn[] }) {
       {placed.map((m, i) => (
         <Marker key={i} p={m.world} color={m.color} size={10} />
       ))}
-      {hover && <Marker p={hover.world} color={hover.snapped ? COLORS.snapped : COLORS.free} size={hover.snapped ? 12 : 7} />}
+      {hover && (
+        <>
+          <Marker p={hover.world} color={hover.snapped ? COLORS.snapped : COLORS.free} size={hover.snapped ? 12 : 7} />
+          {/* Which point this click places; snapping status unless the source has nothing to snap to (PDF). */}
+          <Html position={toScene(hover.world.x, hover.world.y, MARKER_Z)} style={{ pointerEvents: 'none' }}>
+            <div className="align-cursor" style={{ borderColor: sourceStep ? COLORS.source : COLORS.target }}>
+              <strong>{t.align.labels[align.picks.length]}</strong>
+              {(!sourceStep || snaps.source) && <> · {hover.snapped ? t.align.snapped : t.align.free}</>}
+            </div>
+          </Html>
+        </>
+      )}
     </>
   );
 }

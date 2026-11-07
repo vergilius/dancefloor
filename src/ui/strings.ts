@@ -72,8 +72,18 @@ export const t = {
     identity: 'niewyrównany (1:500, bez obrotu)',
     start: 'Wyrównaj',
     startTitle: 'Wyrównaj dwoma punktami w widoku z góry: A na arkuszu, A′ na rzucie, B, B′',
-    tool: 'Wyrównaj',
-    steps: ['kliknij A na arkuszu', 'kliknij A′ na rzucie odniesienia', 'kliknij B na arkuszu', 'kliknij B′ na rzucie odniesienia'],
+    /** Per step: what to click and on which sheet (`src` = the sheet being aligned, `ref` = the reference plan). */
+    steps: [
+      (src: string) => `A: kliknij narożnik budynku na ${src} (np. róg ściany zewnętrznej)`,
+      (_src: string, ref: string) => `A′: kliknij ten sam narożnik na ${ref}`,
+      (src: string) => `B: kliknij drugi narożnik na ${src}, jak najdalej od A (np. przeciwległy róg budynku)`,
+      (_src: string, ref: string) => `B′: kliknij ten sam drugi narożnik na ${ref}`,
+    ],
+    labels: ['A', 'A′', 'B', 'B′'],
+    stepOf: (n: number) => `krok ${n}/4`,
+    snapped: 'przyciągnięty do końca linii',
+    free: 'bez przyciągania',
+    referenceFallback: 'rzucie parteru',
     escHint: 'Esc anuluje',
     cancel: 'Anuluj',
     reasons: {

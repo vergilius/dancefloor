@@ -190,16 +190,23 @@ function Scene({ project }: { project?: string }) {
 function AlignPrompt() {
   const align = useProject((s) => s.align);
   const cancelAlign = useProject((s) => s.cancelAlign);
+  const ref = useReference();
   if (!align) return null;
+  const n = align.picks.length;
+  const step = t.align.steps[n];
   return (
     <span className="align-prompt">
-      {t.align.tool} {align.file}: {t.align.steps[align.picks.length]} · {t.align.escHint}{' '}
+      <span className="muted">{t.align.stepOf(n + 1)}</span> <strong>{step?.(sheetName(align.file), ref ? sheetName(ref.file) : t.align.referenceFallback)}</strong> ·{' '}
+      {t.align.escHint}{' '}
       <button type="button" onClick={cancelAlign}>
         {t.align.cancel}
       </button>
     </span>
   );
 }
+
+/** Short sheet name for prompts: "PAB-01 - RZUT PARTERU.dwg" → "PAB-01", others without the extension. */
+const sheetName = (file: string) => file.replace(/\.(dwg|pdf)$/i, '').split(' - ')[0]!;
 
 const isOrtho = (c: Controls) => c.camera instanceof OrthographicCameraImpl;
 
