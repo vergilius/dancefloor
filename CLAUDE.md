@@ -9,7 +9,7 @@ acceptance criteria, and risks. Read only the section you need for the current t
 changes, update PLAN.md in the same change.
 
 ## Status
-- Pre-scaffold: no app code yet. Next step is **M1a (worker, normalization, stacked plans)**.
+- M1a in progress (worker, normalization, stacked plans). Progress lives in `tasks/todo.md`.
 - Track milestone/task progress in PLAN.md (or a `tasks/` file created via `planning-and-task-breakdown`).
 
 ## Stack (planned, see PLAN.md §3)
@@ -18,7 +18,13 @@ wasm in `public/wasm/`) · three-mesh-bvh · delaunator · pdfjs-dist · zustand
 Node 24, **pnpm 12** (pinned via `packageManager`). Don't use npm or yarn.
 
 ## Commands
-None yet. When scaffolding, add `dev`, `build`, `test` (Vitest), `lint`, `typecheck` scripts and list them here.
+- `pnpm dev`: Vite dev server
+- `pnpm build`: typecheck + production build
+- `pnpm test`: Vitest, single run (`pnpm test:watch` for watch mode)
+- `pnpm lint`: ESLint
+- `pnpm typecheck`: `tsc --noEmit`
+
+TypeScript is pinned to `~6.0` because typescript-eslint 8 doesn't support TS 7 yet.
 
 ## Domain rules (easy to get wrong)
 - DWG units are **mm** (`INSUNITS=4`). The scene is in **metres**, so scale by 0.001 on import.

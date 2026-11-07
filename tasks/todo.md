@@ -1,6 +1,6 @@
 # M1a task list
 
-Next: T1 (scaffold) on branch `feat/m1a`.
+Next: user checks T1 in the browser (`pnpm dev` → orbitable grid), then T2 (folder access). Branch `feat/m1a`.
 
 Commands (once T1 is done): `pnpm test`, `pnpm build`, `pnpm lint`, `pnpm typecheck`, `pnpm dev`.
 Every task: tests pass, build is clean, and a "verify in browser" checklist goes to the user (CLAUDE.md).
@@ -15,9 +15,9 @@ Every task: tests pass, build is clean, and a "verify in browser" checklist goes
 `dev`, `build`, `test`, `lint`, `typecheck` and list them in CLAUDE.md. Replace the `npm init` fields in
 `package.json`.
 **Acceptance criteria:**
-- [ ] `pnpm dev` shows the shell with an orbitable 3D grid
-- [ ] `pnpm build`, `pnpm test` (1 smoke test), `pnpm lint`, `pnpm typecheck` all pass
-- [ ] Dependencies are limited to the planned stack (react, three, @react-three/fiber, @react-three/drei, zustand; dev: vite, vitest, typescript, eslint)
+- [ ] `pnpm dev` shows the shell with an orbitable 3D grid (user check pending)
+- [x] `pnpm build`, `pnpm test` (1 smoke test), `pnpm lint`, `pnpm typecheck` all pass
+- [x] Dependencies are limited to the planned stack (react, three, @react-three/fiber, @react-three/drei; zustand deferred to T7 when first used; dev: vite, vitest, typescript ~6.0, eslint + typescript-eslint, react-hooks plugin)
 **Verification:** all four commands are green; user opens `pnpm dev` and sees the grid.
 **Dependencies:** none
 **Files:** `package.json`, `vite.config.ts`, `tsconfig*.json`, `eslint.config.js`, `index.html`, `src/main.tsx`, `src/App.tsx`, `CLAUDE.md`

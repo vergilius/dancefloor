@@ -1,0 +1,10 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #1f2328;
+  background: #f6f7f9;
+}
+html, body, #root { height: 100%; margin: 0; }
+.app { display: grid; grid-template-columns: 300px 1fr; height: 100%; }
+.sidebar { padding: 16px; border-right: 1px solid #d0d7de; overflow-y: auto; background: #fff; }
+.sidebar h1 { font-size: 18px; margin: 0 0 12px; }
+.viewport { position: relative; min-width: 0; }
