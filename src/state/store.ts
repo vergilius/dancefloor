@@ -72,6 +72,8 @@ export const useProject = create<ProjectState>()((set, get) => ({
       ...saved.filter((s) => !present.has(s.file)).map((s) => ({ ...s, source: 'saved' as const, missing: true })),
     ];
     set({ dir, sheets, dirty: false, loadError, saveError: undefined, parsed: {} });
+    // Plans are drawn in 3D (T8), so parse them right away. The worker handles one file at a time.
+    for (const s of sheets) if (s.kind === 'plan' && s.type === 'dwg' && !s.missing) void get().parse(s.file);
   },
 
   setKind(file, kind) {
@@ -83,6 +85,8 @@ export const useProject = create<ProjectState>()((set, get) => ({
         return { ...r, kind, placement: { type: 'horizontal', z } };
       }),
     }));
+    const row = get().sheets.find((r) => r.file === file);
+    if (kind === 'plan' && row?.type === 'dwg' && !row.missing && !get().parsed[file]) void get().parse(file);
   },
 
   setZ(file, z) {
