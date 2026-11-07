@@ -1,6 +1,7 @@
 # M1c task list
 
-Next: plan written, waiting for user approval. Then Task 1.
+Next: Task 2 (draw site sheets through their transform). T1 verified in browser 2026-11-08.
+Note (T1): autoAlign votes with an even sample of ~200 reference endpoints (`VOTERS` in `src/project/align.ts`) to keep it fast.
 Note (spec): data facts and expected values are in PLAN.md §5 M1c (PZT-01: rotation −11.27506°, scale 1,
 translation 0, 66 % endpoints matched; tank at plan x 8.785–11.785, y −15.838…−13.438).
 M1b task notes are in git history (`tasks/todo.md` at 237fd7b).
@@ -15,8 +16,8 @@ Every task: typecheck, lint and build green, and a "verify in browser" checklist
 derives and caches it against the reference plan. Site sheets auto-parse on open. The sheet list shows, per site sheet,
 rotation (°), scale, translation (m) and matched share, or the reason it failed.
 **Acceptance criteria:**
-- [ ] PZT-01 shows rotation −11.275° (±0.01°), scale 1.000, translation ≈ (0, 0), share ≈ 66 %
-- [ ] A site sheet with too few matches shows a reason and no transform
+- [x] PZT-01 shows rotation −11.275° (±0.01°), scale 1.000, translation ≈ (0, 0), share ≈ 66 %
+- [x] A site sheet with too few matches shows a reason and no transform
 **Verification:** `pnpm check`; user opens the folder and reads the values.
 **Dependencies:** none
 **Files:** `src/project/align.ts`, `src/state/site.ts`, `src/state/store.ts`, `src/ui/SheetList.tsx`, `src/ui/strings.ts`
