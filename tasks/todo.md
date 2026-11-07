@@ -1,8 +1,9 @@
 # M1a task list
 
-Next: T6 (MTEXT stripping). T5 code done; its placement check waits for T8. Branch `feat/m1a`.
+Next: Checkpoint B (user checks the sheet panel on all 12 files), then T7. T5/T6 placement and readability checks wait for T8.
+Note (T6): only MTEXT in the files (4962; no TEXT/ATTRIB, no `\P`); codes used: `\f…;` `\W…;` `\L`. Some words are split into two MTEXTs at diacritics in the source (`KRAW`+`ĘŻNIK`): not ours to fix. Branch `feat/m1a`.
 Note (T5): all 12 DWGs expand with no missing/cyclic/too-deep blocks. ELLIPSE added to normalize (user request; 756 on PAB-02, mostly inside blocks).
-Note (T4): DWG closed LWPOLYLINE = `flag & 0x200`; ARC angles are radians; PAB-01 paper space isn't in `db.entities` (no `(paper space)` count).
+Note (T4): DWG closed LWPOLYLINE = `flag & 0x200`; ARC angles are radians. Paper space IS in `db.entities` and `isInPaperSpace` is never set: filter by `ownerBlockRecordSoftId` = *Model_Space handle (fixed in T6; PAB-01 has 268 paper-space entities).
 Note: the WASM is loaded by the glue's own `new URL(…, import.meta.url)` (Vite bundles it); no copy script, no `public/wasm/`.
 
 Commands: `pnpm dev`, `pnpm build`, `pnpm lint`, `pnpm typecheck`. No automated tests (CLAUDE.md).
@@ -90,8 +91,8 @@ rotation, nesting. Entities on layer `0` inside a block take the INSERT's layer.
 **Description:** `stripMtext()` removes `\f…;`, `\W…;`, `\H…;`, `\C…;`, `\Q…;`, `\T…;`, `\A…;`, `\L`/`\l`, `\O`/`\o`,
 `{}` and `\P` → newline, and unescapes `\\`. MTEXT/TEXT become text primitives (m, rotation, height).
 **Acceptance criteria:**
-- [ ] `\fArial|b0|i0|c238|p34|;\W.8;1` → `1`; `0,00= +355.40 m npm` survives intact; Polish diacritics preserved; leftover `\` codes logged as dev warnings
-- [ ] Texts carry their insertion point in metres, plus height and rotation
+- [x] `\fArial|b0|i0|c238|p34|;\W.8;1` → `1`; `0,00= +355.40 m npm` survives intact; Polish diacritics preserved; leftover `\` codes logged as dev warnings (and counted in the panel: 0 on all files)
+- [x] Texts carry their insertion point in metres, plus height and rotation (through INSERT transforms)
 **Verification:** checked in the browser once T8 draws texts (grid labels, level labels readable).
 **Dependencies:** T4
 **Files:** `src/dwg/mtext.ts`, `src/dwg/normalize.ts`

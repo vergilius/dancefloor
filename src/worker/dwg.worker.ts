@@ -29,7 +29,11 @@ async function parse({ name, bytes }: ParseRequest): Promise<ParseSummary> {
       entityCount: db.entities.length,
       entityCounts,
       layerNames: [...layers].sort((a, b) => a.localeCompare(b, 'pl')),
-      sheet: normalize(db.entities, new Map(db.tables.BLOCK_RECORD.entries.map((b) => [b.name, b]))),
+      sheet: normalize(
+        db.entities,
+        new Map(db.tables.BLOCK_RECORD.entries.map((b) => [b.name, b])),
+        db.tables.BLOCK_RECORD.entries.find((b) => b.name.toUpperCase() === '*MODEL_SPACE')?.handle,
+      ),
       ms: Math.round(performance.now() - t0),
     };
   } finally {

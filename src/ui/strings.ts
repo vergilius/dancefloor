@@ -17,6 +17,8 @@ export const t = {
   drawn: 'Narysowane',
   segments: 'odcinków',
   skipped: 'Pominięte',
+  texts: 'Teksty',
+  textLeftovers: 'z nieznanymi kodami',
   folderUnsupported:
     'Ta przeglądarka nie obsługuje dostępu do folderów (File System Access API). Użyj Chrome lub Edge.',
   fileCount: (n: number) => `${n} ${n === 1 ? 'plik' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'pliki' : 'plików'}`,

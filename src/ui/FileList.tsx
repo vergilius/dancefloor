@@ -59,7 +59,7 @@ const m = (v: number) => v.toFixed(2);
 
 function Summary({ s }: { s: ParseSummary }) {
   const types = Object.entries(s.entityCounts).sort((a, b) => b[1] - a[1]);
-  const { extents: x, drawn, skipped, segmentCount } = s.sheet;
+  const { extents: x, drawn, skipped, segmentCount, texts, textLeftovers } = s.sheet;
   return (
     <div className="summary">
       <div>
@@ -78,6 +78,11 @@ function Summary({ s }: { s: ParseSummary }) {
       </div>
       <div className="muted">
         {t.skipped}: {counts(skipped)}
+      </div>
+      <div className="muted">
+        {t.texts} ({texts.length}
+        {textLeftovers > 0 && <span className="error">, {textLeftovers} {t.textLeftovers}</span>}):{' '}
+        {[...new Set(texts.map((x) => x.text))].slice(0, 12).join(' · ')}
       </div>
       <div className="muted">
         {t.layers} ({s.layerNames.length}): {s.layerNames.join(', ')}
