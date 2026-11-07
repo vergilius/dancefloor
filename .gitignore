@@ -156,5 +156,3 @@ dwg/
 # macOS
 .DS_Store
 
-# Copied from node_modules by scripts/copy-wasm.mjs
-public/wasm/

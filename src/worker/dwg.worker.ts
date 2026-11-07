@@ -6,8 +6,8 @@ import type { ParseRequest, ParseResponse, ParseSummary } from './protocol';
 declare const self: DedicatedWorkerGlobalScope;
 
 let libPromise: ReturnType<typeof LibreDwg.create> | undefined;
-// WASM is served from public/wasm/ (copied by scripts/copy-wasm.mjs).
-const getLib = () => (libPromise ??= LibreDwg.create(`${import.meta.env.BASE_URL}wasm`));
+// No path: the glue loads its WASM via `new URL(…, import.meta.url)`, which Vite bundles as a hashed asset.
+const getLib = () => (libPromise ??= LibreDwg.create());
 
 async function parse({ name, bytes }: ParseRequest): Promise<ParseSummary> {
   const lib = await getLib();

@@ -14,12 +14,12 @@ changes, update PLAN.md in the same change.
 
 ## Stack (planned, see PLAN.md §3)
 Vite + React + TypeScript · three / @react-three/fiber / drei · `@mlightcad/libredwg-web` (in a Web Worker,
-wasm in `public/wasm/`) · three-mesh-bvh · delaunator · pdfjs-dist · zustand (+ command stack for undo).
+WASM bundled by Vite) · three-mesh-bvh · delaunator · pdfjs-dist · zustand (+ command stack for undo).
 Node 24, **pnpm 12** (pinned via `packageManager`). Don't use npm or yarn.
 
 ## Commands
-- `pnpm dev`: copies libredwg's WASM to `public/wasm/` (gitignored), then starts the Vite dev server
-- `pnpm build`: WASM copy + typecheck + production build
+- `pnpm dev`: Vite dev server
+- `pnpm build`: typecheck + production build
 - `pnpm lint`: ESLint
 - `pnpm typecheck`: `tsc --noEmit`
 - `pnpm check`: build + lint + floor guard + bundle budget + `pnpm audit` (see CONSTRAINTS.md)

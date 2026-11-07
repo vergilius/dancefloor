@@ -12,7 +12,7 @@ This file is the source of truth. `scripts/bundle-budget.mjs` reads its budgets 
 - No unfinished work: `throw new Error("Not implemented")`, empty `catch {}`, `TODO` standing in for code
 - No personal data: nothing under `dwg/`, and no `.dwg`/`.dxf` file is ever tracked by git
 - No runtime network calls in `src/`: no `fetch(`, `XMLHttpRequest`, `WebSocket`, `EventSource`, `sendBeacon`,
-  or `http(s)://` imports. The WASM ships from `public/wasm/` via the libredwg glue, not via our own fetch.
+  or `http(s)://` imports. The WASM is a Vite-bundled asset loaded by the libredwg glue, not via our own fetch.
 - No automated tests are added (user decision, CLAUDE.md), so there are no test-skip rules
 - This file doesn't get weakened in the same change as the code that was failing
 
