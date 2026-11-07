@@ -156,7 +156,7 @@ don't redefine here).
   (`RZUT` → plan, `ELEWACJA` → elevation, `PRZEKRÓJ` → section, `ZAGOSPODAROWANIA` → site, otherwise
   detail) and default `z` for plans (`PARTERU` 0, `PODDASZA` 3.29, `DACHU` 9.12). The user confirms or
   fixes these once in the sheet list, and the result is saved in the project JSON.
-- Worker parses DWG → normalized geometry in metres (LINE, ARC, CIRCLE, LWPOLYLINE, SPLINE→polyline,
+- Worker parses DWG → normalized geometry in metres (LINE, ARC, CIRCLE, ELLIPSE, LWPOLYLINE, SPLINE→polyline,
   INSERT expanded with transforms, MTEXT as text sprites; skip HATCH/DIMENSION at first).
 - Layer panel with per-layer toggle; noise layers from §1 hidden by default.
 - Plan sheets (PAB-01/02/03) drawn horizontally at their `z` with identity `transform`.

@@ -1,7 +1,7 @@
 # M1a task list
 
 Next: T6 (MTEXT stripping). T5 code done; its placement check waits for T8. Branch `feat/m1a`.
-Note (T5): all 12 DWGs expand with no missing/cyclic/too-deep blocks. ELLIPSE (756 on PAB-02, mostly inside blocks) is counted as skipped; not in T4's list.
+Note (T5): all 12 DWGs expand with no missing/cyclic/too-deep blocks. ELLIPSE added to normalize (user request; 756 on PAB-02, mostly inside blocks).
 Note (T4): DWG closed LWPOLYLINE = `flag & 0x200`; ARC angles are radians; PAB-01 paper space isn't in `db.entities` (no `(paper space)` count).
 Note: the WASM is loaded by the glue's own `new URL(…, import.meta.url)` (Vite bundles it); no copy script, no `public/wasm/`.
 
@@ -63,7 +63,7 @@ Clicking a file in the list shows its counts.
 ## Phase 2: Geometry (pure functions, checked in the UI)
 
 ### Task 4: Normalize basic entities
-**Description:** `normalize()` for LINE, ARC, CIRCLE, LWPOLYLINE (including bulge), SPLINE → segments in
+**Description:** `normalize()` for LINE, ARC, CIRCLE, ELLIPSE, LWPOLYLINE (including bulge), SPLINE → segments in
 metres (×0.001), grouped by layer. Unknown types are counted in `skipped`. Input types come from `src/dwg/types.ts`.
 **Acceptance criteria:**
 - [x] Coordinates in metres (PAB-01 sheet extents −7.56…22.26 × −19.47…6.56 m, user checked; `A-WALL` alone is 0.34…15.12 × −12.27…3.05 m, so the house is right and the grid lines/annotations extend past it); arcs/circles tessellated with ≤ 1 mm chord error; LWPOLYLINE bulges and closed flags handled
