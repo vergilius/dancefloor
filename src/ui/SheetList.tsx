@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { NormalizedSheet } from '../dwg/types';
 import { SHEET_KINDS, type SheetKind } from '../project/projectFile';
-import { useProject, type SheetRow } from '../state/store';
+import { useProject, type PdfState, type SheetRow } from '../state/store';
 import { planeValue, withPlane } from '../project/vertical';
 import { deriveSite, unsavedTransforms } from '../state/site';
 import { deriveVertical, isVertical, placementFor, unsavedPlacements, useReference, type VerticalKind } from '../state/vertical';
@@ -70,6 +70,7 @@ export function SheetList() {
 
 function SheetItem({ sheet: s }: { sheet: SheetRow }) {
   const p = useProject((st) => st.parsed[s.file]);
+  const pdf = useProject((st) => st.pdfs[s.file]);
   const parse = useProject((st) => st.parse);
   const setKind = useProject((st) => st.setKind);
   const setZ = useProject((st) => st.setZ);
@@ -101,6 +102,7 @@ function SheetItem({ sheet: s }: { sheet: SheetRow }) {
         {s.source === 'suggested' && <span className="tag suggested">{t.suggested}</span>}
         {s.missing && <span className="error">{t.fileMissing}</span>}
       </div>
+      {s.kind === 'pdf' && pdf && <PdfLine pdf={pdf} />}
       {p?.status === 'parsing' && <div className="muted">{t.parsing}</div>}
       {p?.status === 'error' && <div className="error">{p.message}</div>}
       {p?.status === 'done' && (
@@ -216,6 +218,24 @@ function AlignLine({ row, sheet }: { row: SheetRow; sheet: NormalizedSheet }) {
           </button>
         </>
       )}
+    </div>
+  );
+}
+
+function PdfLine({ pdf }: { pdf: PdfState }) {
+  if (pdf.status === 'rendering') return <div className="muted">{t.pdf.rendering}</div>;
+  if (pdf.status === 'error') return <div className="error">{pdf.message}</div>;
+  const { canvas, pagePt, sheetM, dpi, clamped, ms } = pdf.render;
+  return (
+    <div>
+      {t.pdf.title}:{' '}
+      <strong>
+        {canvas.width} × {canvas.height} px
+      </strong>{' '}
+      · {dpi.toFixed(0)} dpi{clamped && <span className="error"> ({t.pdf.clamped})</span>} · {ms} ms{' '}
+      <span className="muted">
+        ({t.pdf.page} {pagePt.w.toFixed(0)} × {pagePt.h.toFixed(0)} pt · {t.pdf.sheet} {sheetM.w.toFixed(1)} × {sheetM.h.toFixed(1)} m)
+      </span>
     </div>
   );
 }

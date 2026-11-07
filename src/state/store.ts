@@ -6,6 +6,7 @@ import { DEFAULT_GROUPS, type GroupId, type Groups } from '../project/layerGroup
 import { readProjectFile, writeProjectFile, type Sheet, type SheetKind } from '../project/projectFile';
 import { suggest } from '../project/suggest';
 import type { VerticalPlacement } from '../project/vertical';
+import { renderPdf as renderPdfPage, type PdfRender } from '../pdf/render';
 import { parseDwg } from '../worker/client';
 import type { ParseSummary } from '../worker/protocol';
 
@@ -17,6 +18,8 @@ export type ParseState =
   | { status: 'done'; summary: ParseSummary }
   | { status: 'error'; message: string };
 
+export type PdfState = { status: 'rendering' } | { status: 'done'; render: PdfRender } | { status: 'error'; message: string };
+
 export type ProjectState = {
   dir?: FileSystemDirectoryHandle;
   sheets: SheetRow[];
@@ -25,6 +28,8 @@ export type ProjectState = {
   loadError?: string;
   saveError?: string;
   parsed: Record<string, ParseState>;
+  /** PDF sheets rendered to a canvas (M1c underlay). */
+  pdfs: Record<string, PdfState>;
   /** Layer groups, project-wide (T9). */
   groups: Groups;
   open(dir: FileSystemDirectoryHandle): Promise<void>;
@@ -41,6 +46,7 @@ export type ProjectState = {
   /** `derived`: placements of vertical sheets and transforms of site sheets with none saved yet, written with them. */
   save(derived?: Derived): Promise<void>;
   parse(file: string): Promise<void>;
+  renderPdf(file: string): Promise<void>;
 };
 
 export type Derived = { placements?: Record<string, VerticalPlacement>; transforms?: Record<string, Similarity2D> };
@@ -70,6 +76,7 @@ export const useProject = create<ProjectState>()((set, get) => ({
   sheets: [],
   dirty: false,
   parsed: {},
+  pdfs: {},
   groups: DEFAULT_GROUPS,
 
   async open(dir) {
@@ -94,9 +101,10 @@ export const useProject = create<ProjectState>()((set, get) => ({
       // Saved sheets whose file is gone stay in the project (and in the next save) so nothing is lost silently.
       ...saved.filter((s) => !present.has(s.file)).map((s) => ({ ...s, source: 'saved' as const, missing: true })),
     ];
-    set({ dir, sheets, groups, dirty: false, loadError, saveError: undefined, parsed: {} });
+    set({ dir, sheets, groups, dirty: false, loadError, saveError: undefined, parsed: {}, pdfs: {} });
     // Plans and vertical sheets are placed in 3D, so parse them right away. The worker handles one file at a time.
     for (const s of sheets) if (AUTO_PARSE.has(s.kind) && s.type === 'dwg' && !s.missing) void get().parse(s.file);
+    for (const s of sheets) if (s.kind === 'pdf' && s.type === 'pdf' && !s.missing) void get().renderPdf(s.file);
   },
 
   setKind(file, kind) {
@@ -111,6 +119,7 @@ export const useProject = create<ProjectState>()((set, get) => ({
     }));
     const row = get().sheets.find((r) => r.file === file);
     if (AUTO_PARSE.has(kind) && row?.type === 'dwg' && !row.missing && !get().parsed[file]) void get().parse(file);
+    if (kind === 'pdf' && row?.type === 'pdf' && !row.missing && !get().pdfs[file]) void get().renderPdf(file);
   },
 
   setZ(file, z) {
@@ -182,6 +191,21 @@ export const useProject = create<ProjectState>()((set, get) => ({
     try {
       const bytes = await (await (await dir.getFileHandle(file)).getFile()).arrayBuffer();
       setP({ status: 'done', summary: await parseDwg(file, bytes) });
+    } catch (err) {
+      setP({ status: 'error', message: errText(err) });
+    }
+  },
+
+  async renderPdf(file) {
+    const { dir } = get();
+    if (!dir) return;
+    const setP = (p: PdfState) => {
+      if (get().dir === dir) set((st) => ({ pdfs: { ...st.pdfs, [file]: p } }));
+    };
+    setP({ status: 'rendering' });
+    try {
+      const bytes = await (await (await dir.getFileHandle(file)).getFile()).arrayBuffer();
+      setP({ status: 'done', render: await renderPdfPage(bytes) });
     } catch (err) {
       setP({ status: 'error', message: errText(err) });
     }

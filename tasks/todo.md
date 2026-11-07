@@ -1,6 +1,7 @@
 # M1c task list
 
-Next: Task 5 (PDF underlay). T1–T4 and Checkpoint A verified in browser 2026-11-08.
+Next: Task 5 (PDF underlay) implemented, awaiting the user's browser check; then tick it and start Task 6. T1–T4 and Checkpoint A verified 2026-11-08.
+Note (T5): pdfjs-dist 6.x: `isEvalSupported` is gone and teardown is `loadingTask.destroy()`. pdfjs is a lazy chunk (`src/pdf/render.ts`), render state is `pdfs` in the store (not `parsed`).
 Note (T4): obstacle colour = `OBSTACLE_COLOR` via `layerColor()` in `src/project/layerGroups.ts` (lines and texts). Groups are
 global by layer name, so `A-DETL-2` is an obstacle on every sheet.
 Note (T3): `Sheet.transform` (rotation in rad) is a sheet field, not part of `placement`. A saved one wins over auto

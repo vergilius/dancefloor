@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ComponentRef, type RefObject } from 'react';
+import { useEffect, useMemo, useRef, useState, type ComponentRef, type RefObject } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { CameraControls, Grid, OrthographicCamera, PerspectiveCamera } from '@react-three/drei';
 import { Box3, MathUtils, OrthographicCamera as OrthographicCameraImpl, Vector3 } from 'three';
@@ -12,6 +12,9 @@ import { sheetBox, type SheetPlacement } from './coords';
 import { loadView, storeView, type SavedView, type Side } from './savedView';
 import { SheetObject } from './SheetObject';
 import { SheetTexts } from './SheetTexts';
+import { PdfObject } from './PdfObject';
+import type { SheetRow } from '../state/store';
+import type { PdfRender } from '../pdf/render';
 import { t } from '../ui/strings';
 
 // One colour per stacked plan, in sheet order, so the levels are easy to tell apart. Vertical sheets get their own set.
@@ -52,6 +55,26 @@ function useDrawnSheets(): DrawnSheet[] {
     }
     return [];
   });
+}
+
+/** PDF sheets just under the lines (default z −0.02), through their transform (identity until aligned, PLAN.md §5 M1c). */
+const PDF_Z = -0.02;
+
+function PdfSheets() {
+  const sheets = useProject((s) => s.sheets);
+  const pdfs = useProject((s) => s.pdfs);
+  return sheets.map((s) => {
+    const p = pdfs[s.file];
+    return s.kind === 'pdf' && p?.status === 'done' && <PdfSheet key={s.file} row={s} render={p.render} />;
+  });
+}
+
+function PdfSheet({ row, render }: { row: SheetRow; render: PdfRender }) {
+  const z = row.placement?.type === 'horizontal' ? row.placement.z : PDF_Z;
+  const { transform } = row;
+  // Stable while z and the stored transform don't change, so the quad isn't rebuilt on every render.
+  const placement = useMemo(() => ({ type: 'horizontal' as const, z, ...(transform && { transform }) }), [z, transform]);
+  return <PdfObject render={render} placement={placement} />;
 }
 
 type Controls = ComponentRef<typeof CameraControls>;
@@ -139,6 +162,7 @@ function Scene({ project }: { project?: string }) {
         <ambientLight intensity={0.8} />
         <Grid args={[100, 100]} cellSize={1} sectionSize={10} infiniteGrid fadeDistance={150} />
         <axesHelper args={[2]} />
+        <PdfSheets />
         {drawn.map((d) => {
           const visible = (layer: string) => layerVisible(groups, d.layers, layer);
           return (

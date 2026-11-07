@@ -74,6 +74,13 @@ export const t = {
       lowShare: 'mniej niż 50 % końców ścian rzutu pasuje',
     },
   },
+  pdf: {
+    rendering: 'Renderowanie PDF…',
+    title: 'Podkład',
+    page: 'strona',
+    sheet: 'w 1:500',
+    clamped: 'ograniczone do max rozmiaru tekstury',
+  },
   plane: {
     title: 'Płaszczyzna',
     cut: 'linia cięcia',
