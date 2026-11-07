@@ -9,7 +9,10 @@ const ANCHOR_X = ['left', 'center', 'right'] as const;
 // drei's anchorY type omits 'top-cap', which troika supports (troika-three-text Typesetter.js).
 const ANCHOR_Y = ['top-cap', 'middle', 'bottom-baseline'] as unknown as ('top' | 'middle' | 'bottom-baseline')[];
 
-/** Plan texts lying flat at z. fontSize = MTEXT height (looked closer to the drawings than a cap-height scale). */
+/** fontSize / MTEXT height. Picked by eye (user, T8): between 1.0 (too small) and 1.4 (cap-height match, too big). */
+const TEXT_SCALE = 1.2;
+
+/** Plan texts lying flat at z. */
 export function SheetTexts({ texts, z, color }: { texts: NormalizedText[]; z: number; color: string }) {
   return (
     <group>
@@ -22,7 +25,7 @@ export function SheetTexts({ texts, z, color }: { texts: NormalizedText[]; z: nu
             // Flat on the plan (text up = north), then the MTEXT rotation about the vertical axis.
             rotation={[-Math.PI / 2, t.rotation, 0, 'YXZ']}
             font={FONT_URL}
-            fontSize={t.height}
+            fontSize={t.height * TEXT_SCALE}
             anchorX={ANCHOR_X[a % 3]}
             anchorY={ANCHOR_Y[Math.floor(a / 3)]}
             color={color}
