@@ -3,6 +3,7 @@ export const t = {
   appTitle: 'DanceFloor',
   viewTop: 'Widok z góry',
   view3d: 'Widok 3D',
+  fitView: 'Dopasuj widok',
   loading: 'Wczytywanie…',
   noProject: 'Nie otwarto folderu projektu.',
   folderOpen: 'Otwórz folder projektu',
