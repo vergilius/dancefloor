@@ -1,4 +1,4 @@
-# Garden Levels — DWG-based 3D site planner (web)
+# DanceFloor — DWG-based 3D site planner for garden levels (web)
 
 Personal tool: load the architect's DWG sheets, see the house + plot in 3D, and design garden
 levels (terraces, slopes, retaining walls) with exact heights. Not a general CAD editor.

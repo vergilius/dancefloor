@@ -1,4 +1,4 @@
-# Garden Levels (repo: dancefloor)
+# DanceFloor (repo: dancefloor)
 
 Personal, local-only web app: load the architect's DWG sheets as a read-only underlay, show house + plot
 in 3D, and design garden levels (platforms, slopes, retaining walls) with exact heights and cut/fill volumes.
@@ -20,7 +20,6 @@ Node 24, **pnpm 12** (pinned via `packageManager`). Don't use npm or yarn.
 ## Commands
 - `pnpm dev`: Vite dev server
 - `pnpm build`: typecheck + production build
-- `pnpm test`: Vitest, single run (`pnpm test:watch` for watch mode)
 - `pnpm lint`: ESLint
 - `pnpm typecheck`: `tsc --noEmit`
 
@@ -43,7 +42,6 @@ TypeScript is pinned to `~6.0` because typescript-eslint 8 doesn't support TS 7 
 
 ## Boundaries
 - **Never commit anything from `dwg/`** (DWG/PDF title blocks contain personal data). It is gitignored.
-  Tests must use small synthetic fixtures, or read real files from `dwg/` locally and skip when absent.
 - No backend and no network calls at runtime. Everything runs in the browser.
 - Ask before adding a dependency that isn't in the planned stack.
 - Out of scope (PLAN.md §7): DWG editing, dimensioning, printing, multi-user, MEP, structural accuracy.
@@ -53,12 +51,18 @@ TypeScript is pinned to `~6.0` because typescript-eslint 8 doesn't support TS 7 
   Check for a matching skill before starting work, and follow skill steps in order, including verification.
 - Its core behaviors apply: surface assumptions, stop on confusion, push back, keep it simple, stay in
   scope, verify instead of assuming.
-- Definition of Done: tests pass, no regressions, behavior verified at runtime (in the browser, by the user, see below), docs/PLAN.md updated.
+- **No automated tests** (user decision, 2026-11-07): no Vitest, no unit or real-file tests. Don't add them, and
+  ignore skill steps that require them (TDD, "tests pass"). Verification = `pnpm typecheck`, `pnpm lint`,
+  `pnpm build`, plus the user's browser check.
+- Definition of Done: typecheck, lint and build green; behavior verified at runtime (in the browser, by the user,
+  see below); docs/PLAN.md updated.
 - Project-specific notes:
   - Spec = PLAN.md. Use `spec-driven-development` to sharpen a milestone's section, then
     `planning-and-task-breakdown`.
   - No quality bar is written yet. Run `constraint-driven-development` once after scaffolding (→ `CONSTRAINTS.md`).
-  - Test-first targets: DWG normalization, MTEXT stripping, label regexes, grid evaluation, cut/fill volumes.
+  - Code where silent bugs are likely (DWG normalization, INSERT transforms, MTEXT/label regexes, grid and
+    cut/fill maths): keep it small and pure, and make its results visible in the UI (counts, values) so the
+    browser check can catch errors.
   - Use `source-driven-development` for three/r3f/drei/libredwg-web/pdfjs APIs.
   - **The user does browser verification.** Don't drive a browser. At the end of a slice, give a short
     "verify in browser" checklist (what to open, what to click, what you should see) and wait for the result.
