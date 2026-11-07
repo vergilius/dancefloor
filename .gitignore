@@ -147,3 +147,11 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Project: architect drawings contain personal data — never commit
+dwg/
+*.dwg
+*.dxf
+
+# macOS
+.DS_Store
