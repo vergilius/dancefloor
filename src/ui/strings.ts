@@ -55,6 +55,17 @@ export const t = {
       residual: 'odchyłka dopasowania > 5 mm',
     },
   },
+  plane: {
+    title: 'Płaszczyzna',
+    cut: 'linia cięcia',
+    wall: 'skrajna ściana A-WALL rzutu',
+    reasons: {
+      noLetter: 'brak litery przekroju w nazwie pliku (PRZEKRÓJ X-X)',
+      letterNotOnPlan: 'litery przekroju nie ma na rzucie (G-ANNO-SYMB)',
+      noCutLine: 'brak linii cięcia na rzucie (G-ANNO-SYMB-2)',
+      noWalls: 'brak ścian A-WALL na rzucie',
+    },
+  },
   folderUnsupported:
     'Ta przeglądarka nie obsługuje dostępu do folderów (File System Access API). Użyj Chrome lub Edge.',
   fileCount: (n: number) => `${n} ${n === 1 ? 'plik' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'pliki' : 'plików'}`,

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { NormalizedSheet } from '../dwg/types';
 import { SHEET_KINDS, type SheetKind } from '../project/projectFile';
-import { fitAxis, planGrid, type PlanGrid } from '../project/vertical';
+import { fitAxis, planeOf, planGrid, type PlanGrid } from '../project/vertical';
 import { useProject, type SheetRow } from '../state/store';
 import type { ParseSummary } from '../worker/protocol';
 import { GroupToggles, SheetLayers } from './LayerPanel';
@@ -103,7 +103,9 @@ function SheetItem({ sheet: s }: { sheet: SheetRow }) {
       {p?.status === 'error' && <div className="error">{p.message}</div>}
       {p?.status === 'done' && (
         <>
-          {(s.kind === 'elevation' || s.kind === 'section') && <AxisFitLine sheet={p.summary.sheet} />}
+          {(s.kind === 'elevation' || s.kind === 'section') && (
+            <AxisFitLine file={s.file} kind={s.kind} sheet={p.summary.sheet} />
+          )}
           <Summary s={p.summary} />
           <SheetLayers row={s} sheet={p.summary.sheet} />
         </>
@@ -113,18 +115,19 @@ function SheetItem({ sheet: s }: { sheet: SheetRow }) {
 }
 
 /** The reference plan's grid: the first parsed plan at z = 0 (PLAN.md §5 M1b). */
-function useReferenceGrid(): { file: string; grid: PlanGrid } | undefined {
+function useReferenceGrid(): { file: string; plan: NormalizedSheet; grid: PlanGrid } | undefined {
   const ref = useProject((st) => {
     const row = st.sheets.find((r) => r.kind === 'plan' && r.placement?.z === 0);
     const p = row && st.parsed[row.file];
     return p?.status === 'done' ? p.summary : undefined;
   });
-  return useMemo(() => ref && { file: ref.name, grid: planGrid(ref.sheet) }, [ref]);
+  return useMemo(() => ref && { file: ref.name, plan: ref.sheet, grid: planGrid(ref.sheet) }, [ref]);
 }
 
-function AxisFitLine({ sheet }: { sheet: NormalizedSheet }) {
+function AxisFitLine({ file, kind, sheet }: { file: string; kind: 'elevation' | 'section'; sheet: NormalizedSheet }) {
   const ref = useReferenceGrid();
   const fit = useMemo(() => ref && fitAxis(sheet, ref.grid), [ref, sheet]);
+  const plane = useMemo(() => ref && fit?.ok && planeOf(file, kind, ref.plan, fit), [ref, fit, file, kind]);
   if (!ref || !fit) return <div className="error">{t.axis.noReference}</div>;
   const mm = (v: number) => (v * 1000).toFixed(2);
   if (!fit.ok)
@@ -141,6 +144,26 @@ function AxisFitLine({ sheet }: { sheet: NormalizedSheet }) {
       <span className="muted">
         (x = {fit.sign < 0 ? '−' : ''}plan {fit.axis} {fit.offset < 0 ? '−' : '+'} {Math.abs(fit.offset).toFixed(3)} · {ref.file})
       </span>
+      {plane && (
+        <div className={plane.ok ? undefined : 'error'}>
+          {t.plane.title}:{' '}
+          {plane.ok ? (
+            <>
+              <strong>
+                {fit.axis === 'x' ? 'y' : 'x'} = {plane.value.toFixed(3)} m
+              </strong>{' '}
+              <span className="muted">
+                ({plane.source === 'cut' ? `${t.plane.cut} ${plane.letter}` : t.plane.wall})
+              </span>
+            </>
+          ) : (
+            <>
+              {t.plane.reasons[plane.reason]}
+              {plane.letter && ` (${plane.letter})`}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
