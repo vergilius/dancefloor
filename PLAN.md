@@ -178,7 +178,7 @@ don't redefine here).
 - ✅ Each of the 12 DWGs parses in the worker in < 2 s; PAB-01/02/03 stack with `S-GRID-1` lines
   coinciding (< 1 mm); layer toggles work; reopening the app restores the folder after one permission click.
 
-**M1b — Elevations and sections on their lines** (spec sharpened 2026-11-07 on the real files)
+**M1b — Elevations and sections on their lines** — done 2026-11-07 (spec sharpened 2026-11-07 on the real files)
 
 Facts (analysed on PAB-01, PAB-04..10 after normalize):
 - Every vertical sheet has `S-GRID-1` as 14 vertical stubs (2 per grid line) and 7 `S-GRID-IDEN` labels of one

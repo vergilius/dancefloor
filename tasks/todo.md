@@ -1,6 +1,6 @@
 # M1b task list
 
-Next: T5 (M1b acceptance: user checks every M1b ✅ in PLAN.md, then mark M1b done in PLAN.md and CLAUDE.md). T4 done: saved vertical placement wins over the derived one (`placementFor` in `src/state/vertical.ts`); "Zapisz" writes derived placements for unsaved vertical sheets; plane field has a Reset (drops the saved placement → derived again). Ortho side views (Z północy/wschodu/południa/zachodu) added in `Viewport.tsx`.
+Next: M1b done (user accepted 2026-11-07). Merge `feat/m1b` into `main`, then start M1c (spec-driven-development on PLAN.md §5 M1c, then a new task list). Earlier T4 notes: saved vertical placement wins over the derived one (`placementFor` in `src/state/vertical.ts`); the plane field has a Reset.
 Known issue (camera, deferred by the user as minor): switching "Widok z góry" ↔ "Widok 3D" resets both cameras' position.
 Note (spec): data facts and the expected result per sheet are in PLAN.md §5 M1b. Sheet y = height rel. ±0.00, no scale.
 M1a task notes are in git history (`tasks/todo.md` at 032c110).
@@ -66,10 +66,10 @@ saved placement. The sheet list has a number input for the plane position (m); c
 ### Task 5: M1b acceptance
 **Description:** Final browser check against the M1b ✅ in PLAN.md; mark M1b done in PLAN.md and CLAUDE.md.
 **Acceptance criteria:**
-- [ ] Every M1b ✅ criterion checked off by the user
+- [x] Every M1b ✅ criterion checked off by the user
 **Dependencies:** T4
 **Files:** `PLAN.md`, `CLAUDE.md`, `tasks/todo.md`
 **Scope:** XS
 
 ### Checkpoint B (M1b complete)
-- [ ] `pnpm check` green; user browser check passed
+- [x] `pnpm check` green; user browser check passed
