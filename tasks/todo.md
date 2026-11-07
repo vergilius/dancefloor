@@ -1,6 +1,6 @@
 # M1b task list
 
-Next: T2 (plane position from cut lines / wall extent). T1 done and checked by the user.
+Next: Checkpoint A browser check (T2 + T3 built, not yet checked: user skipped the T2 value check, verifies both on the render). Then T4.
 Known issue (camera, deferred by the user as minor): switching "Widok z góry" ↔ "Widok 3D" resets both cameras' position.
 Note (spec): data facts and the expected result per sheet are in PLAN.md §5 M1b. Sheet y = height rel. ±0.00, no scale.
 M1a task notes are in git history (`tasks/todo.md` at 032c110).

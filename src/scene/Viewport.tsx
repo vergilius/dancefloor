@@ -5,25 +5,37 @@ import { Box3, MathUtils, OrthographicCamera as OrthographicCameraImpl, Vector3 
 import type { NormalizedSheet } from '../dwg/types';
 import { layerVisible, type LayerOverrides } from '../project/layerGroups';
 import { useProject } from '../state/store';
-import { planBox } from './coords';
+import { deriveVertical, isVertical, useReference } from '../state/vertical';
+import { sheetBox, type SheetPlacement } from './coords';
 import { loadView, storeView, type SavedView } from './savedView';
 import { SheetObject } from './SheetObject';
 import { SheetTexts } from './SheetTexts';
 import { t } from '../ui/strings';
 
-// One colour per stacked plan, in sheet order, so the levels are easy to tell apart.
+// One colour per stacked plan, in sheet order, so the levels are easy to tell apart. Vertical sheets get their own set.
 const PLAN_COLORS = ['#1f6feb', '#d1242f', '#1a7f37', '#8250df', '#bf8700'];
+const VERTICAL_COLORS = ['#57606a', '#bc4c00', '#0a7480', '#953800', '#6e40c9', '#4d2d00', '#116329'];
 
-type DrawnPlan = { file: string; z: number; sheet: NormalizedSheet; layers?: LayerOverrides };
+type DrawnSheet = { file: string; placement: SheetPlacement; sheet: NormalizedSheet; layers?: LayerOverrides; color: string };
 
-function useDrawnPlans(): DrawnPlan[] {
+/** Plans at their z, plus vertical sheets that were placed (flagged ones aren't drawn, PLAN.md §5 M1b). */
+function useDrawnSheets(): DrawnSheet[] {
   const sheets = useProject((s) => s.sheets);
   const parsed = useProject((s) => s.parsed);
-  return sheets.flatMap((s) => {
+  const ref = useReference();
+  let plans = 0;
+  let verticals = 0;
+  return sheets.flatMap((s): DrawnSheet[] => {
     const p = parsed[s.file];
-    return s.kind === 'plan' && s.placement && p?.status === 'done'
-      ? [{ file: s.file, z: s.placement.z, sheet: p.summary.sheet, layers: s.layers }]
-      : [];
+    if (p?.status !== 'done') return [];
+    const base = { file: s.file, sheet: p.summary.sheet, layers: s.layers };
+    if (s.kind === 'plan' && s.placement)
+      return [{ ...base, placement: s.placement, color: PLAN_COLORS[plans++ % PLAN_COLORS.length]! }];
+    if (isVertical(s.kind) && ref) {
+      const placement = deriveVertical(s.file, s.kind, p.summary.sheet, ref).placement;
+      if (placement) return [{ ...base, placement, color: VERTICAL_COLORS[verticals++ % VERTICAL_COLORS.length]! }];
+    }
+    return [];
   });
 }
 
@@ -42,7 +54,7 @@ export function Viewport() {
 }
 
 function Scene({ project }: { project?: string }) {
-  const plans = useDrawnPlans();
+  const drawn = useDrawnSheets();
   const groups = useProject((s) => s.groups);
   // Read once per folder. With a saved view the plans aren't auto-framed: the user's camera wins.
   const [saved] = useState(() => (project ? loadView(project) : undefined));
@@ -70,20 +82,19 @@ function Scene({ project }: { project?: string }) {
         <ambientLight intensity={0.8} />
         <Grid args={[100, 100]} cellSize={1} sectionSize={10} infiniteGrid fadeDistance={150} />
         <axesHelper args={[2]} />
-        {plans.map((p, i) => {
-          const color = PLAN_COLORS[i % PLAN_COLORS.length]!;
-          const visible = (layer: string) => layerVisible(groups, p.layers, layer);
+        {drawn.map((d) => {
+          const visible = (layer: string) => layerVisible(groups, d.layers, layer);
           return (
-            <group key={p.file}>
-              <SheetObject sheet={p.sheet} z={p.z} color={color} visible={visible} />
-              <SheetTexts texts={p.sheet.texts} z={p.z} color={color} visible={visible} />
+            <group key={d.file}>
+              <SheetObject sheet={d.sheet} placement={d.placement} color={d.color} visible={visible} />
+              <SheetTexts texts={d.sheet.texts} placement={d.placement} color={d.color} visible={visible} />
             </group>
           );
         })}
         {/* Polar angle 0 = looking straight down; locked in top view. */}
         <CameraControls makeDefault maxPolarAngle={top ? 0 : Math.PI} />
         <CameraSync view={view} top={top} project={project} />
-        <FrameOnPlans plans={plans} top={top} auto={!saved} tick={fitTick} />
+        <FrameOnSheets sheets={drawn} top={top} auto={!saved} tick={fitTick} />
       </Canvas>
     </>
   );
@@ -154,23 +165,23 @@ function CameraSync({ view, top, project }: { view: RefObject<SavedView | undefi
 }
 
 /**
- * Frames the camera on the drawn plans: automatically when the set of plans (or their z) changes and
+ * Frames the camera on the drawn sheets: automatically when the set of sheets (or their placement) changes and
  * there was no saved view, and whenever "Dopasuj widok" is clicked. Switching cameras doesn't re-frame.
  */
-function FrameOnPlans({ plans, top, auto, tick }: { plans: DrawnPlan[]; top: boolean; auto: boolean; tick: number }) {
+function FrameOnSheets({ sheets, top, auto, tick }: { sheets: DrawnSheet[]; top: boolean; auto: boolean; tick: number }) {
   const controls = useThree((s) => s.controls) as Controls | null;
-  // Compare keys, not the `plans` array, which is new on every store change (that would fight orbiting).
+  // Compare keys, not the `sheets` array, which is new on every store change (that would fight orbiting).
   const framed = useRef({ key: '', tick: 0 });
   useEffect(() => {
-    const key = plans.map((p) => `${p.file}@${p.z}`).join('|');
+    const key = sheets.map((d) => `${d.file}@${JSON.stringify(d.placement)}`).join('|');
     if (!controls || isOrtho(controls) !== top) return;
     if (!(auto && key !== framed.current.key) && tick === framed.current.tick) return;
     framed.current = { key, tick };
     // fitToBox snaps the rotation to the nearest 90°, so polar 0 stays a top view.
     if (top) void controls.rotateTo(0, 0, false);
     const box = new Box3();
-    for (const p of plans) if (p.sheet.extents) box.union(planBox(p.sheet.extents, p.z));
+    for (const d of sheets) if (d.sheet.extents) box.union(sheetBox(d.sheet.extents, d.placement));
     if (!box.isEmpty()) void controls.fitToBox(box, true, { paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1 });
-  }, [controls, plans, top, auto, tick]);
+  }, [controls, sheets, top, auto, tick]);
   return null;
 }

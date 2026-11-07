@@ -15,7 +15,7 @@ export type ParseState =
   | { status: 'done'; summary: ParseSummary }
   | { status: 'error'; message: string };
 
-type ProjectState = {
+export type ProjectState = {
   dir?: FileSystemDirectoryHandle;
   sheets: SheetRow[];
   dirty: boolean;

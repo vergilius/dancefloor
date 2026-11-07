@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import type { NormalizedSheet } from '../dwg/types';
 import { SHEET_KINDS, type SheetKind } from '../project/projectFile';
-import { fitAxis, planeOf, planGrid, type PlanGrid } from '../project/vertical';
 import { useProject, type SheetRow } from '../state/store';
+import { deriveVertical, isVertical, useReference, type VerticalKind } from '../state/vertical';
 import type { ParseSummary } from '../worker/protocol';
 import { GroupToggles, SheetLayers } from './LayerPanel';
 import { t } from './strings';
@@ -103,7 +103,7 @@ function SheetItem({ sheet: s }: { sheet: SheetRow }) {
       {p?.status === 'error' && <div className="error">{p.message}</div>}
       {p?.status === 'done' && (
         <>
-          {(s.kind === 'elevation' || s.kind === 'section') && (
+          {isVertical(s.kind) && (
             <AxisFitLine file={s.file} kind={s.kind} sheet={p.summary.sheet} />
           )}
           <Summary s={p.summary} />
@@ -114,21 +114,10 @@ function SheetItem({ sheet: s }: { sheet: SheetRow }) {
   );
 }
 
-/** The reference plan's grid: the first parsed plan at z = 0 (PLAN.md §5 M1b). */
-function useReferenceGrid(): { file: string; plan: NormalizedSheet; grid: PlanGrid } | undefined {
-  const ref = useProject((st) => {
-    const row = st.sheets.find((r) => r.kind === 'plan' && r.placement?.z === 0);
-    const p = row && st.parsed[row.file];
-    return p?.status === 'done' ? p.summary : undefined;
-  });
-  return useMemo(() => ref && { file: ref.name, plan: ref.sheet, grid: planGrid(ref.sheet) }, [ref]);
-}
-
-function AxisFitLine({ file, kind, sheet }: { file: string; kind: 'elevation' | 'section'; sheet: NormalizedSheet }) {
-  const ref = useReferenceGrid();
-  const fit = useMemo(() => ref && fitAxis(sheet, ref.grid), [ref, sheet]);
-  const plane = useMemo(() => ref && fit?.ok && planeOf(file, kind, ref.plan, fit), [ref, fit, file, kind]);
-  if (!ref || !fit) return <div className="error">{t.axis.noReference}</div>;
+function AxisFitLine({ file, kind, sheet }: { file: string; kind: VerticalKind; sheet: NormalizedSheet }) {
+  const ref = useReference();
+  if (!ref) return <div className="error">{t.axis.noReference}</div>;
+  const { fit, plane } = deriveVertical(file, kind, sheet, ref);
   const mm = (v: number) => (v * 1000).toFixed(2);
   if (!fit.ok)
     return (
