@@ -22,6 +22,7 @@ Node 24, **pnpm 12** (pinned via `packageManager`). Don't use npm or yarn.
 - `pnpm build`: WASM copy + typecheck + production build
 - `pnpm lint`: ESLint
 - `pnpm typecheck`: `tsc --noEmit`
+- `pnpm check`: build + lint + floor guard + bundle budget + `pnpm audit` (see CONSTRAINTS.md)
 
 TypeScript is pinned to `~6.0` because typescript-eslint 8 doesn't support TS 7 yet.
 
@@ -59,7 +60,7 @@ TypeScript is pinned to `~6.0` because typescript-eslint 8 doesn't support TS 7 
 - Project-specific notes:
   - Spec = PLAN.md. Use `spec-driven-development` to sharpen a milestone's section, then
     `planning-and-task-breakdown`.
-  - No quality bar is written yet. Run `constraint-driven-development` once after scaffolding (→ `CONSTRAINTS.md`).
+  - Quality bar: `CONSTRAINTS.md`. Run `pnpm check` at task end. Keep constraint work minimal (user: build, lint, typecheck, works).
   - Code where silent bugs are likely (DWG normalization, INSERT transforms, MTEXT/label regexes, grid and
     cut/fill maths): keep it small and pure, and make its results visible in the UI (counts, values) so the
     browser check can catch errors.

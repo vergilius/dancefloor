@@ -1,6 +1,6 @@
 # M1a task list
 
-Next: user checks T3 in the browser (click each DWG → counts, INSUNITS 4, parse time), then Checkpoint A. Branch `feat/m1a`.
+Next: Checkpoint A review with the user (CONSTRAINTS.md done), then T4 (normalize). Branch `feat/m1a`.
 Note: `dist/` holds the WASM twice (Vite also emits a hashed copy via the glue's `new URL(…, import.meta.url)`); harmless for a local app.
 
 Commands: `pnpm dev`, `pnpm build`, `pnpm lint`, `pnpm typecheck`. No automated tests (CLAUDE.md).
@@ -52,8 +52,8 @@ Clicking a file in the list shows its counts.
 **Scope:** M
 
 ### Checkpoint A (after T1–T3)
-- [ ] `CONSTRAINTS.md` written via `constraint-driven-development` (CLAUDE.md: once, after the scaffold)
-- [ ] All green; the riskiest integration (WASM in a worker) is proven
+- [x] `CONSTRAINTS.md` written via `constraint-driven-development` (CLAUDE.md: once, after the scaffold)
+- [x] All green; the riskiest integration (WASM in a worker) is proven
 - [ ] Review with the user before geometry work
 
 ---
