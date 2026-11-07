@@ -1,6 +1,6 @@
 # M1b task list
 
-Next: Checkpoint A browser check (T2 + T3 built, not yet checked: user skipped the T2 value check, verifies both on the render). Then T4.
+Next: T4 (save placement, edit plane position). Checkpoint A passed (user, render looks ok). Derived placement: `src/state/vertical.ts` (cached; keep placement objects stable or geometry rebuilds).
 Known issue (camera, deferred by the user as minor): switching "Widok z góry" ↔ "Widok 3D" resets both cameras' position.
 Note (spec): data facts and the expected result per sheet are in PLAN.md §5 M1b. Sheet y = height rel. ±0.00, no scale.
 M1a task notes are in git history (`tasks/todo.md` at 032c110).
@@ -29,8 +29,8 @@ max residual (mm) and look direction (N/E/S/W), or the reason it failed.
 filename (`PRZEKRÓJ X-X`); for a jog, the longest segment parallel to `dir`. Elevations: outermost `A-WALL` extent
 on the viewer side. Combine with T1 into `placement: { type: 'vertical', origin, dir }`; show the plane position.
 **Acceptance criteria:**
-- [ ] Plane positions match the PLAN.md table (A-A x 6.712, B-B y −6.363, C-C y −0.063, N y 3.051, E x 15.124, W x 0.034, S y −14.966)
-- [ ] A section with no letter/cut line found shows a reason
+- [x] Plane positions match the PLAN.md table (A-A x 6.712, B-B y −6.363, C-C y −0.063, N y 3.051, E x 15.124, W x 0.034, S y −14.966)
+- [x] A section with no letter/cut line found shows a reason
 **Verification:** `pnpm check`; user reads the plane positions in the sheet list.
 **Dependencies:** T1
 **Files:** `src/project/vertical.ts`, `src/ui/SheetList.tsx`, `src/ui/strings.ts`
@@ -41,16 +41,16 @@ on the viewer side. Combine with T1 into `placement: { type: 'vertical', origin,
 standing on their plane: sheet (x, y) → origin + x·dir at height y. Texts lie in the plane, readable from the
 viewer side. Fit-view framing includes them.
 **Acceptance criteria:**
-- [ ] Top view: each vertical sheet's grid stubs stand on the plan's grid lines (< 1 cm)
-- [ ] Each elevation's ±0.00 line lies at z = 0 (on PAB-01's floor); texts readable from outside, not mirrored
-- [ ] Layer/group toggles work on vertical sheets
+- [x] Top view: each vertical sheet's grid stubs stand on the plan's grid lines (< 1 cm)
+- [x] Each elevation's ±0.00 line lies at z = 0 (on PAB-01's floor); texts readable from outside, not mirrored
+- [x] Layer/group toggles work on vertical sheets
 **Verification:** `pnpm check`; user checks top view and 3D view.
 **Dependencies:** T2
 **Files:** `src/scene/coords.ts`, `src/scene/SheetObject.tsx`, `src/scene/SheetTexts.tsx`, `src/scene/Viewport.tsx`
 **Scope:** M
 
 ### Checkpoint A (after T1–T3)
-- [ ] `pnpm check` green; all 7 vertical sheets placed and drawn correctly (user check)
+- [x] `pnpm check` green; all 7 vertical sheets placed and drawn correctly (user check)
 
 ### Task 4: Save placement and edit the plane position
 **Description:** `projectFile.ts` accepts and validates the vertical placement. Derive only when the sheet has no
