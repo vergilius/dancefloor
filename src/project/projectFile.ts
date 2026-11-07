@@ -1,6 +1,7 @@
 // The project JSON (`dancefloor.json`) next to the DWGs: our own source of truth (PLAN.md §2, §4).
 // Sheets are referenced by filename. Fields from §4 that later tasks need (vertical placement,
-// transform, layers) are added when those tasks land; unknown fields are rejected, not guessed.
+// transform) are added when those tasks land; unknown fields are rejected, not guessed.
+import { GROUP_IDS, type GroupId, type Groups, type LayerOverrides } from './layerGroups';
 
 export const PROJECT_FILE = 'dancefloor.json';
 
@@ -14,16 +15,18 @@ export type Sheet = {
   kind: SheetKind;
   /** Plans only, for now (T7). m rel. ±0.00. */
   placement?: Placement;
+  /** Only layers the user turned off (T9). */
+  layers?: LayerOverrides;
 };
 
-export type ProjectFile = { version: 1; sheets: Sheet[] };
+export type ProjectFile = { version: 1; sheets: Sheet[]; groups?: Partial<Groups> };
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 
 function parseSheet(v: unknown, i: number): Sheet {
   const where = `sheets[${i}]`;
   if (!isObj(v)) throw new Error(`${where}: not an object`);
-  const { file, kind, placement } = v;
+  const { file, kind, placement, layers } = v;
   if (typeof file !== 'string' || !file) throw new Error(`${where}.file: expected a filename`);
   if (!SHEET_KINDS.includes(kind as SheetKind)) throw new Error(`${where}.kind: unknown "${String(kind)}"`);
   const sheet: Sheet = { file, kind: kind as SheetKind };
@@ -31,6 +34,14 @@ function parseSheet(v: unknown, i: number): Sheet {
     if (!isObj(placement) || placement.type !== 'horizontal' || !Number.isFinite(placement.z))
       throw new Error(`${where}.placement: expected { type: "horizontal", z: number }`);
     sheet.placement = { type: 'horizontal', z: placement.z as number };
+  }
+  if (layers !== undefined) {
+    if (!isObj(layers)) throw new Error(`${where}.layers: expected an object`);
+    sheet.layers = {};
+    for (const [name, l] of Object.entries(layers)) {
+      if (!isObj(l) || typeof l.visible !== 'boolean') throw new Error(`${where}.layers["${name}"]: expected { visible: boolean }`);
+      sheet.layers[name] = { visible: l.visible };
+    }
   }
   return sheet;
 }
@@ -40,7 +51,16 @@ export function parseProjectFile(text: string): ProjectFile {
   if (!isObj(v)) throw new Error('not a JSON object');
   if (v.version !== 1) throw new Error(`unsupported version ${String(v.version)} (expected 1)`);
   if (!Array.isArray(v.sheets)) throw new Error('sheets: expected an array');
-  return { version: 1, sheets: v.sheets.map(parseSheet) };
+  const project: ProjectFile = { version: 1, sheets: v.sheets.map(parseSheet) };
+  if (v.groups !== undefined) {
+    if (!isObj(v.groups)) throw new Error('groups: expected an object');
+    project.groups = {};
+    for (const [g, on] of Object.entries(v.groups)) {
+      if (!GROUP_IDS.includes(g as GroupId) || typeof on !== 'boolean') throw new Error(`groups.${g}: unknown group or not a boolean`);
+      project.groups[g as GroupId] = on;
+    }
+  }
+  return project;
 }
 
 /** The saved project, or undefined if the folder has none yet. */

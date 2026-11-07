@@ -12,11 +12,14 @@ const ANCHOR_Y = ['top-cap', 'middle', 'bottom-baseline'] as unknown as ('top' |
 /** fontSize / MTEXT height. Picked by eye (user, T8): between 1.0 (too small) and 1.4 (cap-height match, too big). */
 const TEXT_SCALE = 1.2;
 
-/** Plan texts lying flat at z. */
-export function SheetTexts({ texts, z, color }: { texts: NormalizedText[]; z: number; color: string }) {
+type Props = { texts: NormalizedText[]; z: number; color: string; visible: (layer: string) => boolean };
+
+/** Plan texts lying flat at z. Keys are the text's index, so hiding a layer doesn't re-create the others. */
+export function SheetTexts({ texts, z, color, visible }: Props) {
   return (
     <group>
       {texts.map((t, i) => {
+        if (!visible(t.layer)) return null;
         const a = Math.min(Math.max(t.attach, 1), 9) - 1;
         return (
           <Text

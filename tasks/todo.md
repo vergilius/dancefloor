@@ -1,6 +1,7 @@
 # M1a task list
 
-Next: T9 (layer panel). T8 passed the user's browser check. T5's layer-0 criterion is checked in T9 (toggle a block's INSERT layer).
+Next: T9 browser check (layer panel + groups, built). Then T10. T5's layer-0 criterion is checked in T9 (toggle a block's INSERT layer).
+Note (T9): `.gitignore` had `dwg/` unanchored, so `src/dwg/` was never committed until 4dbb1b4; now `/dwg/`.
 Note (T8): texts = one drei `<Text>` per label, local Noto Sans (latin default via troika `configureTextBuilder`, latin-ext as `font`); anchors `top-cap`/`middle`/`bottom-baseline` (drei's type lacks `top-cap`, cast); size = MTEXT height × 1.2 (by eye). Plans auto-parse on open.
 Note (T6): only MTEXT in the files (4962; no TEXT/ATTRIB, no `\P`); codes used: `\f…;` `\W…;` `\L`. Some words are split into two MTEXTs at diacritics in the source (`KRAW`+`ĘŻNIK`): not ours to fix. Branch `feat/m1a`.
 Note (T5): all 12 DWGs expand with no missing/cyclic/too-deep blocks. ELLIPSE added to normalize (user request; 756 on PAB-02, mostly inside blocks).
@@ -134,14 +135,16 @@ loaded sheets. Texts via drei `<Text>`.
 ### Task 9: Layer panel with noise layers hidden by default
 **Description:** Per sheet, a layer list with visibility toggles and entity counts. Default-hidden patterns
 from PLAN.md §1 (`G-ANNO-*` except `G-ANNO-DIMS*`, `PZT_WYMIARY-1`, `I-FURN*`, `P-SANR-FIXT`, `*-PATT*`).
-Visibility is saved in the project JSON.
+Visibility is saved in the project JSON. Folded in (user): project-wide layer groups (Layout / Levels / Grid /
+Details / Other, PLAN.md §1) so "Details" off leaves walls, doors and windows; door swing arcs go to Details.
 **Acceptance criteria:**
 - [ ] On PAB-01 the noise layers start hidden and walls, grid and levels start visible
+- [ ] Details off: no furniture, sanitary, labels or door swings; walls, doors and windows remain
 - [ ] Toggling a layer hides it immediately in 3D; the state survives save and reload
 - [ ] The skipped entity counts from T4 are shown per sheet
 **Verification:** user toggles `A-WALL` and reloads.
 **Dependencies:** T8
-**Files:** `src/project/layerDefaults.ts`, `src/ui/LayerPanel.tsx`, `src/state/store.ts`
+**Files:** `src/project/layerGroups.ts`, `src/dwg/layers.ts`, `src/dwg/normalize.ts`, `src/project/projectFile.ts`, `src/ui/LayerPanel.tsx`, `src/state/store.ts`, `src/scene/*`
 **Scope:** S
 
 ### Task 10: M1a acceptance on the real files

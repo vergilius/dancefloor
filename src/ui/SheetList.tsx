@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { SHEET_KINDS, type SheetKind } from '../project/projectFile';
 import { useProject, type SheetRow } from '../state/store';
 import type { ParseSummary } from '../worker/protocol';
+import { GroupToggles, SheetLayers } from './LayerPanel';
 import { t } from './strings';
 
 export function SheetList() {
@@ -35,6 +36,7 @@ export function SheetList() {
           {t.saveError}: {saveError}
         </p>
       )}
+      <GroupToggles />
       <ul className="file-list">
         {sheets.map((s) => (
           <SheetItem key={s.file} sheet={s} />
@@ -79,7 +81,12 @@ function SheetItem({ sheet: s }: { sheet: SheetRow }) {
       </div>
       {p?.status === 'parsing' && <div className="muted">{t.parsing}</div>}
       {p?.status === 'error' && <div className="error">{p.message}</div>}
-      {p?.status === 'done' && <Summary s={p.summary} />}
+      {p?.status === 'done' && (
+        <>
+          <Summary s={p.summary} />
+          <SheetLayers row={s} sheet={p.summary.sheet} />
+        </>
+      )}
     </li>
   );
 }
@@ -141,9 +148,6 @@ function Summary({ s }: { s: ParseSummary }) {
         {t.texts} ({texts.length}
         {textLeftovers > 0 && <span className="error">, {textLeftovers} {t.textLeftovers}</span>}):{' '}
         {[...new Set(texts.map((x) => x.text))].slice(0, 12).join(' · ')}
-      </div>
-      <div className="muted">
-        {t.layers} ({s.layerNames.length}): {s.layerNames.join(', ')}
       </div>
     </div>
   );

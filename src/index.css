@@ -25,3 +25,9 @@ html, body, #root { height: 100%; margin: 0; }
 .z-input { width: 56px; }
 .z-input.invalid { border-color: #cf222e; color: #cf222e; }
 .tag.suggested { background: #fff8c5; color: #7d4e00; }
+.groups { border: 1px solid #d0d7de; border-radius: 6px; margin: 0 0 8px; padding: 4px 8px 6px; font-size: 13px; display: grid; gap: 2px; }
+.groups legend { padding: 0 4px; color: #656d76; }
+.layers { font-size: 12px; margin: 0 0 8px 34px; }
+.layers summary { cursor: pointer; }
+.layers > div { margin: 4px 0 0; display: grid; gap: 1px; }
+.layer { display: block; padding-left: 8px; }

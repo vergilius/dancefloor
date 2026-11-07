@@ -3,13 +3,15 @@ import { BufferAttribute, BufferGeometry } from 'three';
 import type { NormalizedSheet } from '../dwg/types';
 import { planPositions } from './coords';
 
-/** A plan sheet drawn horizontally at z: one LineSegments per layer. */
-export function SheetObject({ sheet, z, color }: { sheet: NormalizedSheet; z: number; color: string }) {
+type Props = { sheet: NormalizedSheet; z: number; color: string; visible: (layer: string) => boolean };
+
+/** A plan sheet drawn horizontally at z: one LineSegments per visible layer. */
+export function SheetObject({ sheet, z, color, visible }: Props) {
   return (
     <group>
-      {sheet.layers.map((l) => (
-        <LayerLines key={l.name} segments={l.segments} z={z} color={color} />
-      ))}
+      {sheet.layers.map(
+        (l) => visible(l.name) && <LayerLines key={l.name} segments={l.segments} z={z} color={color} />,
+      )}
     </group>
   );
 }

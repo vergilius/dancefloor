@@ -1,5 +1,6 @@
 // DWG entities (mm) → line segments in metres, grouped by layer, with INSERTs expanded. Pure; runs in the worker.
 import { apply, compose, insertMatrices, type Mat } from './insert';
+import { DOOR_SWING_LAYER } from './layers';
 import { decodePercent, stripMtext } from './mtext';
 import type {
   ArcIn,
@@ -239,8 +240,9 @@ export function normalize(
     const pts = tessellate(e);
     if (!pts) return void count(skipped, e.type);
     count(drawn, e.type);
-    let seg = byLayer.get(layer);
-    if (!seg) byLayer.set(layer, (seg = []));
+    const target = e.type === 'ARC' && layer === 'A-DOOR' ? DOOR_SWING_LAYER : layer;
+    let seg = byLayer.get(target);
+    if (!seg) byLayer.set(target, (seg = []));
     let px = 0, py = 0;
     pts.forEach(([rx, ry], i) => {
       const [x, y] = apply(m, rx, ry);

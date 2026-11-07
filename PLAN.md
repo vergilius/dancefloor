@@ -28,6 +28,13 @@ Relevant layers for the app:
 - Site: `PZT_UTWARDZENIA`, `Bryła terenu`, `PZT_OPIS`
 - Levels: `G-ANNO-DIMS-1` (MTEXT), `G-ANNO-DIMS` (markers + roof pitch)
 - Noise to hide by default: `G-ANNO-*` (title block, schedules, notes), `PZT_WYMIARY-1` (dimensions), `I-FURN*`, `P-SANR-FIXT`, `*-PATT*` hatches
+- Doors: `A-DOOR` holds leaves, frames **and** the swing arcs (all ARCs on `A-DOOR` in PAB-01/02 are 90°, r 750–911 mm,
+  inside the door blocks). Swings aren't real geometry (user, T9): the worker moves them to our own layer `A-DOOR (łuki)`.
+  Windows: `A-GLAZ*`. Tags/labels: `*-IDEN*`; hidden/overhead lines: `*-HDLN*`.
+- Layer groups (T9, `src/project/layerGroups.ts`, first match wins): **Levels** `G-ANNO-DIMS*` · **Grid** `S-GRID*` ·
+  **Details** `*-IDEN*` `*-ANNO*` `*-PATT*` `*-HDLN*` door swings · **Layout** `A-WALL*` `I-WALL*` `A-DOOR*` `A-GLAZ*`
+  `S-COLS*` `S-STRS*` `A-FLOR-HRAL*` `A-ROOF*` · **Details** `G-ANNO-*` `I-FURN*` `P-SANR-*` `Q-SPCQ*` `A-DETL-*` `A-AREA*`
+  `PZT_WYMIARY*` `PZT_OPIS*` · **Other** everything else (e.g. `G-IMPT`, `Obieg pionowy`, site layers). Details start hidden.
 
 ### Second batch: PZT-01 (site plan), PAB-04..06 (sections A-A, B-B, C-C), PAB-07..10 (elevations N/E/W/S)
 
@@ -136,7 +143,8 @@ type Sheet = { id; file: string;
                             //  plan: identity (S-GRID-1 coincides)
                             //  site, pdf: from 2-point alignment
                             //  elevation, section: from S-GRID-1 lines (x along `line`; y = height rel. ±0.00)
-  layers: Record<string, { visible: boolean; color?: string }> };
+  layers: Record<string, { visible: boolean; color?: string }> };  // T9: only layers turned off are stored
+// Project-level: groups: Record<'layout'|'levels'|'grid'|'details'|'other', boolean>  (T9; applies to all sheets)
 type Similarity2D = { scale: number; rotation: number /* rad */; translate: Vec2 };
 type Feature =
   | { kind: 'platform'; polygon: Vec2[]; z: number; material: 'grass'|'paving'|'gravel' }
@@ -163,7 +171,7 @@ don't redefine here).
   fixes these once in the sheet list, and the result is saved in the project JSON.
 - Worker parses DWG → normalized geometry in metres (LINE, ARC, CIRCLE, ELLIPSE, LWPOLYLINE, SPLINE→polyline,
   INSERT expanded with transforms, MTEXT as text sprites; skip HATCH/DIMENSION at first).
-- Layer panel with per-layer toggle; noise layers from §1 hidden by default.
+- Layer panel with per-layer toggle plus project-wide layer groups (§1); the Details group (noise layers) is hidden by default.
 - Plan sheets (PAB-01/02/03) drawn horizontally at their `z` with identity `transform`.
 - ✅ Each of the 12 DWGs parses in the worker in < 2 s; PAB-01/02/03 stack with `S-GRID-1` lines
   coinciding (< 1 mm); layer toggles work; reopening the app restores the folder after one permission click.
