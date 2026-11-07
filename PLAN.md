@@ -164,7 +164,7 @@ filename is the sheet's key, so there is no separate `id`. Fields are added as t
 Sheets are positioned by `kind`, `placement` and `transform` as defined in §4 (single source of truth,
 don't redefine here).
 
-**M1a — Worker, normalization, stacked plans**
+**M1a — Worker, normalization, stacked plans** — done 2026-11-07 (slowest parse 1015 ms, PAB-02)
 - Open the project folder (§2 File access); list the DWGs in it. Auto-suggest `kind` from the filename
   (`RZUT` → plan, `ELEWACJA` → elevation, `PRZEKRÓJ` → section, `ZAGOSPODAROWANIA` → site, otherwise
   detail) and default `z` for plans (`PARTERU` 0, `PODDASZA` 3.29, `DACHU` 9.12). The user confirms or

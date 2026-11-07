@@ -1,6 +1,8 @@
 # M1a task list
 
-Next: T10 (M1a acceptance on the real files). T9 and T5 layer-0 passed the user's browser check.
+Next: M1a done (2026-11-07). Start M1b: sharpen its PLAN.md section (spec-driven-development), then break it into tasks.
+Known issue (camera): switching "Widok z góry" ↔ "Widok 3D" still resets both cameras' position (user, after e927ae8); the per-folder saved view + "Dopasuj widok" are in `src/scene/Viewport.tsx`/`savedView.ts`. Not yet browser-checked whether the saved view survives a reload.
+Note (T10): slowest parse PAB-02 1015 ms; S-GRID-1 of PAB-01/02/03 coincide in the ortho top view (user). Perspective shows parallax between stacked plans, so compare grids only in the top view.
 Note (T9): `.gitignore` had `dwg/` unanchored, so `src/dwg/` was never committed until 4dbb1b4; now `/dwg/`.
 Note (T8): texts = one drei `<Text>` per label, local Noto Sans (latin default via troika `configureTextBuilder`, latin-ext as `font`); anchors `top-cap`/`middle`/`bottom-baseline` (drei's type lacks `top-cap`, cast); size = MTEXT height × 1.2 (by eye). Plans auto-parse on open.
 Note (T6): only MTEXT in the files (4962; no TEXT/ATTRIB, no `\P`); codes used: `\f…;` `\W…;` `\L`. Some words are split into two MTEXTs at diacritics in the source (`KRAW`+`ĘŻNIK`): not ours to fix. Branch `feat/m1a`.
@@ -152,13 +154,13 @@ Details / Other, PLAN.md §1) so "Details" off leaves walls, doors and windows; 
 in the sheet panel), and the `S-GRID-1` lines of PAB-01/02/03 coincide when viewed from above. Mark M1a done in
 PLAN.md and CLAUDE.md.
 **Acceptance criteria:**
-- [ ] Parse times < 2 s and grid lines coincide (user check)
-- [ ] Every M1a ✅ criterion in PLAN.md is checked off, including the user's browser check
+- [x] Parse times < 2 s and grid lines coincide (user check)
+- [x] Every M1a ✅ criterion in PLAN.md is checked off, including the user's browser check
 **Verification:** user runs the final browser checklist.
 **Dependencies:** T9
 **Files:** `PLAN.md`, `CLAUDE.md`
 **Scope:** S
 
 ### Checkpoint C (M1a complete)
-- [ ] Build, lint and typecheck green
-- [ ] User browser check passed
+- [x] Build, lint and typecheck green
+- [x] User browser check passed
