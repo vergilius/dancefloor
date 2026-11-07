@@ -4,7 +4,7 @@
   background: #f6f7f9;
 }
 html, body, #root { height: 100%; margin: 0; }
-.app { display: grid; grid-template-columns: 300px 1fr; height: 100%; }
+.app { display: grid; grid-template-columns: 360px 1fr; height: 100%; }
 .sidebar { padding: 16px; border-right: 1px solid #d0d7de; overflow-y: auto; background: #fff; }
 .sidebar h1 { font-size: 18px; margin: 0 0 12px; }
 .viewport { position: relative; min-width: 0; }
@@ -16,3 +16,6 @@ html, body, #root { height: 100%; margin: 0; }
 .file-list { list-style: none; padding: 0; margin: 0; font-size: 13px; }
 .file-list li { padding: 3px 0; }
 .tag { display: inline-block; min-width: 30px; font-size: 10px; text-align: center; padding: 1px 4px; border-radius: 4px; background: #ddf4ff; color: #0969da; }
+.sidebar button.link { border: none; background: none; padding: 0; text-align: left; font-size: 13px; }
+.sidebar button.link:hover { text-decoration: underline; background: none; }
+.summary { font-size: 12px; margin: 4px 0 8px 34px; display: grid; gap: 2px; }

@@ -4,14 +4,15 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "dev": "node scripts/copy-wasm.mjs && vite",
+    "build": "node scripts/copy-wasm.mjs && tsc --noEmit && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
   "packageManager": "pnpm@12.18.0+sha512.9d7882d5dc82147ecfc4e062aa34834e0ad0296710a1837a1115ae012127d36b7109e321ac1598a1dd0a65597681b1e99917e12ed0d749eae91187943363beb3",
   "dependencies": {
+    "@mlightcad/libredwg-web": "0.8.6",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.2",
     "react": "^19.3.1",

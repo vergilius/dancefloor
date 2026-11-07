@@ -7,6 +7,7 @@ import {
   pickFolder,
   type SourceFile,
 } from '../project/folder';
+import { FileList } from './FileList';
 import { t } from './strings';
 
 type State =
@@ -81,13 +82,7 @@ export function FolderPanel() {
           {state.files.length === 0 ? (
             <p>{t.folderEmpty}</p>
           ) : (
-            <ul className="file-list">
-              {state.files.map((f) => (
-                <li key={f.name}>
-                  <span className="tag">{f.type.toUpperCase()}</span> {f.name}
-                </li>
-              ))}
-            </ul>
+            <FileList dir={state.dir} files={state.files} />
           )}
         </>
       )}

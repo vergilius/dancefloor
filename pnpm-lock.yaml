@@ -166,6 +166,9 @@ importers:
 
   .:
     dependencies:
+      '@mlightcad/libredwg-web':
+        specifier: 0.8.6
+        version: 0.8.6
       '@react-three/drei':
         specifier: ^10.7.9
         version: 10.7.9(@react-three/fiber@9.8.2(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(three@0.187.0))(@types/react@19.3.0)(@types/three@0.187.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(three@0.187.0)
@@ -384,6 +387,10 @@ packages:
 
   '@mediapipe/tasks-vision@0.10.17':
     resolution: {integrity: sha512-CZWV/q6TTe8ta61cZXjfnnHsfWIdFhms03M9T7Cnd5y2mdpylJM0rF1qRq+wsQVRMLz1OYPVEBU9ph2Bx8cxrg==}
+
+  '@mlightcad/libredwg-web@0.8.6':
+    resolution: {integrity: sha512-c5zMYwj9S7xH0l84fjukV0tg9gK31Zbf9CAwk4KeKCwcFTA/413vn5Pav4Kb+Mt//xmAtm5ef25s7ZUKLHweJg==}
+    engines: {node: '>=20'}
 
   '@monogrid/gainmap-js@3.7.3':
     resolution: {integrity: sha512-YjgdH65wZ9lQnzkVWerrR9FJR0JYhn3ahV7DJqDZVtIvR/kWv7XzFbMSIOFS/47+nWbZ5zFTRxsFhq0OX//SuA==}
@@ -1545,6 +1552,8 @@ snapshots:
   '@keyv/serialize@1.1.1': {}
 
   '@mediapipe/tasks-vision@0.10.17': {}
+
+  '@mlightcad/libredwg-web@0.8.6': {}
 
   '@monogrid/gainmap-js@3.7.3(three@0.187.0)':
     dependencies:

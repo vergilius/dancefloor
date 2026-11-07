@@ -18,8 +18,8 @@ wasm in `public/wasm/`) · three-mesh-bvh · delaunator · pdfjs-dist · zustand
 Node 24, **pnpm 12** (pinned via `packageManager`). Don't use npm or yarn.
 
 ## Commands
-- `pnpm dev`: Vite dev server
-- `pnpm build`: typecheck + production build
+- `pnpm dev`: copies libredwg's WASM to `public/wasm/` (gitignored), then starts the Vite dev server
+- `pnpm build`: WASM copy + typecheck + production build
 - `pnpm lint`: ESLint
 - `pnpm typecheck`: `tsc --noEmit`
 

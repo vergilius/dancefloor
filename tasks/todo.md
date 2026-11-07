@@ -1,6 +1,7 @@
 # M1a task list
 
-Next: user checks T2 in the browser, then T3 (worker parse). Branch `feat/m1a`.
+Next: user checks T3 in the browser (click each DWG → counts, INSUNITS 4, parse time), then Checkpoint A. Branch `feat/m1a`.
+Note: `dist/` holds the WASM twice (Vite also emits a hashed copy via the glue's `new URL(…, import.meta.url)`); harmless for a local app.
 
 Commands: `pnpm dev`, `pnpm build`, `pnpm lint`, `pnpm typecheck`. No automated tests (CLAUDE.md).
 Every task: typecheck, lint and build green, and a "verify in browser" checklist goes to the user.
@@ -43,8 +44,8 @@ version). `src/worker/dwg.worker.ts` receives a file's bytes, parses and convert
 Clicking a file in the list shows its counts.
 **Acceptance criteria:**
 - [ ] Clicking PAB-01 shows INSUNITS 4 and ~1898 entities, with no main-thread freeze
-- [ ] libredwg is imported only in `src/worker/` (lint rule `no-restricted-imports` elsewhere)
-- [ ] Parse errors come back as a message, not as an uncaught worker error
+- [x] libredwg is imported only in `src/worker/` (lint rule `no-restricted-imports` elsewhere; probe import fails lint)
+- [x] Parse errors come back as a message, not as an uncaught worker error (worker crash also rejects pending requests)
 **Verification:** the lint rule fails on a deliberate import elsewhere (then revert it); user clicks through all 12 files and sees counts and parse time.
 **Dependencies:** T2
 **Files:** `src/worker/dwg.worker.ts`, `src/worker/parse.ts`, `src/worker/protocol.ts`, `scripts/copy-wasm.mjs`
