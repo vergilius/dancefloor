@@ -4,6 +4,7 @@ import { CameraControls, Grid, OrthographicCamera, PerspectiveCamera } from '@re
 import { Box3, MathUtils, OrthographicCamera as OrthographicCameraImpl, Vector3 } from 'three';
 import type { NormalizedSheet } from '../dwg/types';
 import { layerVisible, type LayerOverrides } from '../project/layerGroups';
+import type { SheetKind } from '../project/projectFile';
 import { useProject } from '../state/store';
 import { deriveSite } from '../state/site';
 import { deriveVertical, isVertical, placementFor, useReference } from '../state/vertical';
@@ -18,7 +19,7 @@ const PLAN_COLORS = ['#1f6feb', '#d1242f', '#1a7f37', '#8250df', '#bf8700'];
 const VERTICAL_COLORS = ['#57606a', '#bc4c00', '#0a7480', '#953800', '#6e40c9', '#4d2d00', '#116329'];
 const SITE_COLORS = ['#6e7781', '#a40e26'];
 
-type DrawnSheet = { file: string; placement: SheetPlacement; sheet: NormalizedSheet; layers?: LayerOverrides; color: string };
+type DrawnSheet = { file: string; kind: SheetKind; placement: SheetPlacement; sheet: NormalizedSheet; layers?: LayerOverrides; color: string };
 
 /**
  * Plans at their z, vertical sheets that were placed (flagged ones aren't drawn, PLAN.md §5 M1b), and site sheets
@@ -34,7 +35,7 @@ function useDrawnSheets(): DrawnSheet[] {
   return sheets.flatMap((s): DrawnSheet[] => {
     const p = parsed[s.file];
     if (p?.status !== 'done') return [];
-    const base = { file: s.file, sheet: p.summary.sheet, layers: s.layers };
+    const base = { file: s.file, kind: s.kind, sheet: p.summary.sheet, layers: s.layers };
     if (s.kind === 'plan' && s.placement?.type === 'horizontal')
       return [{ ...base, placement: s.placement, color: PLAN_COLORS[plans++ % PLAN_COLORS.length]! }];
     if (isVertical(s.kind) && ref) {
@@ -220,7 +221,7 @@ function CameraSync({ view, ortho, project }: { view: RefObject<SavedView | unde
 }
 
 /**
- * Frames the camera on the drawn sheets: automatically when the set of sheets (or their placement) changes and
+ * Frames the camera on the building (drawn sheets other than site sheets): automatically when the set of sheets (or their placement) changes and
  * there was no saved view, and whenever "Dopasuj widok" is clicked. Switching cameras doesn't re-frame.
  */
 function FrameOnSheets({ sheets, ortho, auto, tick }: { sheets: DrawnSheet[]; ortho: Ortho | null; auto: boolean; tick: number }) {
@@ -235,7 +236,9 @@ function FrameOnSheets({ sheets, ortho, auto, tick }: { sheets: DrawnSheet[]; or
     // fitToBox snaps the rotation to the nearest 90°, so ortho views stay exact.
     if (ortho) void controls.rotateTo(...ORTHO_ANGLES[ortho], false);
     const box = new Box3();
-    for (const d of sheets) if (d.sheet.extents) box.union(sheetBox(d.sheet.extents, d.placement));
+    // The building (plans, elevations); site sheets reach far beyond it. Site-only projects frame the site.
+    const building = sheets.filter((d) => d.kind !== 'site');
+    for (const d of building.length ? building : sheets) if (d.sheet.extents) box.union(sheetBox(d.sheet.extents, d.placement));
     if (!box.isEmpty()) void controls.fitToBox(box, true, { paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1 });
   }, [controls, sheets, ortho, auto, tick]);
   return null;
