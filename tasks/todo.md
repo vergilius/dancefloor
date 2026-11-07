@@ -1,6 +1,8 @@
 # M1c task list
 
-Next: Task 2 (draw site sheets through their transform). T1 verified in browser 2026-11-08.
+Next: Task 3 (save the transform, Reset). T1 and T2 verified in browser 2026-11-08.
+Note (T2): site sheets without a successful auto-alignment are drawn with identity. "Dopasuj widok" frames only
+non-site sheets (the building); a site-only project frames everything (`FrameOnSheets` in `src/scene/Viewport.tsx`).
 Note (T1): autoAlign votes with an even sample of ~200 reference endpoints (`VOTERS` in `src/project/align.ts`) to keep it fast.
 Note (spec): data facts and expected values are in PLAN.md §5 M1c (PZT-01: rotation −11.27506°, scale 1,
 translation 0, 66 % endpoints matched; tank at plan x 8.785–11.785, y −15.838…−13.438).
@@ -27,8 +29,8 @@ rotation (°), scale, translation (m) and matched share, or the reason it failed
 **Description:** Horizontal `SheetPlacement` gets an optional transform applied in `sheetToWorld`; texts add its
 rotation/scale. `Viewport` draws site sheets at z 0 with the derived transform (layer panel and groups apply).
 **Acceptance criteria:**
-- [ ] Top view: PZT-01 `A-WALL` lies on PAB-01's walls (< 2 cm); texts upright and unmirrored
-- [ ] Layer/group toggles work on PZT-01
+- [x] Top view: PZT-01 `A-WALL` lies on PAB-01's walls (< 2 cm); texts upright and unmirrored
+- [x] Layer/group toggles work on PZT-01
 **Verification:** `pnpm check`; user checks the top view.
 **Dependencies:** T1
 **Files:** `src/scene/coords.ts`, `src/scene/SheetTexts.tsx`, `src/scene/Viewport.tsx`
