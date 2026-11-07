@@ -1,6 +1,6 @@
 # M1a task list
 
-Next: T2 (folder access). Branch `feat/m1a`.
+Next: user checks T2 in the browser, then T3 (worker parse). Branch `feat/m1a`.
 
 Commands: `pnpm dev`, `pnpm build`, `pnpm lint`, `pnpm typecheck`. No automated tests (CLAUDE.md).
 Every task: typecheck, lint and build green, and a "verify in browser" checklist goes to the user.
@@ -30,7 +30,7 @@ that re-requests permission.
 **Acceptance criteria:**
 - [ ] Picking `dwg/` lists the 12 DWGs and 1 PDF
 - [ ] After a reload, one click restores the list without the picker
-- [ ] Extensions are matched case-insensitively (`.DWG` also listed)
+- [x] Extensions are matched case-insensitively (`.DWG` also listed)
 **Verification:** user checks pick and reload in Chrome.
 **Dependencies:** T1
 **Files:** `src/project/folder.ts`, `src/ui/FolderPanel.tsx`
