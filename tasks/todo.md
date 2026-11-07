@@ -1,6 +1,6 @@
 # M1a task list
 
-Next: Checkpoint B (user checks the sheet panel on all 12 files), then T7. T5/T6 placement and readability checks wait for T8.
+Next: T7 (sheet list + project JSON; Checkpoint B passed). T5/T6 placement and readability checks wait for T8.
 Note (T6): only MTEXT in the files (4962; no TEXT/ATTRIB, no `\P`); codes used: `\f…;` `\W…;` `\L`. Some words are split into two MTEXTs at diacritics in the source (`KRAW`+`ĘŻNIK`): not ours to fix. Branch `feat/m1a`.
 Note (T5): all 12 DWGs expand with no missing/cyclic/too-deep blocks. ELLIPSE added to normalize (user request; 756 on PAB-02, mostly inside blocks).
 Note (T4): DWG closed LWPOLYLINE = `flag & 0x200`; ARC angles are radians. Paper space IS in `db.entities` and `isInPaperSpace` is never set: filter by `ownerBlockRecordSoftId` = *Model_Space handle (fixed in T6; PAB-01 has 268 paper-space entities).
@@ -99,7 +99,7 @@ rotation, nesting. Entities on layer `0` inside a block take the INSERT's layer.
 **Scope:** S
 
 ### Checkpoint B (after T4–T6)
-- [ ] Typecheck, lint and build green; the sheet panel shows normalized extents and counts for all 12 files
+- [x] Typecheck, lint and build green; the sheet panel shows normalized extents and counts for all 12 files (user checked)
 
 ---
 
