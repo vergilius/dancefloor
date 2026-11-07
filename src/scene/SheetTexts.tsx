@@ -5,7 +5,9 @@ import { FONT_URL } from './font';
 
 // MTEXT attachment point 1–9 (1 = top left … 9 = bottom right) → troika anchors.
 const ANCHOR_X = ['left', 'center', 'right'] as const;
-const ANCHOR_Y = ['top', 'middle', 'bottom'] as const;
+// MTEXT top = cap line of the first line, bottom = baseline of the last (not troika's full line box).
+// drei's anchorY type omits 'top-cap', which troika supports (troika-three-text Typesetter.js).
+const ANCHOR_Y = ['top-cap', 'middle', 'bottom-baseline'] as unknown as ('top' | 'middle' | 'bottom-baseline')[];
 
 /** Plan texts lying flat at z. MTEXT height ≈ cap height; Noto Sans cap height is 0.714 em. */
 export function SheetTexts({ texts, z, color }: { texts: NormalizedText[]; z: number; color: string }) {
