@@ -29,7 +29,7 @@ async function parse({ name, bytes }: ParseRequest): Promise<ParseSummary> {
       entityCount: db.entities.length,
       entityCounts,
       layerNames: [...layers].sort((a, b) => a.localeCompare(b, 'pl')),
-      sheet: normalize(db.entities),
+      sheet: normalize(db.entities, new Map(db.tables.BLOCK_RECORD.entries.map((b) => [b.name, b]))),
       ms: Math.round(performance.now() - t0),
     };
   } finally {

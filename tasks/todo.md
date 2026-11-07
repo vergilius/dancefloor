@@ -1,6 +1,7 @@
 # M1a task list
 
-Next: T5 (INSERT expansion). Branch `feat/m1a`.
+Next: T6 (MTEXT stripping). T5 code done; its placement check waits for T8. Branch `feat/m1a`.
+Note (T5): all 12 DWGs expand with no missing/cyclic/too-deep blocks. ELLIPSE (756 on PAB-02, mostly inside blocks) is counted as skipped; not in T4's list.
 Note (T4): DWG closed LWPOLYLINE = `flag & 0x200`; ARC angles are radians; PAB-01 paper space isn't in `db.entities` (no `(paper space)` count).
 Note: the WASM is loaded by the glue's own `new URL(…, import.meta.url)` (Vite bundles it); no copy script, no `public/wasm/`.
 
@@ -79,7 +80,7 @@ rotation, nesting. Entities on layer `0` inside a block take the INSERT's layer.
 **Acceptance criteria:**
 - [ ] Translated, rotated, mirrored (sx = −1) and nested blocks land in the right place
 - [ ] Layer-0 entities inside a block take the INSERT's layer
-- [ ] Recursion is guarded (a cycle or a depth > 16 stops with a counted error)
+- [x] Recursion is guarded (a cycle or a depth > 16 stops with a counted error)
 **Verification:** checked in the browser once T8 draws sheets (doors, windows, grid bubbles in the right place on PAB-01).
 **Dependencies:** T4
 **Files:** `src/dwg/insert.ts`, `src/dwg/normalize.ts`
