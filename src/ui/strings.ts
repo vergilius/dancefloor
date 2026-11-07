@@ -1,6 +1,8 @@
 // Polish UI strings (PLAN.md §2). Keep all user-visible text here.
 export const t = {
   appTitle: 'DanceFloor',
+  viewTop: 'Widok z góry',
+  view3d: 'Widok 3D',
   loading: 'Wczytywanie…',
   noProject: 'Nie otwarto folderu projektu.',
   folderOpen: 'Otwórz folder projektu',
