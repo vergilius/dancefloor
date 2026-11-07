@@ -34,3 +34,4 @@ html, body, #root { height: 100%; margin: 0; }
 .layers summary { cursor: pointer; }
 .layers > div { margin: 4px 0 0; display: grid; gap: 1px; }
 .layer { display: block; padding-left: 8px; }
+.align-prompt { align-self: center; padding: 6px 10px; border-radius: 6px; background: #fff8c5; border: 1px solid #d4a72c; }

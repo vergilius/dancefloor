@@ -1,7 +1,7 @@
 // App state: the open project folder, its sheets (saved or suggested) and per-file parse results.
 import { create } from 'zustand';
 import { listSourceFiles, type SourceFile } from '../project/folder';
-import type { Similarity2D } from '../project/align';
+import { fromTwoPairs, type Similarity2D, type Vec2 } from '../project/align';
 import { DEFAULT_GROUPS, type GroupId, type Groups } from '../project/layerGroups';
 import { readProjectFile, writeProjectFile, type Sheet, type SheetKind } from '../project/projectFile';
 import { suggest } from '../project/suggest';
@@ -20,6 +20,9 @@ export type ParseState =
 
 export type PdfState = { status: 'rendering' } | { status: 'done'; render: PdfRender } | { status: 'error'; message: string };
 
+/** 2-point tool (M1c T6): picks alternate A (sheet coords), A′ (plan coords), B (sheet), B′ (plan). */
+export type AlignTool = { file: string; picks: Vec2[] };
+
 export type ProjectState = {
   dir?: FileSystemDirectoryHandle;
   sheets: SheetRow[];
@@ -30,6 +33,7 @@ export type ProjectState = {
   parsed: Record<string, ParseState>;
   /** PDF sheets rendered to a canvas (M1c underlay). */
   pdfs: Record<string, PdfState>;
+  align?: AlignTool;
   /** Layer groups, project-wide (T9). */
   groups: Groups;
   open(dir: FileSystemDirectoryHandle): Promise<void>;
@@ -41,6 +45,12 @@ export type ProjectState = {
   resetVertical(file: string): void;
   /** Site/PDF sheets: drops the saved transform (site: back to the automatic one, PDF: identity). */
   resetTransform(file: string): void;
+  /** Site/PDF sheets: sets the transform (2-point tool); it then wins like a saved one. */
+  setTransform(file: string, transform: Similarity2D): void;
+  startAlign(file: string): void;
+  /** Adds the next pick; the 4th computes the transform, applies it and ends the tool. */
+  pickAlign(p: Vec2): void;
+  cancelAlign(): void;
   setGroup(group: GroupId, visible: boolean): void;
   setLayer(file: string, layer: string, visible: boolean): void;
   /** `derived`: placements of vertical sheets and transforms of site sheets with none saved yet, written with them. */
@@ -101,7 +111,7 @@ export const useProject = create<ProjectState>()((set, get) => ({
       // Saved sheets whose file is gone stay in the project (and in the next save) so nothing is lost silently.
       ...saved.filter((s) => !present.has(s.file)).map((s) => ({ ...s, source: 'saved' as const, missing: true })),
     ];
-    set({ dir, sheets, groups, dirty: false, loadError, saveError: undefined, parsed: {}, pdfs: {} });
+    set({ dir, sheets, groups, dirty: false, loadError, saveError: undefined, parsed: {}, pdfs: {}, align: undefined });
     // Plans and vertical sheets are placed in 3D, so parse them right away. The worker handles one file at a time.
     for (const s of sheets) if (AUTO_PARSE.has(s.kind) && s.type === 'dwg' && !s.missing) void get().parse(s.file);
     for (const s of sheets) if (s.kind === 'pdf' && s.type === 'pdf' && !s.missing) void get().renderPdf(s.file);
@@ -110,6 +120,7 @@ export const useProject = create<ProjectState>()((set, get) => ({
   setKind(file, kind) {
     set((st) => ({
       dirty: true,
+      align: st.align?.file === file ? undefined : st.align,
       // A transform belongs to the sheet as aligned under its old kind, so a kind change drops it.
       sheets: edit(st.sheets, file, ({ placement, ...r }) => {
         if (kind !== 'plan') return { ...r, kind, transform: undefined };
@@ -139,6 +150,31 @@ export const useProject = create<ProjectState>()((set, get) => ({
 
   resetTransform(file) {
     set((st) => ({ dirty: true, sheets: edit(st.sheets, file, (r) => ({ ...r, transform: undefined })) }));
+  },
+
+  setTransform(file, transform) {
+    set((st) => ({ dirty: true, sheets: edit(st.sheets, file, (r) => ({ ...r, transform })) }));
+  },
+
+  startAlign(file) {
+    set({ align: { file, picks: [] } });
+  },
+
+  pickAlign(p) {
+    const { align } = get();
+    if (!align) return;
+    const picks = [...align.picks, p];
+    if (picks.length < 4) return set({ align: { ...align, picks } });
+    const [a, a2, b, b2] = picks as [Vec2, Vec2, Vec2, Vec2];
+    const t = fromTwoPairs(a, a2, b, b2);
+    // B on top of A gives no transform: pick B and B′ again.
+    if (!t) return set({ align: { ...align, picks: picks.slice(0, 2) } });
+    get().setTransform(align.file, t);
+    set({ align: undefined });
+  },
+
+  cancelAlign() {
+    set({ align: undefined });
   },
 
   setGroup(group, visible) {

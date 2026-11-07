@@ -103,6 +103,7 @@ function SheetItem({ sheet: s }: { sheet: SheetRow }) {
         {s.missing && <span className="error">{t.fileMissing}</span>}
       </div>
       {s.kind === 'pdf' && pdf && <PdfLine pdf={pdf} />}
+      {s.kind === 'pdf' && pdf?.status === 'done' && <AlignLine row={s} />}
       {p?.status === 'parsing' && <div className="muted">{t.parsing}</div>}
       {p?.status === 'error' && <div className="error">{p.message}</div>}
       {p?.status === 'done' && (
@@ -183,22 +184,48 @@ function AxisFitLine({ row, kind, sheet }: { row: SheetRow; kind: VerticalKind; 
   );
 }
 
-function AlignLine({ row, sheet }: { row: SheetRow; sheet: NormalizedSheet }) {
+/** Site sheet (with `sheet`): saved transform, else the automatic one. PDF: saved transform, else identity. */
+function AlignLine({ row, sheet }: { row: SheetRow; sheet?: NormalizedSheet }) {
   const ref = useReference();
   const resetTransform = useProject((st) => st.resetTransform);
+  const startAlign = useProject((st) => st.startAlign);
+  const active = useProject((st) => st.align?.file === row.file);
   const pct = (v: number) => `${(v * 100).toFixed(0)} %`;
   // A saved transform wins and is not re-derived (PLAN.md §5 M1c).
-  const a = row.transform ? undefined : ref && deriveSite(sheet, ref);
-  if (!row.transform && !ref) return <div className="error">{t.axis.noReference}</div>;
-  if (a && !a.ok)
+  const a = row.transform || !sheet ? undefined : ref && deriveSite(sheet, ref);
+  const transform = row.transform ?? (a?.ok ? a.transform : undefined);
+  const tools = (
+    <>
+      {' '}
+      <button type="button" title={t.align.startTitle} disabled={active} onClick={() => startAlign(row.file)}>
+        {t.align.start}
+      </button>
+      {row.transform && (
+        <>
+          {' '}
+          <button type="button" title={sheet ? t.align.resetTitle : t.align.resetPdfTitle} onClick={() => resetTransform(row.file)}>
+            {t.plane.reset}
+          </button>
+        </>
+      )}
+    </>
+  );
+  if (sheet && !row.transform && !ref) return <div className="error">{t.axis.noReference}</div>;
+  if (!transform)
     return (
-      <div className="error">
-        {t.align.title}: {t.align.reasons[a.reason]}
-        {a.share !== undefined && ` (${pct(a.share)})`}
+      <div>
+        {t.align.title}:{' '}
+        {a && !a.ok ? (
+          <span className="error">
+            {t.align.reasons[a.reason]}
+            {a.share !== undefined && ` (${pct(a.share)})`}
+          </span>
+        ) : (
+          <span className="muted">{t.align.identity}</span>
+        )}
+        {tools}
       </div>
     );
-  const transform = row.transform ?? a?.transform;
-  if (!transform) return null;
   const { scale, rotation, translate } = transform;
   return (
     <div>
@@ -210,14 +237,7 @@ function AlignLine({ row, sheet }: { row: SheetRow; sheet: NormalizedSheet }) {
       <span className="muted">
         ({a?.ok ? `${t.align.auto} · ${t.align.share} ${pct(a.share)} = ${a.matched}/${a.total} · ${ref?.file}` : t.align.saved})
       </span>
-      {row.transform && (
-        <>
-          {' '}
-          <button type="button" title={t.align.resetTitle} onClick={() => resetTransform(row.file)}>
-            {t.plane.reset}
-          </button>
-        </>
-      )}
+      {tools}
     </div>
   );
 }

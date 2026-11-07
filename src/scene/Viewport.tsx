@@ -13,6 +13,7 @@ import { loadView, storeView, type SavedView, type Side } from './savedView';
 import { SheetObject } from './SheetObject';
 import { SheetTexts } from './SheetTexts';
 import { PdfObject } from './PdfObject';
+import { AlignTool } from './AlignTool';
 import type { SheetRow } from '../state/store';
 import type { PdfRender } from '../pdf/render';
 import { t } from '../ui/strings';
@@ -134,7 +135,10 @@ function Scene({ project }: { project?: string }) {
   const [saved] = useState(() => (project ? loadView(project) : undefined));
   const view = useRef<SavedView | undefined>(saved);
   // Ortho views (no parallax): from above to compare stacked plans, from a side to compare with elevations.
-  const [ortho, setOrtho] = useState<Ortho | null>(() => savedOrtho(saved));
+  const [chosen, setOrtho] = useState<Ortho | null>(() => savedOrtho(saved));
+  // The 2-point tool works in the top view only; the chosen view comes back when it ends.
+  const aligning = useProject((s) => s.align !== undefined);
+  const ortho: Ortho | null = aligning ? 'top' : chosen;
   const top = ortho !== null;
   const [fitTick, setFitTick] = useState(0);
   return (
@@ -143,14 +147,15 @@ function Scene({ project }: { project?: string }) {
         <button type="button" onClick={() => setFitTick((n) => n + 1)}>
           {t.fitView}
         </button>
-        <button type="button" aria-pressed={!top} onClick={() => setOrtho(null)}>
+        <button type="button" aria-pressed={!top} disabled={aligning} onClick={() => setOrtho(null)}>
           {t.view3d}
         </button>
         {ORTHO_BUTTONS.map(([o, label]) => (
-          <button key={o} type="button" aria-pressed={ortho === o} onClick={() => setOrtho(o)}>
+          <button key={o} type="button" aria-pressed={ortho === o} disabled={aligning} onClick={() => setOrtho(o)}>
             {label}
           </button>
         ))}
+        <AlignPrompt />
       </div>
       <Canvas>
         {top ? (
@@ -172,11 +177,27 @@ function Scene({ project }: { project?: string }) {
             </group>
           );
         })}
+        <AlignTool drawn={drawn} />
         <CameraControls makeDefault {...orthoLimits(ortho)} />
         <CameraSync view={view} ortho={ortho} project={project} />
         <FrameOnSheets sheets={drawn} ortho={ortho} auto={!saved} tick={fitTick} />
       </Canvas>
     </>
+  );
+}
+
+/** What the 2-point tool wants clicked next. */
+function AlignPrompt() {
+  const align = useProject((s) => s.align);
+  const cancelAlign = useProject((s) => s.cancelAlign);
+  if (!align) return null;
+  return (
+    <span className="align-prompt">
+      {t.align.tool} {align.file}: {t.align.steps[align.picks.length]} · {t.align.escHint}{' '}
+      <button type="button" onClick={cancelAlign}>
+        {t.align.cancel}
+      </button>
+    </span>
   );
 }
 
