@@ -66,6 +66,8 @@ export const t = {
     translation: 'przesunięcie',
     share: 'dopasowane końce ścian',
     auto: 'auto z A-WALL',
+    saved: 'zapisane lub ustawione ręcznie',
+    resetTitle: 'Usuń zapisane wyrównanie i wróć do automatycznego z A-WALL',
     reasons: {
       noSiteWalls: 'brak ścian A-WALL na arkuszu',
       noRefWalls: 'brak ścian A-WALL na rzucie odniesienia',

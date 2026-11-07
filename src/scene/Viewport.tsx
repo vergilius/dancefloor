@@ -23,7 +23,7 @@ type DrawnSheet = { file: string; kind: SheetKind; placement: SheetPlacement; sh
 
 /**
  * Plans at their z, vertical sheets that were placed (flagged ones aren't drawn, PLAN.md §5 M1b), and site sheets
- * at z 0 through their auto-alignment (identity if it failed or there's no reference plan, PLAN.md §5 M1c).
+ * at z 0 through their saved or automatic alignment (identity if neither, PLAN.md §5 M1c).
  */
 function useDrawnSheets(): DrawnSheet[] {
   const sheets = useProject((s) => s.sheets);
@@ -43,8 +43,11 @@ function useDrawnSheets(): DrawnSheet[] {
       if (placement) return [{ ...base, placement, color: VERTICAL_COLORS[verticals++ % VERTICAL_COLORS.length]! }];
     }
     if (s.kind === 'site') {
-      const a = ref && deriveSite(p.summary.sheet, ref);
-      const placement = { type: 'horizontal' as const, z: 0, ...(a?.ok && { transform: a.transform }) };
+      // A saved transform wins; otherwise the automatic one.
+      const a = !s.transform && ref ? deriveSite(p.summary.sheet, ref) : undefined;
+      const transform = s.transform ?? (a?.ok ? a.transform : undefined);
+      const z = s.placement?.type === 'horizontal' ? s.placement.z : 0;
+      const placement = { type: 'horizontal' as const, z, ...(transform && { transform }) };
       return [{ ...base, placement, color: SITE_COLORS[sites++ % SITE_COLORS.length]! }];
     }
     return [];

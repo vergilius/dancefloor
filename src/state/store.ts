@@ -1,6 +1,7 @@
 // App state: the open project folder, its sheets (saved or suggested) and per-file parse results.
 import { create } from 'zustand';
 import { listSourceFiles, type SourceFile } from '../project/folder';
+import type { Similarity2D } from '../project/align';
 import { DEFAULT_GROUPS, type GroupId, type Groups } from '../project/layerGroups';
 import { readProjectFile, writeProjectFile, type Sheet, type SheetKind } from '../project/projectFile';
 import { suggest } from '../project/suggest';
@@ -33,12 +34,16 @@ export type ProjectState = {
   setVertical(file: string, placement: VerticalPlacement): void;
   /** Elevations/sections: drops the saved placement, so it is derived again. */
   resetVertical(file: string): void;
+  /** Site/PDF sheets: drops the saved transform (site: back to the automatic one, PDF: identity). */
+  resetTransform(file: string): void;
   setGroup(group: GroupId, visible: boolean): void;
   setLayer(file: string, layer: string, visible: boolean): void;
-  /** `derived`: placements of vertical sheets with none saved yet, written with them. */
-  save(derived?: Record<string, VerticalPlacement>): Promise<void>;
+  /** `derived`: placements of vertical sheets and transforms of site sheets with none saved yet, written with them. */
+  save(derived?: Derived): Promise<void>;
   parse(file: string): Promise<void>;
 };
+
+export type Derived = { placements?: Record<string, VerticalPlacement>; transforms?: Record<string, Similarity2D> };
 
 /** Kinds parsed as soon as the folder opens (or the kind is chosen): they are placed in 3D. */
 const AUTO_PARSE = new Set<SheetKind>(['plan', 'elevation', 'section', 'site']);
@@ -97,10 +102,11 @@ export const useProject = create<ProjectState>()((set, get) => ({
   setKind(file, kind) {
     set((st) => ({
       dirty: true,
+      // A transform belongs to the sheet as aligned under its old kind, so a kind change drops it.
       sheets: edit(st.sheets, file, ({ placement, ...r }) => {
-        if (kind !== 'plan') return { ...r, kind };
+        if (kind !== 'plan') return { ...r, kind, transform: undefined };
         const z = (placement?.type === 'horizontal' ? placement.z : undefined) ?? (r.type ? suggest({ name: file, type: r.type }).z : undefined) ?? 0;
-        return { ...r, kind, placement: { type: 'horizontal', z } };
+        return { ...r, kind, transform: undefined, placement: { type: 'horizontal', z } };
       }),
     }));
     const row = get().sheets.find((r) => r.file === file);
@@ -122,6 +128,10 @@ export const useProject = create<ProjectState>()((set, get) => ({
     set((st) => ({ dirty: true, sheets: edit(st.sheets, file, (r) => ({ ...r, placement: undefined })) }));
   },
 
+  resetTransform(file) {
+    set((st) => ({ dirty: true, sheets: edit(st.sheets, file, (r) => ({ ...r, transform: undefined })) }));
+  },
+
   setGroup(group, visible) {
     set((st) => ({ dirty: true, groups: { ...st.groups, [group]: visible } }));
   },
@@ -138,19 +148,24 @@ export const useProject = create<ProjectState>()((set, get) => ({
     }));
   },
 
-  async save(derived = {}) {
+  async save({ placements = {}, transforms = {} } = {}) {
     const { dir, groups, loadError } = get();
     if (!dir || loadError) return;
-    const sheets = get().sheets.map((r) => (!r.placement && derived[r.file] ? { ...r, placement: derived[r.file] } : r));
-    const out: Sheet[] = sheets.map(({ file, kind, placement, layers }) => ({
+    const sheets = get().sheets.map((r) => ({
+      ...r,
+      placement: r.placement ?? placements[r.file],
+      transform: r.transform ?? transforms[r.file],
+    }));
+    const out: Sheet[] = sheets.map(({ file, kind, placement, transform, layers }) => ({
       file,
       kind,
       ...(placement && { placement }),
+      ...(transform && { transform }),
       ...(layers && Object.keys(layers).length > 0 && { layers }),
     }));
     try {
       await writeProjectFile(dir, { version: 1, sheets: out, groups });
-      // Keep the written placements on the rows, so they are used (not re-derived) from now on.
+      // Keep the written placements/transforms on the rows, so they are used (not re-derived) from now on.
       set({ dirty: false, saveError: undefined, sheets: sheets.map((r) => ({ ...r, source: 'saved' })) });
     } catch (err) {
       set({ saveError: errText(err) });
