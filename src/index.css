@@ -19,3 +19,9 @@ html, body, #root { height: 100%; margin: 0; }
 .sidebar button.link { border: none; background: none; padding: 0; text-align: left; font-size: 13px; }
 .sidebar button.link:hover { text-decoration: underline; background: none; }
 .summary { font-size: 12px; margin: 4px 0 8px 34px; display: grid; gap: 2px; }
+.save-bar { margin: 0 0 8px; font-size: 13px; }
+.sheet-controls { display: flex; gap: 6px; align-items: center; margin: 2px 0 4px 34px; font-size: 12px; }
+.sheet-controls select, .sheet-controls input { font: inherit; padding: 1px 4px; }
+.z-input { width: 56px; }
+.z-input.invalid { border-color: #cf222e; color: #cf222e; }
+.tag.suggested { background: #fff8c5; color: #7d4e00; }

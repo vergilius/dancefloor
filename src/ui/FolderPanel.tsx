@@ -1,27 +1,24 @@
 import { useEffect, useState } from 'react';
-import {
-  ensurePermission,
-  isFolderAccessSupported,
-  listSourceFiles,
-  loadRememberedFolder,
-  pickFolder,
-  type SourceFile,
-} from '../project/folder';
-import { FileList } from './FileList';
+import { ensurePermission, isFolderAccessSupported, loadRememberedFolder, pickFolder } from '../project/folder';
+import { useProject } from '../state/store';
+import { SheetList } from './SheetList';
 import { t } from './strings';
 
 type State =
   | { status: 'loading' }
   | { status: 'none' }
   | { status: 'needsPermission'; dir: FileSystemDirectoryHandle }
-  | { status: 'ready'; dir: FileSystemDirectoryHandle; files: SourceFile[] }
+  | { status: 'ready'; dir: FileSystemDirectoryHandle }
   | { status: 'error'; message: string };
 
 export function FolderPanel() {
   const [state, setState] = useState<State>({ status: 'loading' });
+  const sheetCount = useProject((s) => s.sheets.filter((r) => !r.missing).length);
 
-  const open = async (dir: FileSystemDirectoryHandle) =>
-    setState({ status: 'ready', dir, files: await listSourceFiles(dir) });
+  const open = async (dir: FileSystemDirectoryHandle) => {
+    await useProject.getState().open(dir);
+    setState({ status: 'ready', dir });
+  };
 
   const run = (action: () => Promise<void>) => () => {
     action().catch((err: unknown) => setState({ status: 'error', message: String(err) }));
@@ -77,13 +74,10 @@ export function FolderPanel() {
       {state.status === 'ready' && (
         <>
           <h2>
-            {state.dir.name} <span className="muted">({t.fileCount(state.files.length)})</span>
+            {state.dir.name} <span className="muted">({t.fileCount(sheetCount)})</span>
           </h2>
-          {state.files.length === 0 ? (
-            <p>{t.folderEmpty}</p>
-          ) : (
-            <FileList dir={state.dir} files={state.files} />
-          )}
+          {sheetCount === 0 && <p>{t.folderEmpty}</p>}
+          <SheetList />
         </>
       )}
     </section>

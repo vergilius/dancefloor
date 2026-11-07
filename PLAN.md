@@ -145,6 +145,10 @@ type Feature =
 
 Designed surface = evaluate features in order over the grid. Never mutate `terrain.base`.
 
+Saved as `dancefloor.json` in the project folder, `version: 1` (M1a T7, `src/project/projectFile.ts`). The
+filename is the sheet's key, so there is no separate `id`. Fields are added as tasks need them (T7: `file`,
+`kind`, horizontal `placement` for plans). Saved sheets whose file has gone stay in the JSON and are flagged in the list.
+
 ## 5. Milestones (each with acceptance criteria)
 
 **M1 — DWG underlay viewer** (three sub-milestones, each shippable on its own).
