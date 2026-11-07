@@ -19,7 +19,7 @@ export const t = {
   entities: 'Obiekty',
   layers: 'Warstwy',
   groupsTitle: 'Widoczne grupy warstw',
-  groups: { layout: 'Układ (ściany, drzwi, okna)', levels: 'Rzędne', grid: 'Siatka osi', details: 'Detale', other: 'Inne' },
+  groups: { layout: 'Układ (ściany, drzwi, okna)', levels: 'Rzędne', grid: 'Siatka osi', obstacles: 'Przeszkody', details: 'Detale', other: 'Inne' },
   textsShort: 'tekstów',
   notMm: 'oczekiwano 4 = mm',
   extents: 'Zasięg',

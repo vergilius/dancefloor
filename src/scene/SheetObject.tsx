@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { BufferAttribute, BufferGeometry } from 'three';
 import type { NormalizedSheet } from '../dwg/types';
+import { layerColor } from '../project/layerGroups';
 import { sheetPositions, type SheetPlacement } from './coords';
 
 type Props = { sheet: NormalizedSheet; placement: SheetPlacement; color: string; visible: (layer: string) => boolean };
@@ -10,7 +11,7 @@ export function SheetObject({ sheet, placement, color, visible }: Props) {
   return (
     <group>
       {sheet.layers.map(
-        (l) => visible(l.name) && <LayerLines key={l.name} segments={l.segments} placement={placement} color={color} />,
+        (l) => visible(l.name) && <LayerLines key={l.name} segments={l.segments} placement={placement} color={layerColor(l.name, color)} />,
       )}
     </group>
   );

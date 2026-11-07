@@ -1,5 +1,6 @@
 import { Text } from '@react-three/drei';
 import type { NormalizedText } from '../dwg/types';
+import { layerColor } from '../project/layerGroups';
 import { sheetToWorld, toScene, type SheetPlacement } from './coords';
 import { FONT_URL } from './font';
 
@@ -48,7 +49,7 @@ export function SheetTexts({ texts, placement: p, color, visible }: Props) {
             fontSize={t.height * TEXT_SCALE * scale}
             anchorX={ANCHOR_X[a % 3]}
             anchorY={ANCHOR_Y[Math.floor(a / 3)]}
-            color={color}
+            color={layerColor(t.layer, color)}
           >
             {t.text}
           </Text>
