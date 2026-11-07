@@ -1,6 +1,6 @@
 # M1a task list
 
-Next: T7 browser check by the user (code done), then T8. T5/T6 placement and readability checks wait for T8.
+Next: T8 (draw plan sheets in 3D; T7 passed the user's browser check). T5/T6 placement and readability checks wait for T8.
 Note (T6): only MTEXT in the files (4962; no TEXT/ATTRIB, no `\P`); codes used: `\f…;` `\W…;` `\L`. Some words are split into two MTEXTs at diacritics in the source (`KRAW`+`ĘŻNIK`): not ours to fix. Branch `feat/m1a`.
 Note (T5): all 12 DWGs expand with no missing/cyclic/too-deep blocks. ELLIPSE added to normalize (user request; 756 on PAB-02, mostly inside blocks).
 Note (T4): DWG closed LWPOLYLINE = `flag & 0x200`; ARC angles are radians. Paper space IS in `db.entities` and `isInPaperSpace` is never set: filter by `ownerBlockRecordSoftId` = *Model_Space handle (fixed in T6; PAB-01 has 268 paper-space entities).
@@ -110,8 +110,8 @@ rotation, nesting. Entities on layer `0` inside a block take the INSERT's layer.
 dropdown and a z input. "Zapisz" writes `dancefloor.json` to the folder; it loads on open.
 **Acceptance criteria:**
 - [x] All 13 real filenames get the expected kind/z suggestion (checked with a one-off node run)
-- [ ] Saved JSON has `version: 1` and reloads to the same state
-- [ ] After a reload, the confirmed kinds/z are restored from the file
+- [x] Saved JSON has `version: 1` and reloads to the same state
+- [x] After a reload, the confirmed kinds/z are restored from the file (user checked)
 **Verification:** user checks the suggestions, edits a z, saves, reloads.
 **Dependencies:** T2 (T3 for parsing on open)
 **Files:** `src/project/suggest.ts`, `src/project/projectFile.ts`, `src/state/store.ts`, `src/ui/SheetList.tsx`
