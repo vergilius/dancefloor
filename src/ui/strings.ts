@@ -71,13 +71,13 @@ export const t = {
     resetPdfTitle: 'Usuń wyrównanie PDF (wróć do 1:500 bez obrotu)',
     identity: 'niewyrównany (1:500, bez obrotu)',
     start: 'Wyrównaj',
-    startTitle: 'Wyrównaj dwoma punktami w widoku z góry: A na arkuszu, A′ na rzucie, B, B′',
+    startTitle: 'Wyrównaj dwoma punktami w widoku z góry: A na rzucie, A′ na arkuszu, B, B′',
     /** Per step: what to click and on which sheet (`src` = the sheet being aligned, `ref` = the reference plan). */
     steps: [
-      (src: string) => `A: kliknij narożnik budynku na ${src} (np. róg ściany zewnętrznej)`,
-      (_src: string, ref: string) => `A′: kliknij ten sam narożnik na ${ref}`,
-      (src: string) => `B: kliknij drugi narożnik na ${src}, jak najdalej od A (np. przeciwległy róg budynku)`,
-      (_src: string, ref: string) => `B′: kliknij ten sam drugi narożnik na ${ref}`,
+      (_src: string, ref: string) => `A: kliknij narożnik budynku na ${ref} (np. róg ściany zewnętrznej)`,
+      (src: string) => `A′: kliknij ten sam narożnik na ${src}, arkusz przesunie się tak, żeby A′ leżał na A`,
+      (_src: string, ref: string) => `B: kliknij drugi narożnik na ${ref}, jak najdalej od A (np. przeciwległy róg budynku)`,
+      (src: string) => `B′: kliknij ten sam drugi narożnik na ${src}, arkusz obróci się i przeskaluje`,
     ],
     labels: ['A', 'A′', 'B', 'B′'],
     stepOf: (n: number) => `krok ${n}/4`,

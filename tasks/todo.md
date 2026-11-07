@@ -1,7 +1,7 @@
 # M1c task list
 
 Next: Task 6 (2-point tool) implemented, awaiting the user's browser check; then tick it and do Task 7. T1–T5 and Checkpoint A verified 2026-11-08.
-Note (T6): tool state is `align` in the store (picks: A sheet, A′ plan, B sheet, B′ plan); applied on the 4th click, not previewed. Top view is forced while it runs. r3f fires onClick after drags too, so picks with `e.delta` > 4 px are ignored (`src/scene/AlignTool.tsx`).
+Note (T6): tool state is `align` in the store (picks: A plan, A′ sheet, B plan, B′ sheet; user order 2026-11-08). A′ shifts the sheet at once, B′ applies the full transform, Esc restores `align.before`. Top view is forced while it runs. r3f fires onClick after drags too, so picks with `e.delta` > 4 px are ignored (`src/scene/AlignTool.tsx`).
 Note (T5): pdfjs-dist 6.x: `isEvalSupported` is gone and teardown is `loadingTask.destroy()`. pdfjs is a lazy chunk (`src/pdf/render.ts`), render state is `pdfs` in the store (not `parsed`).
 Note (T4): obstacle colour = `OBSTACLE_COLOR` via `layerColor()` in `src/project/layerGroups.ts` (lines and texts). Groups are
 global by layer name, so `A-DETL-2` is an obstacle on every sheet.

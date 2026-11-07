@@ -1,4 +1,4 @@
-// 2-point tool (PLAN.md §5 M1c), top view only: A on the sheet → A′ on the reference → B → B′.
+// 2-point tool (PLAN.md §5 M1c), top view only: A on the reference → A′ on the sheet (shifts it there) → B → B′.
 import { useEffect, useMemo, useState } from 'react';
 import { useThree, type ThreeEvent } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
@@ -20,7 +20,7 @@ const MARKER_Z = 0.05;
 const COLORS = { source: '#0969da', target: '#cf222e', snapped: '#1a7f37', free: '#6e7781' };
 
 type Drawn = { file: string; placement: SheetPlacement; sheet: NormalizedSheet; layers?: LayerOverrides };
-/** World point under the cursor; `sheet` set on source steps (the point in the aligned sheet's own coords). */
+/** World point under the cursor; `sheet` set on sheet steps (A′, B′: the point in the aligned sheet's own coords). */
 type Pick = { world: Vec2; sheet?: Vec2; snapped: boolean };
 
 export function AlignTool({ drawn }: { drawn: Drawn[] }) {
@@ -57,7 +57,8 @@ export function AlignTool({ drawn }: { drawn: Drawn[] }) {
   }, [file, cancelAlign]);
 
   if (!align) return null;
-  const sourceStep = align.picks.length % 2 === 0;
+  // A, B on the reference; A′, B′ on the sheet being aligned.
+  const sourceStep = align.picks.length % 2 === 1;
 
   const pickAt = (e: ThreeEvent<PointerEvent | MouseEvent>): Pick => {
     const p = { x: e.point.x, y: -e.point.z };
@@ -74,8 +75,8 @@ export function AlignTool({ drawn }: { drawn: Drawn[] }) {
     return { world: p, snapped: false };
   };
 
-  // Picks so far, in world coords: A and B through the sheet's current transform, A′ and B′ as picked.
-  const placed = align.picks.map((p, i) => ({ world: i % 2 === 0 ? apply(current, p) : p, color: i % 2 === 0 ? COLORS.source : COLORS.target }));
+  // Picks so far, in world coords: A and B as picked, A′ and B′ through the sheet's current transform.
+  const placed = align.picks.map((p, i) => ({ world: i % 2 === 1 ? apply(current, p) : p, color: i % 2 === 1 ? COLORS.source : COLORS.target }));
 
   return (
     <>
@@ -86,7 +87,7 @@ export function AlignTool({ drawn }: { drawn: Drawn[] }) {
         onClick={(e) => {
           if (e.delta > CLICK_PX) return;
           const p = pickAt(e);
-          pickAlign(sourceStep ? p.sheet! : p.world);
+          pickAlign(sourceStep ? p.sheet! : p.world, current);
           setHover(undefined);
         }}
       >

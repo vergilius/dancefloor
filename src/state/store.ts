@@ -1,7 +1,7 @@
 // App state: the open project folder, its sheets (saved or suggested) and per-file parse results.
 import { create } from 'zustand';
 import { listSourceFiles, type SourceFile } from '../project/folder';
-import { fromTwoPairs, type Similarity2D, type Vec2 } from '../project/align';
+import { apply, fromTwoPairs, type Similarity2D, type Vec2 } from '../project/align';
 import { DEFAULT_GROUPS, type GroupId, type Groups } from '../project/layerGroups';
 import { readProjectFile, writeProjectFile, type Sheet, type SheetKind } from '../project/projectFile';
 import { suggest } from '../project/suggest';
@@ -20,8 +20,11 @@ export type ParseState =
 
 export type PdfState = { status: 'rendering' } | { status: 'done'; render: PdfRender } | { status: 'error'; message: string };
 
-/** 2-point tool (M1c T6): picks alternate A (sheet coords), A′ (plan coords), B (sheet), B′ (plan). */
-export type AlignTool = { file: string; picks: Vec2[] };
+/**
+ * 2-point tool (M1c T6): picks alternate A (plan coords), A′ (the aligned sheet's own coords), B (plan), B′ (sheet).
+ * `before` = the row's transform and dirty flag at start, restored on cancel.
+ */
+export type AlignTool = { file: string; picks: Vec2[]; before: { transform?: Similarity2D; dirty: boolean } };
 
 export type ProjectState = {
   dir?: FileSystemDirectoryHandle;
@@ -48,8 +51,11 @@ export type ProjectState = {
   /** Site/PDF sheets: sets the transform (2-point tool); it then wins like a saved one. */
   setTransform(file: string, transform: Similarity2D): void;
   startAlign(file: string): void;
-  /** Adds the next pick; the 4th computes the transform, applies it and ends the tool. */
-  pickAlign(p: Vec2): void;
+  /**
+   * Adds the next pick. A′ shifts the sheet (keeping `current`'s rotation and scale) so A′ lands on A; B′ computes
+   * the full transform from both pairs, applies it and ends the tool.
+   */
+  pickAlign(p: Vec2, current: Similarity2D): void;
   cancelAlign(): void;
   setGroup(group: GroupId, visible: boolean): void;
   setLayer(file: string, layer: string, visible: boolean): void;
@@ -157,24 +163,36 @@ export const useProject = create<ProjectState>()((set, get) => ({
   },
 
   startAlign(file) {
-    set({ align: { file, picks: [] } });
+    get().cancelAlign();
+    const { sheets, dirty } = get();
+    const transform = sheets.find((r) => r.file === file)?.transform;
+    set({ align: { file, picks: [], before: { transform, dirty } } });
   },
 
-  pickAlign(p) {
+  pickAlign(p, current) {
     const { align } = get();
     if (!align) return;
     const picks = [...align.picks, p];
+    if (picks.length === 2) {
+      // One pair fixes only the shift: move the sheet so A′ lies on A, then B′ is picked near B.
+      const [a, a2] = picks as [Vec2, Vec2];
+      const q = apply(current, a2);
+      get().setTransform(align.file, { ...current, translate: { x: current.translate.x + a.x - q.x, y: current.translate.y + a.y - q.y } });
+    }
     if (picks.length < 4) return set({ align: { ...align, picks } });
     const [a, a2, b, b2] = picks as [Vec2, Vec2, Vec2, Vec2];
-    const t = fromTwoPairs(a, a2, b, b2);
-    // B on top of A gives no transform: pick B and B′ again.
+    const t = fromTwoPairs(a2, a, b2, b);
+    // B′ on top of A′ gives no transform: pick B and B′ again.
     if (!t) return set({ align: { ...align, picks: picks.slice(0, 2) } });
     get().setTransform(align.file, t);
     set({ align: undefined });
   },
 
   cancelAlign() {
-    set({ align: undefined });
+    const { align } = get();
+    if (!align) return;
+    const { transform, dirty } = align.before;
+    set((st) => ({ align: undefined, dirty, sheets: edit(st.sheets, align.file, (r) => ({ ...r, transform })) }));
   },
 
   setGroup(group, visible) {

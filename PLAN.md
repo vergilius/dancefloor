@@ -251,11 +251,12 @@ Requirements:
   3. keep the candidate whose share of reference endpoints with a site endpoint within 2 cm is highest.
   Accept if that share is ≥ 50 % (PZT-01: 66 %, the rest is extra detail in PZT-01). Otherwise flag the sheet
   with the reason and leave it at identity, so the 2-point tool is the fallback. The sheet list shows the share.
-- **2-point tool (top view):** start "Wyrównaj" on a site/PDF sheet → click A on the sheet, then A′ on the
-  reference, then B, then B′ → `Similarity2D` (scale, rotation, translation) from the two point pairs, applied
-  live. Used for the PDF, and to correct a site sheet by hand. Source clicks snap to the sheet's segment endpoints (DWG) or are free (PDF). Target clicks snap to
+- **2-point tool (top view):** start "Wyrównaj" on a site/PDF sheet → click A on the reference, then A′ (the same
+  point) on the sheet; the sheet shifts at once so A′ lies on A (rotation and scale kept). Then B on the reference
+  and B′ on the sheet → `Similarity2D` (scale, rotation, translation) from the two point pairs, applied
+  live (user, 2026-11-08: reference first, shift after the first pair). Used for the PDF, and to correct a site sheet by hand. Source clicks snap to the sheet's segment endpoints (DWG) or are free (PDF). Target clicks snap to
   endpoints of the visible, already-placed horizontal sheets (plans and an aligned site plan). Snap radius in
-  screen px; the snapped point is shown. Esc cancels.
+  screen px; the snapped point is shown. Esc cancels and restores the transform from before the tool started.
 - Sheet list shows per aligned sheet: scale (3 decimals), rotation (°, 3 decimals), translation (m), with a
   Reset (site sheet: back to the automatic alignment; PDF: back to identity). For PZT-01 the expected values are scale 1.000, rotation −11.275°, translation ≈ 0.
 - `transform` saved in `dancefloor.json` with "Zapisz", validated on load (like the vertical placement).
