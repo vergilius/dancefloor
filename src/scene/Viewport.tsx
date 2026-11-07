@@ -5,6 +5,7 @@ import { Box3, MathUtils, OrthographicCamera as OrthographicCameraImpl, Vector3 
 import type { NormalizedSheet } from '../dwg/types';
 import { layerVisible, type LayerOverrides } from '../project/layerGroups';
 import { useProject } from '../state/store';
+import { deriveSite } from '../state/site';
 import { deriveVertical, isVertical, placementFor, useReference } from '../state/vertical';
 import { sheetBox, type SheetPlacement } from './coords';
 import { loadView, storeView, type SavedView, type Side } from './savedView';
@@ -15,16 +16,21 @@ import { t } from '../ui/strings';
 // One colour per stacked plan, in sheet order, so the levels are easy to tell apart. Vertical sheets get their own set.
 const PLAN_COLORS = ['#1f6feb', '#d1242f', '#1a7f37', '#8250df', '#bf8700'];
 const VERTICAL_COLORS = ['#57606a', '#bc4c00', '#0a7480', '#953800', '#6e40c9', '#4d2d00', '#116329'];
+const SITE_COLORS = ['#6e7781', '#a40e26'];
 
 type DrawnSheet = { file: string; placement: SheetPlacement; sheet: NormalizedSheet; layers?: LayerOverrides; color: string };
 
-/** Plans at their z, plus vertical sheets that were placed (flagged ones aren't drawn, PLAN.md §5 M1b). */
+/**
+ * Plans at their z, vertical sheets that were placed (flagged ones aren't drawn, PLAN.md §5 M1b), and site sheets
+ * at z 0 through their auto-alignment (identity if it failed or there's no reference plan, PLAN.md §5 M1c).
+ */
 function useDrawnSheets(): DrawnSheet[] {
   const sheets = useProject((s) => s.sheets);
   const parsed = useProject((s) => s.parsed);
   const ref = useReference();
   let plans = 0;
   let verticals = 0;
+  let sites = 0;
   return sheets.flatMap((s): DrawnSheet[] => {
     const p = parsed[s.file];
     if (p?.status !== 'done') return [];
@@ -34,6 +40,11 @@ function useDrawnSheets(): DrawnSheet[] {
     if (isVertical(s.kind) && ref) {
       const placement = placementFor(s, deriveVertical(s.file, s.kind, p.summary.sheet, ref));
       if (placement) return [{ ...base, placement, color: VERTICAL_COLORS[verticals++ % VERTICAL_COLORS.length]! }];
+    }
+    if (s.kind === 'site') {
+      const a = ref && deriveSite(p.summary.sheet, ref);
+      const placement = { type: 'horizontal' as const, z: 0, ...(a?.ok && { transform: a.transform }) };
+      return [{ ...base, placement, color: SITE_COLORS[sites++ % SITE_COLORS.length]! }];
     }
     return [];
   });
