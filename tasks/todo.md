@@ -1,6 +1,6 @@
 # M1b task list
 
-Next: T4 (save placement, edit plane position). Checkpoint A passed (user, render looks ok). Derived placement: `src/state/vertical.ts` (cached; keep placement objects stable or geometry rebuilds).
+Next: T5 (M1b acceptance: user checks every M1b ✅ in PLAN.md, then mark M1b done in PLAN.md and CLAUDE.md). T4 done: saved vertical placement wins over the derived one (`placementFor` in `src/state/vertical.ts`); "Zapisz" writes derived placements for unsaved vertical sheets; plane field has a Reset (drops the saved placement → derived again). Ortho side views (Z północy/wschodu/południa/zachodu) added in `Viewport.tsx`.
 Known issue (camera, deferred by the user as minor): switching "Widok z góry" ↔ "Widok 3D" resets both cameras' position.
 Note (spec): data facts and the expected result per sheet are in PLAN.md §5 M1b. Sheet y = height rel. ±0.00, no scale.
 M1a task notes are in git history (`tasks/todo.md` at 032c110).
@@ -56,8 +56,8 @@ viewer side. Fit-view framing includes them.
 **Description:** `projectFile.ts` accepts and validates the vertical placement. Derive only when the sheet has no
 saved placement. The sheet list has a number input for the plane position (m); changing it moves the sheet.
 **Acceptance criteria:**
-- [ ] "Zapisz" writes `{ type: "vertical", origin, dir }`; after reload the same placement is used (not re-derived)
-- [ ] Editing the plane position moves the sheet live and marks the project dirty
+- [x] "Zapisz" writes `{ type: "vertical", origin, dir }`; after reload the same placement is used (not re-derived)
+- [x] Editing the plane position moves the sheet live and marks the project dirty
 **Verification:** `pnpm check`; user edits S's plane, saves, reloads.
 **Dependencies:** T3
 **Files:** `src/project/projectFile.ts`, `src/state/store.ts`, `src/ui/SheetList.tsx`

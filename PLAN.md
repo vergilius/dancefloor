@@ -207,7 +207,7 @@ Requirements:
 - **Perpendicular position:** sections: the cut-line segment(s) on `G-ANNO-SYMB-2` nearest the section's letter
   (letter taken from the filename `PRZEKRÓJ X-X`); for a jog, the longest segment parallel to `dir`. Elevations:
   the ground plan's outermost `A-WALL` extent on the viewer's side. The value is shown and editable (number, m)
-  in the sheet list.
+  in the sheet list, with a Reset back to the derived value.
 - **Flag, don't guess:** < 2 matched labels, |s| fit residual > 5 mm, or no cut line for a section → the sheet is
   not drawn and the sheet list shows the reason. No manual 2-line picking tool in M1b (all 7 sheets resolve
   automatically; build it only when a real sheet needs it).

@@ -63,6 +63,10 @@ export const t = {
     title: 'Płaszczyzna',
     cut: 'linia cięcia',
     wall: 'skrajna ściana A-WALL rzutu',
+    edited: 'ustawiona ręcznie lub zapisana',
+    auto: 'auto',
+    reset: 'Reset',
+    resetTitle: 'Wróć do płaszczyzny wyliczonej z rysunków',
     reasons: {
       noLetter: 'brak litery przekroju w nazwie pliku (PRZEKRÓJ X-X)',
       letterNotOnPlan: 'litery przekroju nie ma na rzucie (G-ANNO-SYMB)',

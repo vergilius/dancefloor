@@ -5,7 +5,7 @@ import { Box3, MathUtils, OrthographicCamera as OrthographicCameraImpl, Vector3 
 import type { NormalizedSheet } from '../dwg/types';
 import { layerVisible, type LayerOverrides } from '../project/layerGroups';
 import { useProject } from '../state/store';
-import { deriveVertical, isVertical, useReference } from '../state/vertical';
+import { deriveVertical, isVertical, placementFor, useReference } from '../state/vertical';
 import { sheetBox, type SheetPlacement } from './coords';
 import { loadView, storeView, type SavedView, type Side } from './savedView';
 import { SheetObject } from './SheetObject';
@@ -29,10 +29,10 @@ function useDrawnSheets(): DrawnSheet[] {
     const p = parsed[s.file];
     if (p?.status !== 'done') return [];
     const base = { file: s.file, sheet: p.summary.sheet, layers: s.layers };
-    if (s.kind === 'plan' && s.placement)
+    if (s.kind === 'plan' && s.placement?.type === 'horizontal')
       return [{ ...base, placement: s.placement, color: PLAN_COLORS[plans++ % PLAN_COLORS.length]! }];
     if (isVertical(s.kind) && ref) {
-      const placement = deriveVertical(s.file, s.kind, p.summary.sheet, ref).placement;
+      const placement = placementFor(s, deriveVertical(s.file, s.kind, p.summary.sheet, ref));
       if (placement) return [{ ...base, placement, color: VERTICAL_COLORS[verticals++ % VERTICAL_COLORS.length]! }];
     }
     return [];

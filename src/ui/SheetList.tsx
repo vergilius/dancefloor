@@ -2,7 +2,8 @@ import { useState } from 'react';
 import type { NormalizedSheet } from '../dwg/types';
 import { SHEET_KINDS, type SheetKind } from '../project/projectFile';
 import { useProject, type SheetRow } from '../state/store';
-import { deriveVertical, isVertical, useReference, type VerticalKind } from '../state/vertical';
+import { planeValue, withPlane } from '../project/vertical';
+import { deriveVertical, isVertical, placementFor, unsavedPlacements, useReference, type VerticalKind } from '../state/vertical';
 import type { ParseSummary } from '../worker/protocol';
 import { GroupToggles, SheetLayers } from './LayerPanel';
 import { t } from './strings';
@@ -19,7 +20,7 @@ export function SheetList() {
 
   const onSave = () => {
     setSaving(true);
-    void save().finally(() => setSaving(false));
+    void save(unsavedPlacements()).finally(() => setSaving(false));
   };
   // The worker queues files one at a time and times each parse itself, so queueing doesn't skew `ms`.
   const onParseAll = () => {
@@ -91,7 +92,7 @@ function SheetItem({ sheet: s }: { sheet: SheetRow }) {
             </option>
           ))}
         </select>
-        {s.placement && (
+        {s.placement?.type === 'horizontal' && (
           <label>
             z <ZInput value={s.placement.z} onChange={(z) => setZ(s.file, z)} /> m
           </label>
@@ -104,7 +105,7 @@ function SheetItem({ sheet: s }: { sheet: SheetRow }) {
       {p?.status === 'done' && (
         <>
           {isVertical(s.kind) && (
-            <AxisFitLine file={s.file} kind={s.kind} sheet={p.summary.sheet} />
+            <AxisFitLine row={s} kind={s.kind} sheet={p.summary.sheet} />
           )}
           <Summary s={p.summary} />
           <SheetLayers row={s} sheet={p.summary.sheet} />
@@ -114,10 +115,15 @@ function SheetItem({ sheet: s }: { sheet: SheetRow }) {
   );
 }
 
-function AxisFitLine({ file, kind, sheet }: { file: string; kind: VerticalKind; sheet: NormalizedSheet }) {
+function AxisFitLine({ row, kind, sheet }: { row: SheetRow; kind: VerticalKind; sheet: NormalizedSheet }) {
   const ref = useReference();
+  const setVertical = useProject((st) => st.setVertical);
+  const resetVertical = useProject((st) => st.resetVertical);
   if (!ref) return <div className="error">{t.axis.noReference}</div>;
-  const { fit, plane } = deriveVertical(file, kind, sheet, ref);
+  const derived = deriveVertical(row.file, kind, sheet, ref);
+  const { fit, plane } = derived;
+  const placement = placementFor(row, derived);
+  const edited = row.placement?.type === 'vertical';
   const mm = (v: number) => (v * 1000).toFixed(2);
   if (!fit.ok)
     return (
@@ -134,18 +140,34 @@ function AxisFitLine({ file, kind, sheet }: { file: string; kind: VerticalKind; 
         (x = {fit.sign < 0 ? '−' : ''}plan {fit.axis} {fit.offset < 0 ? '−' : '+'} {Math.abs(fit.offset).toFixed(3)} · {ref.file})
       </span>
       {plane && (
-        <div className={plane.ok ? undefined : 'error'}>
+        <div className={placement ? undefined : 'error'}>
           {t.plane.title}:{' '}
-          {plane.ok ? (
+          {placement ? (
             <>
-              <strong>
-                {fit.axis === 'x' ? 'y' : 'x'} = {plane.value.toFixed(3)} m
-              </strong>{' '}
+              <label>
+                {fit.axis === 'x' ? 'y' : 'x'} ={' '}
+                {/* Remount on reset so the field shows the derived value again. */}
+                <ZInput
+                  key={edited ? 'edited' : 'auto'}
+                  value={planeValue(placement)} onChange={(v) => setVertical(row.file, withPlane(placement, v))} /> m
+              </label>{' '}
               <span className="muted">
-                ({plane.source === 'cut' ? `${t.plane.cut} ${plane.letter}` : t.plane.wall})
+                (
+                {edited
+                  ? `${t.plane.edited}${plane.ok ? ` · ${t.plane.auto} ${plane.value.toFixed(3)}` : ''}`
+                  : plane.ok && (plane.source === 'cut' ? `${t.plane.cut} ${plane.letter}` : t.plane.wall)}
+                )
               </span>
+              {edited && (
+                <>
+                  {' '}
+                  <button type="button" title={t.plane.resetTitle} onClick={() => resetVertical(row.file)}>
+                    {t.plane.reset}
+                  </button>
+                </>
+              )}
             </>
-          ) : (
+          ) : !plane.ok && (
             <>
               {t.plane.reasons[plane.reason]}
               {plane.letter && ` (${plane.letter})`}
@@ -162,9 +184,12 @@ const parseNum = (text: string) => {
   return v === '' ? NaN : Number(v);
 };
 
+/** Shown to the mm, so derived values don't print float noise. */
+const fmt = (v: number) => String(Number(v.toFixed(3)));
+
 /** Accepts a decimal comma or dot. Invalid text is shown in red and not committed. */
 function ZInput({ value, onChange }: { value: number; onChange: (z: number) => void }) {
-  const [text, setText] = useState(() => String(value));
+  const [text, setText] = useState(() => fmt(value));
   const valid = Number.isFinite(parseNum(text));
   return (
     <input
@@ -176,7 +201,7 @@ function ZInput({ value, onChange }: { value: number; onChange: (z: number) => v
         const z = parseNum(e.target.value);
         if (Number.isFinite(z)) onChange(z);
       }}
-      onBlur={() => valid && setText(String(value))}
+      onBlur={() => valid && setText(fmt(value))}
     />
   );
 }

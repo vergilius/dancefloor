@@ -209,6 +209,15 @@ export function planeOf(file: string, kind: 'elevation' | 'section', plan: Norma
   return kind === 'section' ? sectionPlane(file, plan, fit.axis) : elevationPlane(plan, fit.look);
 }
 
+/** The plane's position across `dir`: plan y for a dir along x, plan x for a dir along y. */
+export const planeValue = (p: VerticalPlacement) => (Math.abs(p.dir.x) > Math.abs(p.dir.y) ? p.origin.y : p.origin.x);
+
+/** Same placement moved across `dir` to `plane`. */
+export function withPlane(p: VerticalPlacement, plane: number): VerticalPlacement {
+  const origin = Math.abs(p.dir.x) > Math.abs(p.dir.y) ? { x: p.origin.x, y: plane } : { x: plane, y: p.origin.y };
+  return { ...p, origin };
+}
+
 /** Sheet x = 0 lands on origin; plan point = origin + x·dir (PLAN.md §4). */
 export function placementOf(fit: AxisFit & { ok: true }, plane: number): VerticalPlacement {
   const along = -fit.sign * fit.offset;
