@@ -1,6 +1,6 @@
 # ADR 0005: House massing from blocks (main body from the roof plan, the rest drawn), openings from elevations
 
-Date: 2026-11-08 · Status: proposed (awaiting user approval of the M5 spec)
+Date: 2026-11-08 · Status: accepted (user, 2026-11-08)
 
 ## Context
 PLAN.md §5 M5 planned footprints as closed loops found in the `A-WALL` LINEs. On the real PAB-01 that doesn't work:

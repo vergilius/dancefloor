@@ -455,7 +455,7 @@ rect by 0.10 → net +0.10 m³ (± one cell row). Undo/redo restore the totals e
 differently keeps its own totals. Reload the app → both versions and their totals are back. Delete one → its files
 are gone. Podgląd and Design unchanged; orbiting stays smooth.
 
-**M5 — House massing** (spec sharpened 2026-11-08 on the real files, awaiting approval; ADR 0005)
+**M5 — House massing** (spec sharpened 2026-11-08 on the real files, approved 2026-11-08; ADR 0005)
 
 Facts (normalized sheets, plan coords in m, heights rel ±0.00):
 - **No wall loops:** PAB-01 `A-WALL` = 246 LINEs, 186 open ends, no closed loop at 1 or 10 mm. Auto-tracing the
