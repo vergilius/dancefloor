@@ -93,6 +93,16 @@ export function placeOpening(r: OpeningRect, e: Elevation, triangles: ArrayLike<
   return { rect: r, depth: best, corners: [at(r.x0, r.y0), at(r.x1, r.y0), at(r.x1, r.y1), at(r.x0, r.y1)] };
 }
 
+/** Distances (ascending) along the ray to every triangle it crosses. */
+export function rayHits(o: [number, number, number], d: [number, number, number], triangles: ArrayLike<number>): number[] {
+  const out: number[] = [];
+  for (let i = 0; i < triangles.length; i += 9) {
+    const t = rayTriangle(o, d, triangles, i);
+    if (t !== undefined) out.push(t);
+  }
+  return out.sort((a, b) => a - b);
+}
+
 /** Möller–Trumbore: distance along the ray (≥ 0) to triangle i, or undefined. Double-sided. */
 function rayTriangle(o: [number, number, number], d: [number, number, number], tr: ArrayLike<number>, i: number): number | undefined {
   const ax = tr[i]!;

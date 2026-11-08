@@ -258,12 +258,18 @@ export const t = {
     fromPlanSkipped: (loops: number) =>
       `pominięte: ${loops} ${plural(loops, 'nieprostokątny obrys', 'nieprostokątne obrysy', 'nieprostokątnych obrysów')} A-WALL`,
     holes: (n: number) => `${n} ${plural(n, 'otwór', 'otwory', 'otworów')}`,
+    slabGround: (block: string) => `${block}: podłoga`,
+    slabCeiling: (block: string, z: number) => `${block}: strop pod ${formatRel(z)}`,
+    slabRecess: 'Podcień: podsufitka',
+    slabsTitle: 'Stropy z przekrojów',
+    slabLine: (bottom: string, top: string, from: string) => `${bottom} … ${top} (${from})`,
     wallsTitle: 'Ściany z rzutów (wnętrze)',
     wallsLine: (faces: number, length: number, skipped: number) =>
       `${faces} ${plural(faces, 'ściana', 'ściany', 'ścian')} (linii), ${length.toFixed(1)} m · pominięte ${skipped} (krótkie, podwójne, poza domem)`,
     openingsTitle: 'Okna i drzwi z elewacji',
-    openingsLine: (found: number, drawn: number, missed: number) =>
-      `znalezione ${found}, narysowane ${drawn}` + (missed > 0 ? `, bez ściany za nimi ${missed} (okna dachowe?)` : ''),
+    openingsLine: (found: number, holes: number, quads: number, missed: number) =>
+      `znalezione ${found}: ${holes} ${plural(holes, 'otwór w ścianie', 'otwory w ścianach', 'otworów w ścianach')}, ${quads} na bryle (ciemne)` +
+      (missed > 0 ? `, bez ściany za nimi ${missed} (okna dachowe?)` : ''),
     addBlock: 'Dodaj blok',
     addBlockTitle: 'Narysuj blok z płaskim dachem: klikaj narożniki na rzutach (w widoku Projekt, przyciąganie do końców linii)',
     drawing: 'Nowy blok',

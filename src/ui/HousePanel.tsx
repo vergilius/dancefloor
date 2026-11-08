@@ -14,10 +14,10 @@ import {
   type MainBody,
   type Vec2,
 } from '../house/blocks';
-import { blocksFromPlan, centre, columnHeights, facesSide, heightsFrom, pointInPolygon, recessesFromPlan, WALL_LAYER, type PlanBlocks } from '../house/fromPlan';
+import { blocksFromPlan, centre, columnHeights, facesSide, heightsFrom, pointInPolygon, recessesFromPlan, soffitFrom, WALL_LAYER, type PlanBlocks } from '../house/fromPlan';
 import { formatHeight, formatRel } from '../project/levels';
 import { useDrawnSheets } from '../state/drawn';
-import { useOpenings, useWalls } from '../state/house';
+import { useHouse3D } from '../state/house';
 import { useRefValue } from '../state/levels';
 import { useProject } from '../state/store';
 import { t } from './strings';
@@ -116,15 +116,18 @@ export function HousePanel() {
         { x: q.x1, y: q.y1 },
         { x: q.x0, y: q.y1 },
       ];
-      const h = heightsFrom(ring, elevations.filter((e) => facesSide(e, q.side)), 1, ring);
+      // Its floor: the ground plan's level (PAB-01 at ±0.00); its soffit from the elevation looking at that side.
+      const floor = ground.placement.type === 'horizontal' ? ground.placement.z : 0;
+      const h = elevations
+        .filter((e) => facesSide(e, q.side))
+        .map((e) => soffitFrom(ring, e, floor))
+        .find(Boolean);
       if (!h) {
         unset.push(t.house.recessName(q.side));
         return [];
       }
-      notes.push(t.house.heightsRead(t.house.recessName(q.side), undefined, h.heights[0]!, src(h)));
-      // Its floor: the ground plan's level (PAB-01 at ±0.00).
-      const floor = ground.placement.type === 'horizontal' ? ground.placement.z : 0;
-      return [{ x0: q.x0, y0: q.y0, x1: q.x1, y1: q.y1, bottom: floor, top: h.heights[0]! }];
+      notes.push(t.house.heightsRead(t.house.recessName(q.side), floor, h.top, sheetName(h.file)));
+      return [{ x0: q.x0, y0: q.y0, x1: q.x1, y1: q.y1, bottom: floor, top: h.top }];
     });
     const body = useProject.getState().house.blocks.find((b) => b.kind === 'gable');
     if (body?.kind === 'gable') {
@@ -234,7 +237,8 @@ export function HousePanel() {
 
 /** Hollow house (M5b): per storey, the wall lines drawn as faces. */
 function WallsSummary() {
-  const { storeys } = useWalls();
+  const { storeys, slabList } = useHouse3D();
+  const ref = useRefValue();
   if (storeys.length === 0) return null;
   return (
     <>
@@ -246,13 +250,21 @@ function WallsSummary() {
           </li>
         ))}
       </ul>
+      <h3>{t.house.slabsTitle}</h3>
+      <ul className="house-blocks">
+        {slabList.map((sl) => (
+          <li key={sl.name}>
+            {sl.name}: {t.house.slabLine(formatRel(sl.bottom), formatHeight(sl.top, ref), sheetName(sl.from))}
+          </li>
+        ))}
+      </ul>
     </>
   );
 }
 
 /** Per placed elevation: openings found / drawn / not placed (T3). */
 function OpeningsSummary() {
-  const elevations = useOpenings();
+  const elevations = useHouse3D().openings;
   if (elevations.length === 0) return null;
   return (
     <>
@@ -260,7 +272,8 @@ function OpeningsSummary() {
       <ul className="house-blocks">
         {elevations.map((e) => (
           <li key={e.file}>
-            {sheetName(e.file)}: {t.house.openingsLine(e.found.length, e.placed.length, e.missed)}
+            {sheetName(e.file)}:{' '}
+            {t.house.openingsLine(e.found.length, e.placed.filter((o) => o.hole).length, e.placed.filter((o) => !o.hole).length, e.missed)}
           </li>
         ))}
       </ul>

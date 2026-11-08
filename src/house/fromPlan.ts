@@ -413,15 +413,16 @@ export const centre = (poly: Vec2[]): Vec2 => {
 
 /** A stretch of the main body's side with no wall face on the ground plan must be this long (m) to be a recess. */
 const RECESS_MIN_LEN = 2;
-/** Its wall is set back this far (m): more than the exterior wall thickness (0.48), so inner faces don't count. */
-const RECESS_DEPTH: [number, number] = [0.6, 1.5];
+/** Its wall is set back this far (m): more than the exterior wall thickness (0.48), so inner faces don't count.
+ * PAB-01's west recess under the terrace roof is 0.5995 m deep. */
+const RECESS_DEPTH: [number, number] = [0.55, 1.5];
 
 export type RecessIn = { side: Side; x0: number; y0: number; x1: number; y1: number };
 
 /**
  * Recesses (podcień) of the main body on the ground plan: per side of the main rectangle, the stretches ≥ 2 m with no
- * `I-WALL` / `A-WALL` line on that side, whose wall is a parallel `I-WALL` line 0.6…1.5 m inside covering ≥ half of
- * the stretch. PAB-01: east, x 14.334…15.134, y −7.536…−1.476.
+ * `I-WALL` / `A-WALL` line on that side, whose wall is a parallel `I-WALL` line 0.55…1.5 m inside covering ≥ half of
+ * the stretch or reaching both its ends. PAB-01: east, x 14.334…15.134, y −7.536…−1.476; west under the terrace roof (0.60 m).
  */
 export function recessesFromPlan(sheet: NormalizedSheet, main: GableBlock): RecessIn[] {
   const r: Rect = { x0: main.x0, y0: main.y0, x1: main.x1, y1: main.y1 };
@@ -466,7 +467,9 @@ export function recessesFromPlan(sheet: NormalizedSheet, main: GableBlock): Rece
         const [p, q] = span(s, sd.horiz);
         return n + Math.max(0, Math.min(q, b) - Math.max(p, a));
       }, 0);
-      if (cover < (b - a) / 2) continue;
+      // Enough of it, or both ends (the wall has a wide opening: PAB-01 west, the terrace door).
+      const ends = [a, b].every((e) => at2.some((sg) => span(sg, sd.horiz).some((v) => Math.abs(v - e) < FACE_TOL)));
+      if (cover < (b - a) / 2 && !ends) continue;
       const inside = sd.at + depth * sd.inward;
       const [c0, c1] = [Math.min(sd.at, inside), Math.max(sd.at, inside)];
       out.push(sd.horiz ? { side: sd.side, x0: mm(a), x1: mm(b), y0: mm(c0), y1: mm(c1) } : { side: sd.side, x0: mm(c0), x1: mm(c1), y0: mm(a), y1: mm(b) });
@@ -479,3 +482,37 @@ const OUTWARD: Record<Side, Vec2> = { north: { x: 0, y: 1 }, south: { x: 0, y: -
 
 /** The elevation looks straight at this side of the house (its view direction (−dir.y, dir.x) points inwards). */
 export const facesSide = (e: ElevationIn, side: Side) => -e.dir.y * OUTWARD[side].x + e.dir.x * OUTWARD[side].y < -0.9;
+
+/** A soffit is at least this far (m) above the recess floor, and its lines cover this share of the recess width. */
+const SOFFIT_MIN = 2;
+const SOFFIT_COVER = 0.9;
+
+/**
+ * A recess's soffit on the elevation looking at it: the lowest height ≥ floor + 2 m whose horizontal lines
+ * (`HEIGHT_LAYERS` and `I-WALL`, pieces added up) cover ≥ 90 % of the recess width. PAB-08: +2.635 east
+ * (`PZT_UTWARDZENIA` + `I-WALL`); PAB-09: +2.635 west (the slab band along the whole side).
+ */
+export function soffitFrom(ring: Vec2[], e: ElevationIn & { file: string }, floor: number): { top: number; file: string } | undefined {
+  const xs = ring.map((p) => (p.x - e.origin.x) * e.dir.x + (p.y - e.origin.y) * e.dir.y);
+  const e0 = Math.min(...xs);
+  const e1 = Math.max(...xs);
+  const byHeight = new Map<number, [number, number][]>();
+  for (const layer of [...HEIGHT_LAYERS, 'I-WALL'])
+    for (const [x1, y1, x2, y2] of segments(e.sheet, layer)) {
+      if (Math.abs(y1 - y2) > 0.002 || y1 < floor + SOFFIT_MIN) continue;
+      const a = Math.max(Math.min(x1, x2), e0);
+      const b = Math.min(Math.max(x1, x2), e1);
+      if (b > a) byHeight.set(mm(y1), [...(byHeight.get(mm(y1)) ?? []), [a, b]]);
+    }
+  for (const h of [...byHeight.keys()].sort((p, q) => p - q)) {
+    const spans = byHeight.get(h)!.sort((p, q) => p[0] - q[0]);
+    let covered = 0;
+    let at = e0;
+    for (const [a, b] of spans) {
+      if (b > at) covered += b - Math.max(a, at);
+      at = Math.max(at, b);
+    }
+    if (covered >= SOFFIT_COVER * (e1 - e0)) return { top: h, file: e.file };
+  }
+  return undefined;
+}

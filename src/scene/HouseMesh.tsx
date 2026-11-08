@@ -6,7 +6,7 @@ import { useEffect, useMemo } from 'react';
 import { BufferAttribute, BufferGeometry, DoubleSide, EdgesGeometry } from 'three';
 import { blockOutline, blockTriangles, polygonArea, roofTriangles, type Block } from '../house/blocks';
 import { hostsWalls } from '../house/walls';
-import { useOpenings, useWalls } from '../state/house';
+import { useHouse3D } from '../state/house';
 import { useProject } from '../state/store';
 import { DESIGN_LAYER, ENV_LAYER } from './split';
 
@@ -21,14 +21,14 @@ const THIN_AREA = 1;
 const OPENING_COLOR = '#2b3036';
 const WALL_COLOR = '#f1eee8';
 const WALL_EDGE_COLOR = '#8a847a';
+const SLAB_COLOR = '#d8d2c6';
 
 export function HouseMesh() {
   const show = useProject((s) => s.showHouse);
   const blocks = useProject((s) => s.house.blocks);
-  const walls = useWalls();
-  // With walls from the plans, the main body and the annex are drawn hollow (M5b): their walls, not their solids.
-  const hollow = walls.triangles.length > 0;
-  const ground = walls.storeys[0]?.z ?? 0;
+  const house = useHouse3D();
+  // With walls from the plans, the main body and the annex are drawn hollow (M5b): walls, fills, slabs, roof.
+  const hollow = house.walls.length > 0;
   const footprints = useMemo(() => {
     const pos: number[] = [];
     for (const b of blocks) {
@@ -44,10 +44,12 @@ export function HouseMesh() {
   return (
     <group>
       {blocks.map((b, i) => (
-        <BlockSolid key={i} block={b} hollow={hollow && (b.kind === 'gable' || hostsWalls(b, ground))} />
+        <BlockSolid key={i} block={b} hollow={hollow && (b.kind === 'gable' || hostsWalls(b, house.groundZ))} />
       ))}
-      {hollow && <WallFaces triangles={walls.triangles} />}
-      <Openings />
+      {hollow && <WallFaces triangles={house.walls} color={WALL_COLOR} />}
+      {hollow && <WallFaces triangles={house.fills} color={WALL_COLOR} />}
+      {hollow && <WallFaces triangles={house.slabs} color={SLAB_COLOR} />}
+      <Openings elevations={house.openings} />
       <lineSegments layers={DESIGN_LAYER}>
         <bufferGeometry>
           <bufferAttribute attach="attributes-position" args={[footprints, 3]} />
@@ -72,16 +74,10 @@ function sceneGeometry(world: ArrayLike<number>): BufferGeometry {
   return g;
 }
 
-/** Hollow main body: its roof planes; hollow annex: its top as a lid (until the slabs, M5b T6). */
-function hollowTriangles(b: Block): number[] {
-  if (b.kind === 'gable') return roofTriangles(b);
-  const all = blockTriangles(b);
-  const lid: number[] = [];
-  for (let i = 0; i < all.length; i += 9) if (all[i + 2] === b.top && all[i + 5] === b.top && all[i + 8] === b.top) lid.push(...all.slice(i, i + 9));
-  return lid;
-}
+/** Hollow main body: its roof planes; a hollow annex: nothing of its own (walls and slabs draw it). */
+const hollowTriangles = (b: Block): number[] => (b.kind === 'gable' ? roofTriangles(b) : []);
 
-function WallFaces({ triangles }: { triangles: number[] }) {
+function WallFaces({ triangles, color }: { triangles: number[]; color: string }) {
   const geo = useMemo(() => sceneGeometry(triangles), [triangles]);
   const edges = useMemo(() => new EdgesGeometry(geo, EDGE_ANGLE), [geo]);
   useEffect(() => () => geo.dispose(), [geo]);
@@ -89,7 +85,7 @@ function WallFaces({ triangles }: { triangles: number[] }) {
   return (
     <>
       <mesh layers={ENV_LAYER} geometry={geo}>
-        <meshLambertMaterial color={WALL_COLOR} side={DoubleSide} />
+        <meshLambertMaterial color={color} side={DoubleSide} />
       </mesh>
       <lineSegments layers={ENV_LAYER} geometry={edges}>
         <lineBasicMaterial color={WALL_EDGE_COLOR} />
@@ -126,13 +122,13 @@ function BlockSolid({ block, hollow }: { block: Block; hollow: boolean }) {
   );
 }
 
-/** Façade openings (T3): dark quads 1 cm in front of the face they were placed on. Environment only. */
-function Openings() {
-  const elevations = useOpenings();
+/** Façade openings (T3) not cut through a hollow wall: dark quads 1 cm in front of their face. Environment only. */
+function Openings({ elevations }: { elevations: ReturnType<typeof useHouse3D>['openings'] }) {
   const geo = useMemo(() => {
     const pos: number[] = [];
     for (const e of elevations)
       for (const o of e.placed) {
+        if (o.hole) continue;
         const [a, b, c, d] = o.corners.map(([x, y, z]) => [x, z, -y]) as [number[], number[], number[], number[]];
         pos.push(...a, ...b, ...c, ...a, ...c, ...d);
       }

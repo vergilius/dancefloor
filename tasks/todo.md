@@ -1,6 +1,8 @@
 # M5 task list
 
-Next: Task 3 (openings from the elevations). Order: T3 → T5 → T6 (M5b, ADR 0006) → T4 → checkpoint B. Podcień check by the user pending.
+Next: user's browser check of T3 + T5 + T6 (implemented 2026-11-08), then T4 (hide openings: hidden ones must not cut walls; the merged PAB-08 gable box cuts a big hole until hidden).
+T3 note: pieces are joined where their boxes touch (the garage door's panel lines end mid-frame); counts 6/8/7/1 as specified. Rays start 0.3 m in front of the elevation plane (PAB-08's plane is 1 cm inside the gable).
+T6 note: openings cut the wall lines (plans draw lines across some openings: garage door, podcień doors) and get sill/head fills; a cut needs a wall face within 0.25 m of where the opening was placed (roof windows stay dark quads). West recess (0.60 m, under the terrace roof) found too; soffits via `soffitFrom`.
 T2 note: "Z rzutu parteru" (ADR 0005 amendment) builds the annex, the terrace slab (L, 31.90 m²), the deck (52.20 m²), 2 posts, 1 pier and 7 S-COLS columns from PAB-01, heights read from the elevations/section (annex +3.59, slab +2.635…+3.22, posts −0.02…+2.635, columns −0.02…+2.63).
 T2 note: the slab carries the awning opening as `holes` (6.93 × 2.14 m, net 17.07 m²).
 Real-file checks without the browser: Node 24 runs `src/` TS directly with a resolver hook adding `.ts` to extensionless imports; load a DWG via `@mlightcad/libredwg-web` + `normalize()` in a scratchpad script (never in the repo, never commit `dwg/`).
