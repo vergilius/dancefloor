@@ -364,3 +364,30 @@ function flatTriangles(b: FlatBlock): number[] {
   }
   return out;
 }
+
+/** The two roof planes only (ridge → eave, with the overhang): the hollow house draws them over its walls. */
+export function roofTriangles(b: GableBlock): number[] {
+  const alongX = b.x1 - b.x0 >= b.y1 - b.y0;
+  const [u0, u1, v0, v1] = alongX ? [b.x0, b.x1, b.y0, b.y1] : [b.y0, b.y1, b.x0, b.x1];
+  const P = (u: number, v: number, h: number): P3 => (alongX ? [u, v, h] : [v, u, h]);
+  const vc = (v0 + v1) / 2;
+  const he = wallFace(b) - b.overhang * tan(b.pitch);
+  const out: number[] = [];
+  quad(out, P(u0, v0 - b.overhang, he), P(u1, v0 - b.overhang, he), P(u1, vc, b.ridge), P(u0, vc, b.ridge));
+  quad(out, P(u1, v1 + b.overhang, he), P(u0, v1 + b.overhang, he), P(u0, vc, b.ridge), P(u1, vc, b.ridge));
+  return out;
+}
+
+/** Height of the roof surface over plan point (x, y) (no clamping: beyond the walls it keeps falling). */
+export function roofHeight(b: GableBlock, x: number, y: number): number {
+  const alongX = b.x1 - b.x0 >= b.y1 - b.y0;
+  const v = alongX ? y : x;
+  const vc = alongX ? (b.y0 + b.y1) / 2 : (b.x0 + b.x1) / 2;
+  return b.ridge - Math.abs(v - vc) * tan(b.pitch);
+}
+
+/** The ridge line's fixed coordinate and whether it runs along x. */
+export function ridgeLine(b: GableBlock): { alongX: boolean; at: number } {
+  const alongX = b.x1 - b.x0 >= b.y1 - b.y0;
+  return { alongX, at: alongX ? (b.y0 + b.y1) / 2 : (b.x0 + b.x1) / 2 };
+}

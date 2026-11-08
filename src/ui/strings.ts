@@ -258,6 +258,9 @@ export const t = {
     fromPlanSkipped: (loops: number) =>
       `pominięte: ${loops} ${plural(loops, 'nieprostokątny obrys', 'nieprostokątne obrysy', 'nieprostokątnych obrysów')} A-WALL`,
     holes: (n: number) => `${n} ${plural(n, 'otwór', 'otwory', 'otworów')}`,
+    wallsTitle: 'Ściany z rzutów (wnętrze)',
+    wallsLine: (faces: number, length: number, skipped: number) =>
+      `${faces} ${plural(faces, 'ściana', 'ściany', 'ścian')} (linii), ${length.toFixed(1)} m · pominięte ${skipped} (krótkie, podwójne, poza domem)`,
     openingsTitle: 'Okna i drzwi z elewacji',
     openingsLine: (found: number, drawn: number, missed: number) =>
       `znalezione ${found}, narysowane ${drawn}` + (missed > 0 ? `, bez ściany za nimi ${missed} (okna dachowe?)` : ''),

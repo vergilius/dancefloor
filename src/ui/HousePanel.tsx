@@ -17,7 +17,7 @@ import {
 import { blocksFromPlan, centre, columnHeights, facesSide, heightsFrom, pointInPolygon, recessesFromPlan, WALL_LAYER, type PlanBlocks } from '../house/fromPlan';
 import { formatHeight, formatRel } from '../project/levels';
 import { useDrawnSheets } from '../state/drawn';
-import { useOpenings } from '../state/house';
+import { useOpenings, useWalls } from '../state/house';
 import { useRefValue } from '../state/levels';
 import { useProject } from '../state/store';
 import { t } from './strings';
@@ -215,6 +215,7 @@ export function HousePanel() {
         </p>
       )}
       <LevelOptions />
+      <WallsSummary />
       <OpeningsSummary />
       {blocks.length === 0 ? (
         <p className="muted">{t.house.none}</p>
@@ -227,6 +228,24 @@ export function HousePanel() {
           ))}
         </ul>
       )}
+    </>
+  );
+}
+
+/** Hollow house (M5b): per storey, the wall lines drawn as faces. */
+function WallsSummary() {
+  const { storeys } = useWalls();
+  if (storeys.length === 0) return null;
+  return (
+    <>
+      <h3>{t.house.wallsTitle}</h3>
+      <ul className="house-blocks">
+        {storeys.map((st) => (
+          <li key={st.file}>
+            {sheetName(st.file)} ({formatRel(st.z)}): {t.house.wallsLine(st.faces, st.length, st.skipped)}
+          </li>
+        ))}
+      </ul>
     </>
   );
 }
