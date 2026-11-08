@@ -9,8 +9,9 @@ acceptance criteria, and risks. Read only the section you need for the current t
 changes, update PLAN.md in the same change.
 
 ## Status
-- M1a, M1b (2026-11-07), M1c, M2 (levels & references, measure tool, two viewports) and M3 (terrain grid, mesh,
-  contours; 2026-11-08) done. Now: M4a (edit versions + editor core, PLAN.md §5, `tasks/todo.md`), then M5 house massing, then M4b–M4d (ADR 0004).
+- M1a, M1b (2026-11-07), M1c, M2 (levels & references, measure tool, two viewports), M3 (terrain grid, mesh,
+  contours) and M4a (edit versions: Wyrównaj / Podnieś / Obniż, volumes, undo, Różnice; 2026-11-08) done.
+  Next: M5 house massing, then M4b–M4d (ADR 0004).
 - Track milestone/task progress in PLAN.md (or a `tasks/` file created via `planning-and-task-breakdown`).
 
 ## Stack (planned, see PLAN.md §3)

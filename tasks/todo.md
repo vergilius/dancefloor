@@ -1,6 +1,6 @@
 # M4a task list
 
-Next: T4 implemented, waiting for the user's browser check; then checkpoint B (PLAN.md/CLAUDE.md status, merge), then M5 house massing (ADR 0004).
+Next: M4a done and merged (2026-11-08). Start M5 house massing (ADR 0004): sharpen PLAN.md §5 M5 on the real files with `spec-driven-development`, then plan and tasks.
 Plan: `tasks/plan.md`. Spec: PLAN.md §5 M4a, ADR 0003. M3 task notes are in git history (`tasks/todo.md` at c477be0).
 
 Commands: `pnpm dev`, `pnpm check` (build + lint + guards). No automated tests (CLAUDE.md).
@@ -57,12 +57,12 @@ delete.
 folder load. Toggle "Różnice": vertex colours by Δh = surface − frozen base (red cut, blue fill, white 0, saturated
 ±1.0 m) with a small legend.
 **Acceptance criteria:**
-- [ ] Undo/redo restore totals exactly; a second version keeps its own history and totals
-- [ ] Różnice shows red/blue where expected; off = M3 height tint
+- [x] Undo/redo restore totals exactly; a second version keeps its own history and totals
+- [x] Różnice shows red/blue where expected; off = M3 height tint
 **Verification:** `pnpm check`; user undoes/redoes across two versions, toggles Różnice, orbits (smooth).
 **Dependencies:** T3
 **Files:** `src/state/versions.ts`, `src/scene/TerrainMesh.tsx`, `src/scene/Viewport.tsx`, `src/ui/VersionPanel.tsx`, `src/ui/strings.ts`
 **Scope:** M
 
 ### Checkpoint B (after T3–T4)
-- [ ] `pnpm check` green; the M4a ✅ in PLAN.md verified by the user; PLAN.md/CLAUDE.md status updated; merge
+- [x] `pnpm check` green; the M4a ✅ in PLAN.md verified by the user; PLAN.md/CLAUDE.md status updated; merge
