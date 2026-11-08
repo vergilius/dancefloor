@@ -38,6 +38,8 @@ export type ProjectState = {
   pdfs: Record<string, PdfState>;
   /** PDF underlay opacity per file (0–1, default 1). View setting: not saved, doesn't mark the project dirty. */
   pdfOpacity: Record<string, number>;
+  /** 3D level markers on/off (M2). View setting: not saved, doesn't mark the project dirty. */
+  showLevels: boolean;
   align?: AlignTool;
   /** Layer groups, project-wide (T9). */
   groups: Groups;
@@ -66,6 +68,7 @@ export type ProjectState = {
   parse(file: string): Promise<void>;
   renderPdf(file: string): Promise<void>;
   setPdfOpacity(file: string, opacity: number): void;
+  setShowLevels(show: boolean): void;
 };
 
 export type Derived = { placements?: Record<string, VerticalPlacement>; transforms?: Record<string, Similarity2D> };
@@ -97,6 +100,7 @@ export const useProject = create<ProjectState>()((set, get) => ({
   parsed: {},
   pdfs: {},
   pdfOpacity: {},
+  showLevels: true,
   groups: DEFAULT_GROUPS,
 
   async open(dir) {
@@ -271,5 +275,9 @@ export const useProject = create<ProjectState>()((set, get) => ({
 
   setPdfOpacity(file, opacity) {
     set((st) => ({ pdfOpacity: { ...st.pdfOpacity, [file]: opacity } }));
+  },
+
+  setShowLevels(showLevels) {
+    set({ showLevels });
   },
 }));

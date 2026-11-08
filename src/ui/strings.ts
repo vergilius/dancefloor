@@ -8,6 +8,8 @@ export const t = {
   viewSouth: 'Z południa',
   viewWest: 'Z zachodu',
   fitView: 'Dopasuj widok',
+  levelMarkers: 'Punkty rzędnych',
+  levelMarkersTitle: 'Pokaż/ukryj punkty rzędnych Tp/Ti z arkuszy (w obu widokach)',
   viewports: { design: 'Projekt (rysunki)', env: 'Otoczenie (bryły 3D)' },
   loading: 'Wczytywanie…',
   noProject: 'Nie otwarto folderu projektu.',

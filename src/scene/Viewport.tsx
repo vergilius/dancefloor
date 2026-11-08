@@ -14,6 +14,7 @@ import { SheetObject } from './SheetObject';
 import { SheetTexts } from './SheetTexts';
 import { PdfObject } from './PdfObject';
 import { AlignTool } from './AlignTool';
+import { LevelMarkers } from './LevelMarkers';
 import { ENV_LAYER, inBothViewports, splitEvents, useSplitRender, type Half } from './split';
 import type { SheetRow } from '../state/store';
 import type { PdfRender } from '../pdf/render';
@@ -164,6 +165,7 @@ function Scene({ project }: { project?: string }) {
             {label}
           </button>
         ))}
+        <LevelsToggle />
         <AlignPrompt />
       </div>
       <div className="viewports" ref={container}>
@@ -189,6 +191,7 @@ function Scene({ project }: { project?: string }) {
             </group>
           );
         })}
+        <LevelMarkers drawn={drawn} />
         <AlignTool drawn={drawn} />
         <CameraControls makeDefault domElement={(half === 'env' ? envEl : designEl) ?? undefined} {...orthoLimits(ortho)} />
         <CameraSync view={view} ortho={ortho} project={project} />
@@ -208,6 +211,16 @@ function Scene({ project }: { project?: string }) {
 function SplitRender() {
   useSplitRender();
   return null;
+}
+
+function LevelsToggle() {
+  const show = useProject((s) => s.showLevels);
+  const setShowLevels = useProject((s) => s.setShowLevels);
+  return (
+    <button type="button" aria-pressed={show} title={t.levelMarkersTitle} onClick={() => setShowLevels(!show)}>
+      {t.levelMarkers}
+    </button>
+  );
 }
 
 /** What the 2-point tool wants clicked next. */
