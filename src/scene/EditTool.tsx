@@ -6,10 +6,11 @@
 // clears the selection. A drag that starts anywhere else orbits as usual.
 import { useEffect, useMemo, useRef } from 'react';
 import { useThree } from '@react-three/fiber';
-import { Raycaster, Vector2 } from 'three';
+import { Plane, Raycaster, Vector2, Vector3, type Camera } from 'three';
+import { useProject } from '../state/store';
 import { useEnvSurface, useVersions, versionSurface } from '../state/versions';
 import { isOutside, rayGrid, sampleGrid, type HeightGrid } from '../terrain/grid';
-import { DEFAULT_DZ, edgeHeights, edgesOf, editValue, heightAt, snapOf, snapRect, withEdgeHeight, withValue, type EdgeMode, type Edges, type Edit, type Rect, type Side } from '../versions/edits';
+import { DEFAULT_DZ, edgeHeights, edgesOf, editValue, heightAt, snapOf, snapRect, WALL_SNAP, withEdgeHeight, withValue, type EdgeMode, type Edges, type Edit, type Rect, type Side } from '../versions/edits';
 import { groundUnder, NEW_WALL_ABOVE } from '../versions/walls';
 import { ENV_LAYER, halfAt } from './split';
 
@@ -33,8 +34,63 @@ const NEXT_MODE: Record<EdgeMode, EdgeMode> = { slope: 'step', step: 'slope' };
 let seq = 0;
 const newId = () => `e${Date.now().toString(36)}${(seq++).toString(36)}`;
 
+/** A wall side is grabbed within this many screen px of its top outline. */
+const WALL_SIDE_PX = 8;
+
+/** Client px of a scene point in the Environment half (undefined behind the camera). */
+function toClient(camera: Camera, el: HTMLElement, p: Vector3): [number, number] | undefined {
+  const v = p.clone().project(camera);
+  if (v.z > 1) return undefined;
+  const r = el.getBoundingClientRect();
+  const left = Math.floor(r.width / 2);
+  return [r.left + left + ((v.x + 1) / 2) * (r.width - left), r.top + ((1 - v.y) / 2) * r.height];
+}
+
+const segDist = ([px, py]: [number, number], [ax, ay]: [number, number], [bx, by]: [number, number]) => {
+  const dx = bx - ax, dy = by - ay;
+  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy || 1)));
+  return Math.hypot(px - ax - t * dx, py - ay - t * dy);
+};
+
+/** Point in a convex polygon (any winding). */
+function inPolygon([px, py]: [number, number], poly: [number, number][]): boolean {
+  let sign = 0;
+  for (let k = 0; k < poly.length; k++) {
+    const [ax, ay] = poly[k]!;
+    const [bx, by] = poly[(k + 1) % poly.length]!;
+    const c = Math.sign((bx - ax) * (py - ay) - (by - ay) * (px - ax));
+    if (c === 0) continue;
+    if (sign === 0) sign = c;
+    else if (c !== sign) return false;
+  }
+  return true;
+}
+
+/** A wall under the pointer, in screen space on its top outline: a side (resize) or its top face (lift). */
+function wallHover(camera: Camera, el: HTMLElement, e: Edit & { tool: 'wall' }, client: [number, number]): Side | 'inside' | undefined {
+  const r = e.rect;
+  // Top corners in order s-w, s-e, n-e, n-w; side k joins corner k and k + 1 (s, e, n, w).
+  const pts = [[r.x0, r.y0], [r.x1, r.y0], [r.x1, r.y1], [r.x0, r.y1]].map(([x, y]) => toClient(camera, el, new Vector3(x!, e.top, -y!)));
+  if (pts.some((q) => !q)) return undefined;
+  const poly = pts as [number, number][];
+  const sides: Side[] = ['s', 'e', 'n', 'w'];
+  const best = sides.map((s, k) => [s, segDist(client, poly[k]!, poly[(k + 1) % 4]!)] as const).sort((a, b) => a[1] - b[1])[0]!;
+  if (best[1] <= WALL_SIDE_PX) return best[0];
+  return inPolygon(client, poly) ? 'inside' : undefined;
+}
+
+/** The wall's rect with one side moved to plan coordinate v (5 cm snap), at least one snap wide. */
+function resizeRect(r: Rect, side: Side, v: number): Rect {
+  const s = Math.round(Math.round(v / WALL_SNAP) * WALL_SNAP * 1000) / 1000;
+  if (side === 'w') return { ...r, x0: Math.min(s, r.x1 - WALL_SNAP) };
+  if (side === 'e') return { ...r, x1: Math.max(s, r.x0 + WALL_SNAP) };
+  if (side === 's') return { ...r, y0: Math.min(s, r.y1 - WALL_SNAP) };
+  return { ...r, y1: Math.max(s, r.y0 + WALL_SNAP) };
+}
+
 /** Dragged up / down from its middle: Wyrównaj (z) and Mur (top). */
 const liftable = (e: Edit) => e.tool === 'level' || e.tool === 'wall';
+const sideKey = { w: 'x0', e: 'x1', s: 'y0', n: 'y1' } as const;
 
 /** The side of `r` within EDGE_HIT of plan point p (the nearest), if any. */
 function nearSide(r: Rect, [x, y]: [number, number]): Side | undefined {
@@ -74,15 +130,17 @@ export function EditTool() {
     return isOutside(g, j * (g.cols + 1) + i) ? undefined : [hit[0], hit[1]];
   };
   const pickRef = useRef(pick);
+  const cameraRef = useRef(camera);
   useEffect(() => {
     pickRef.current = pick;
+    cameraRef.current = camera;
   });
 
   useEffect(() => {
     if (!on || !el || !picked) return;
     const grid = picked;
     const st = useVersions.getState;
-    const { setDraft, setPreview, addEdit, replaceEdit, select, setHoverSide, setEditShape } = st();
+    const { setDraft, setPreview, addEdit, replaceEdit, select, setHoverSide, setEditShape, deleteEdit } = st();
     /** The selected edit of the active version. */
     const selectedEdit = () => {
       const s = st();
@@ -95,7 +153,8 @@ export function EditTool() {
     type Drag =
       | { kind: 'area'; start: [number, number]; rect: Rect; z0: number }
       | { kind: 'lift'; edit: Edit; y0: number; moved: boolean }
-      | { kind: 'edge'; edit: Edit; side: Side; y0: number; moved: boolean };
+      | { kind: 'edge'; edit: Edit; side: Side; y0: number; moved: boolean }
+      | { kind: 'resize'; edit: Edit & { tool: 'wall' }; side: Side; y0: number; moved: boolean };
     let drag: Drag | undefined;
     let placing: Edit | undefined;
     let frame = 0;
@@ -129,13 +188,12 @@ export function EditTool() {
     const onMove = (e: PointerEvent) => {
       if (!drag) {
         const sel = selectedEdit();
+        if (sel?.tool === 'wall') return setOver(wallHover(cameraRef.current, el, sel, [e.clientX, e.clientY]));
         const p = sel && pickRef.current(grid, e.clientX, e.clientY);
         if (!sel || !p) return setOver(undefined);
-        // A wall has no edges to grab (it's thin): anywhere on it lifts its top.
-        const side = sel.tool === 'wall' ? undefined : nearSide(sel.rect, p);
-        const pad = sel.tool === 'wall' ? EDGE_HIT : 0;
+        const side = nearSide(sel.rect, p);
         const r = sel.rect;
-        const inside = p[0] > r.x0 - pad && p[0] < r.x1 + pad && p[1] > r.y0 - pad && p[1] < r.y1 + pad;
+        const inside = p[0] > r.x0 && p[0] < r.x1 && p[1] > r.y0 && p[1] < r.y1;
         return setOver(side ?? (inside && liftable(sel) ? 'inside' : undefined));
       }
       if (drag.kind === 'area') {
@@ -143,6 +201,20 @@ export function EditTool() {
         if (!p) return;
         drag.rect = snapRect(drag.start[0], drag.start[1], p[0], p[1], snapOf(st().tool ?? 'level'));
         setDraft({ ...drag.rect, z: st().tool === 'level' ? drag.z0 : undefined });
+        return;
+      }
+      if (drag.kind === 'resize') {
+        // The side follows the pointer on the horizontal plane of the wall's top.
+        const { half, ndc } = halfAt(e.clientX, e.clientY, el.getBoundingClientRect());
+        if (half !== 'env') return;
+        raycaster.setFromCamera(new Vector2(...ndc), cameraRef.current);
+        const hit = raycaster.ray.intersectPlane(new Plane(new Vector3(0, 1, 0), -drag.edit.top), new Vector3());
+        if (!hit) return;
+        const v = drag.side === 'w' || drag.side === 'e' ? hit.x : -hit.z;
+        const rect = resizeRect(drag.edit.rect, drag.side, v);
+        if (rect[sideKey[drag.side]] === drag.edit.rect[sideKey[drag.side]] && !drag.moved) return;
+        drag.moved = true;
+        show({ ...drag.edit, rect }, drag.edit.top);
         return;
       }
       if (Math.abs(e.clientY - drag.y0) > CLICK_PX) drag.moved = true;
@@ -189,6 +261,11 @@ export function EditTool() {
         e.stopPropagation();
         e.preventDefault();
       };
+      if (sel?.tool === 'wall' && over && over !== 'inside') {
+        grab();
+        drag = { kind: 'resize', edit: sel, side: over, y0: e.clientY, moved: false };
+        return;
+      }
       if (sel && over && over !== 'inside') {
         grab();
         drag = { kind: 'edge', edit: sel, side: over, y0: e.clientY, moved: false };
@@ -197,6 +274,16 @@ export function EditTool() {
       if (sel && over === 'inside' && liftable(sel)) {
         grab();
         drag = { kind: 'lift', edit: sel, y0: e.clientY, moved: false };
+        return;
+      }
+      // A click on a wall (its top face, the topmost one) selects it.
+      const s = st();
+      const wall = s.versions
+        .find((v) => v.id === s.active)
+        ?.edits.findLast((w) => w.tool === 'wall' && wallHover(cameraRef.current, el, w, [e.clientX, e.clientY]) !== undefined);
+      if (wall && wall.id !== sel?.id) {
+        grab();
+        select(wall.id);
         return;
       }
       if (!st().tool) return;
@@ -209,9 +296,19 @@ export function EditTool() {
       setDraft({ ...drag.rect, z: st().tool === 'level' ? z0 : undefined });
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
-      if (drag) reset();
-      else if (st().selected) select(undefined);
+      const target = e.target;
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return;
+      if (e.key === 'Escape') {
+        if (drag) reset();
+        else if (st().selected) select(undefined);
+      } else if ((e.key === 'Backspace' || e.key === 'Delete') && !drag && !useProject.getState().houseDraw) {
+        // Deletes the selected edit (undoable); Backspace belongs to the house outline tool while it draws.
+        const id = st().selected;
+        if (!id) return;
+        e.preventDefault();
+        setOver(undefined);
+        deleteEdit(id);
+      }
     };
     el.addEventListener('pointerdown', onDown, { capture: true });
     window.addEventListener('pointermove', onMove);

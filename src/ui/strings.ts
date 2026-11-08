@@ -216,10 +216,10 @@ export const t = {
     slopeSelectedTitle: 'Nachylenie 1:n skarp zaznaczonej zmiany (działa od razu i zostaje domyślne dla następnej)',
     levelHint: 'przeciągnij obszar po terenie · Esc anuluje',
     heightHint: 'w górę / w dół = wysokość · puść = zatwierdź · Esc anuluje',
-    edgeHint: 'zaznaczona: chwyć środek = wysokość, krawędź = pochylenie · klik na krawędź: Skarpa ↔ Uskok · Esc odznacza',
+    edgeHint: 'zaznaczona: chwyć środek = wysokość, krawędź = pochylenie · klik na krawędź: Skarpa ↔ Uskok · Backspace usuwa · Esc odznacza',
     rampLabel: 'krawędzie',
     topLabel: 'góra',
-    wallHint: 'zaznaczony mur: chwyć go i przeciągnij w górę / w dół = góra muru · Esc odznacza',
+    wallHint: 'zaznaczony mur: chwyć bok = rozmiar (co 5 cm), środek w górę / w dół = góra muru · Backspace usuwa · Esc odznacza',
     wallInfo: (hMin: number, hMax: number, volume: number) =>
       `wys. nad terenem ${hMin.toFixed(2)}${hMax - hMin >= 0.005 ? `–${hMax.toFixed(2)}` : ''} m · ${volume.toFixed(2)} m³`,
     slopeTitle: 'Nachylenie skarpy 1:n (n m w poziomie na 1 m w pionie), dla wszystkich krawędzi „Skarpa” tej zmiany',

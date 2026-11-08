@@ -487,7 +487,9 @@ Requirements:
   Podnieś / Obniż. Drag a rect on the terrain, snapped to 5 cm (so a 0.25 m wall can be drawn); saved as an edit
   `{ tool: 'wall', rect, top }` in the version (same list, undo, autosave). Drawn as a box in the house's colour from the
   lowest surface under it up to `top`; a new wall's top = highest surface under it + 0.50 m, then dragged up / down
-  (anywhere on it) or typed. Doesn't change the terrain or cut / fill; the list shows its height above the terrain
+  (its top face) or typed; dragging a side of its top outline (≤ 8 px on screen) moves that side in plan (5 cm snap,
+  ≥ 5 cm). Clicking a wall in the view selects it; Backspace / Delete removes the selected edit (undoable; not while
+  the house outline tool draws). Doesn't change the terrain or cut / fill; the list shows its height above the terrain
   (min–max) and volume (footprint × (top − mean surface)). Edge modes are Skarpa / Uskok only (a saved `wall` edge mode
   from development reads as Uskok).
 - **Edit list:** per edit 4 edge selects (← → ↑ ↓, a precise fallback), the 1:n field (when an edge is Skarpa) and its

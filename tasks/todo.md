@@ -4,7 +4,7 @@ Next: Task 3 (Mur as drawn rectangles) implemented, waiting for the browser chec
 Later (user 2026-11-08): the left sidebar is poor UI/UX (the version panel sits below the long sheet list); address after M4b.
 Plot margin now 5 m (user 2026-11-08): only Podgląd and new versions; existing versions keep their frozen grid.
 Bundle: index 1495 kB of the 1500 kB budget after T2; keep T3 small.
-Branch: m4b-spec (includes level-from-start-point). T3 note: scratchpad check (flat −0.32): 0.25 × 6 m wall → default top +0.18, 0.50 m high, 0.75 m³, terrain untouched; old `wall` edge mode reads as step. Bundle 1497 / 1500 kB after T3; keep the wall mesh code small, ask before raising the budget.
+Branch: m4b-spec (includes level-from-start-point). T3 note: scratchpad check (flat −0.32): 0.25 × 6 m wall → default top +0.18, 0.50 m high, 0.75 m³, terrain untouched; old `wall` edge mode reads as step. Bundle 1500 / 1500 kB after wall resize: the next addition needs the budget raised (ask the user, CONSTRAINTS.md); keep the wall mesh code small, ask before raising the budget.
 Drawings have no slopes or walls (checked PZT, PAB-11, PAB-12): all M4b geometry is the user's design.
 T1 note: scratchpad check on a flat −0.32 grid: 4 × 6 m to +0.30, 1:2 → slope 1.20 m wide (last corner above ground; 1.24 exact), 1:3 → 1.80 m; no edges = M4a fill to 4 decimals; 10 sloped edits (Δ 1.5 m, n = 3) replay in ~14 ms warm (36 ms first run).
 Real-file checks without the browser: Node 24 runs `src/` TS directly with a resolver hook adding `.ts` to extensionless imports; load a DWG via `@mlightcad/libredwg-web` + `normalize()` in a scratchpad script (never in the repo, never commit `dwg/`).
@@ -51,6 +51,7 @@ drag it up / down or type top; list shows height above terrain and m³. No terra
 **Acceptance criteria:**
 - [ ] Draw a 0.25 × 6 m wall along the terrace edge: house-coloured box, list shows 0.25 × 6.00 m, height and m³
 - [ ] Drag it up / down (one undo step), type an exact top; terrain, cut / fill and Design unchanged; reload keeps it
+- [ ] (user 2026-11-08) click a wall to select it; pull a side to resize it (5 cm); Backspace deletes the selected edit
 **Verification:** `pnpm check`; user browser check.
 **Dependencies:** Task 2
 **Files:** `src/versions/edits.ts`, `src/versions/walls.ts`, `src/scene/WallMesh.tsx`, `src/scene/EditTool.tsx`, `src/ui/VersionPanel.tsx`, `src/ui/VersionBar.tsx`, `src/ui/strings.ts`
