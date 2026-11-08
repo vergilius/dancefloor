@@ -12,7 +12,7 @@ import {
   type MainBody,
   type Vec2,
 } from '../house/blocks';
-import { blocksFromPlan, WALL_LAYER, type PlanBlocks } from '../house/fromPlan';
+import { blocksFromPlan, columnHeights, WALL_LAYER, type PlanBlocks } from '../house/fromPlan';
 import { formatHeight, formatRel } from '../project/levels';
 import { useDrawnSheets } from '../state/drawn';
 import { useRefValue } from '../state/levels';
@@ -45,24 +45,28 @@ export function HousePanel() {
         .sort((a, b) => Math.abs(a.placement.type === 'horizontal' ? a.placement.z : 0) - Math.abs(b.placement.type === 'horizontal' ? b.placement.z : 0))[0],
     [drawn],
   );
-  const [fromPlan, setFromPlan] = useState<(PlanBlocks & { file: string }) | undefined>();
+  const [fromPlan, setFromPlan] = useState<(PlanBlocks & { file: string; columnsFrom?: string }) | undefined>();
 
   const buildFromPlan = () => {
     if (!ground || main?.kind !== 'gable') return;
     const r = blocksFromPlan(ground.sheet, main);
+    // Column heights from the first placed elevation/section that draws columns.
+    const columnsFrom = drawn.flatMap((d) => {
+      const h = d.placement.type === 'vertical' ? columnHeights(d.sheet) : undefined;
+      return h ? [{ ...h, file: d.file }] : [];
+    })[0];
     // A block with the same name keeps its heights, so running it again doesn't undo the heights set by hand.
-    const put = (name: string, polygon: Vec2[]) => {
+    // Heights read from a sheet (columns) win over kept ones.
+    const put = (name: string, polygon: Vec2[], heights?: { bottom: number; top: number }) => {
       const old = useProject.getState().house.blocks.find((b) => b.name === name);
-      putBlock(
-        old?.kind === 'flat'
-          ? { ...old, polygon }
-          : { kind: 'flat', name, polygon, bottom: DEFAULT_BOTTOM, top: NEW_TOP },
-      );
+      const kept = old?.kind === 'flat' ? { bottom: old.bottom, top: old.top } : { bottom: DEFAULT_BOTTOM, top: NEW_TOP };
+      putBlock({ kind: 'flat', name, polygon, ...(heights ?? kept) });
     };
     for (const a of r.annexes) put(t.house.annexName[a.side], a.polygon);
     r.slabs.forEach((p, i) => put(t.house.slabName(i + 1), p));
     r.posts.forEach((p, i) => put(t.house.postName(i + 1), p));
-    setFromPlan({ ...r, file: ground.file });
+    r.columns.forEach((p, i) => put(t.house.columnName(i + 1), p, columnsFrom));
+    setFromPlan({ ...r, file: ground.file, columnsFrom: columnsFrom?.file });
   };
 
   const build = () => {
@@ -97,7 +101,13 @@ export function HousePanel() {
       </p>
       {fromPlan && (
         <p className="muted">
-          {t.house.fromPlanResult(sheetName(fromPlan.file), fromPlan.annexes.length, fromPlan.slabs.length, fromPlan.posts.length)}
+          {t.house.fromPlanResult(sheetName(fromPlan.file), fromPlan.annexes.length, fromPlan.slabs.length, fromPlan.posts.length, fromPlan.columns.length)}
+          {fromPlan.columns.length > 0 && (
+            <>
+              <br />
+              {fromPlan.columnsFrom ? t.house.columnsFrom(sheetName(fromPlan.columnsFrom)) : <span className="error">{t.house.columnsNoSection}</span>}
+            </>
+          )}
           {(fromPlan.slabOpenings > 0 || fromPlan.skippedLoops > 0) && (
             <>
               <br />

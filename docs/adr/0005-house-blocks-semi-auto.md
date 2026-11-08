@@ -36,6 +36,9 @@ simple, so "Z rzutu parteru" builds them from the ground plan (rules in `src/hou
   to the main wall. PAB-01: north, x 3.624…14.324, y −1.476…2.904 (10.70 × 4.38 m). The entrance walls (< 2 m) don't count.
 - **Posts**: closed 4-sided `A-WALL` loops ≤ 1 m outside the main body and annexes, outermost of nested ones. PAB-01:
   two, 0.55 × 0.47 m. A round 0.24 m loop at the entrance is skipped (counted).
+- **Columns** (user, 2026-11-08: "taras ma kolumny"): closed 4-sided loops per `S-COLS*` layer, heights from the
+  `S-COLS*` height extent on a placed elevation/section. PAB-01 `S-COLS-1`: 7 columns 0.20 × 0.03 m at x 7.721…7.921,
+  y −14.438…−12.898; PAB-04: −0.02…+2.63. (PLAN.md's facts called them slats; they carry the slab.)
 - **Slab**: an `A-DETL-1` chain with both open ends ≤ 0.5 m from the main rectangle, closed along its perimeter the
   shorter way. PAB-01: an L of 31.90 m² (terrace x 0.034…8.124 to y −14.966, a 0.30 m strip along the west wall,
   a 0.50 m canopy over the south windows; PAB-09 confirms the band +2.635…+3.22 along the whole west side).

@@ -3,6 +3,8 @@
 //   bbox, extended to the main body's wall.
 // - Posts: closed `A-WALL` loops wholly outside the main rectangle and the annexes, each side ≤ POST_MAX; outermost
 //   only (posts are drawn as nested rectangles), as their bbox. Only 4-sided loops; others (e.g. round ones) counted.
+// - Columns: closed 4-sided loops on the `S-COLS*` layers (any size up to POST_MAX), outermost only; their heights
+//   come from a vertical sheet's `S-COLS*` extent (section A-A on the real files), see `columnHeights`.
 // - Slabs: `A-DETL-1` chains whose two open ends lie near the main rectangle, closed along its perimeter (the
 //   shorter way). Closed loops inside a slab (openings) are counted, not modelled.
 import type { NormalizedSheet } from '../dwg/types';
@@ -10,6 +12,7 @@ import { polygonArea, type GableBlock, type Vec2 } from './blocks';
 
 export const WALL_LAYER = 'A-WALL';
 export const SLAB_LAYER = 'A-DETL-1';
+const isColumnLayer = (name: string) => /^S-COLS/.test(name);
 const ANNEX_MIN_LEN = 2;
 /** Lines must lie this far (m) beyond the main body's side to count for an annex. */
 const BEYOND = 0.05;
@@ -27,6 +30,7 @@ type Seg = [number, number, number, number];
 export type PlanBlocks = {
   annexes: { side: Side; polygon: Vec2[] }[];
   posts: Vec2[][];
+  columns: Vec2[][];
   slabs: Vec2[][];
   /** Closed `A-DETL-1` loops inside a slab, not modelled. */
   slabOpenings: number;
@@ -161,6 +165,30 @@ function clean(poly: Vec2[]): Vec2[] {
   });
 }
 
+/** Closed loops with both sides in min…POST_MAX: 4-sided ones as rectangles (outermost of nested/equal ones), the rest counted. */
+function smallLoops(segs: Seg[], min: number): { rects: Vec2[][]; skipped: number } {
+  const small = components(segs)
+    .filter((c) => c.closed)
+    .map((c) => ({ n: c.segs.length, b: bbox(c.segs.flatMap(segPts)) }))
+    .filter(({ b }) => b.x1 - b.x0 <= POST_MAX && b.y1 - b.y0 <= POST_MAX && b.x1 - b.x0 >= min && b.y1 - b.y0 >= min);
+  const loops = small.filter((l) => l.n === 4).map((l) => l.b);
+  const rects = loops.filter((b, i) => !loops.some((o, j) => j !== i && within(b, o) && !(within(o, b) && j > i))).map(rectPoly);
+  return { rects, skipped: small.length - loops.length };
+}
+
+/** Column bottom/top: the height extent of a vertical sheet's `S-COLS*` layers (sheet y = height rel. ±0.00). */
+export function columnHeights(sheet: NormalizedSheet): { bottom: number; top: number } | undefined {
+  let bottom = Infinity;
+  let top = -Infinity;
+  for (const l of sheet.layers)
+    if (isColumnLayer(l.name))
+      for (let i = 1; i < l.segments.length; i += 2) {
+        bottom = Math.min(bottom, l.segments[i]!);
+        top = Math.max(top, l.segments[i]!);
+      }
+  return top > bottom ? { bottom: mm(bottom), top: mm(top) } : undefined;
+}
+
 export function blocksFromPlan(sheet: NormalizedSheet, main: GableBlock): PlanBlocks {
   const r: Rect = { x0: main.x0, y0: main.y0, x1: main.x1, y1: main.y1 };
   const walls = segments(sheet, WALL_LAYER);
@@ -186,13 +214,15 @@ export function blocksFromPlan(sheet: NormalizedSheet, main: GableBlock): PlanBl
   }
 
   const outsideAll = (p: Vec2) => !inside(p, r) && !annexRects.some((a) => inside(p, a));
-  const small = components(walls.filter((s) => segPts(s).every(outsideAll)))
-    .filter((c) => c.closed)
-    .map((c) => ({ n: c.segs.length, b: bbox(c.segs.flatMap(segPts)) }))
-    .filter(({ b }) => b.x1 - b.x0 <= POST_MAX && b.y1 - b.y0 <= POST_MAX && b.x1 - b.x0 >= POST_MIN && b.y1 - b.y0 >= POST_MIN);
-  const loops = small.filter((l) => l.n === 4).map((l) => l.b);
-  const skippedLoops = small.length - loops.length;
-  const posts = loops.filter((b, i) => !loops.some((o, j) => j !== i && within(b, o) && !(within(o, b) && j > i))).map(rectPoly);
+  const postLoops = smallLoops(walls.filter((s) => segPts(s).every(outsideAll)), POST_MIN);
+  const posts = postLoops.rects;
+  const skippedLoops = postLoops.skipped;
+  // Per layer: `S-COLS` draws the columns' X diagonals onto the corners of the `S-COLS-1` rectangles.
+  const columnRects = sheet.layers.filter((l) => isColumnLayer(l.name)).flatMap((l) => smallLoops(segments(sheet, l.name), 0).rects);
+  // Sorted north → south, then west → east, so "Kolumna n" names stay stable between runs.
+  const columns = columnRects
+    .filter((c, i) => !columnRects.some((o, j) => j < i && within(bbox(c), bbox(o)) && within(bbox(o), bbox(c))))
+    .sort((a, b) => b[0]!.y - a[0]!.y || a[0]!.x - b[0]!.x);
 
   const slabs: Vec2[][] = [];
   const closedLoops: Vec2[][] = [];
@@ -218,5 +248,5 @@ export function blocksFromPlan(sheet: NormalizedSheet, main: GableBlock): PlanBl
     if (slabs.some((s) => within(lb, bbox(s)))) slabOpenings++;
     else slabs.push(clean(loop));
   }
-  return { annexes, posts, slabs, slabOpenings, skippedLoops };
+  return { annexes, posts, columns, slabs, slabOpenings, skippedLoops };
 }

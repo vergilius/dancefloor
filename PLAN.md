@@ -468,7 +468,7 @@ Facts (normalized sheets, plan coords in m, heights rel ±0.00):
 - **North annex** (garage, floor ≈ +0.28/+0.30): single storey, flat roof with parapet at **+3.59** (PAB-04, PAB-07,
   PAB-08), outside the main roof towards y +3.05. Its corners are on PAB-01 `A-WALL`.
 - **Terrace roof** (south-west): slab **+2.635…+3.22** over x 0.03…8.12, from the south wall out to y −14.97, on two
-  0.55 × 0.48 m posts (x 0.03…0.58 and 7.57…8.12, y −14.97…−14.49, from −0.02); slats `S-COLS` on its east side
+  0.55 × 0.48 m posts (x 0.03…0.58 and 7.57…8.12, y −14.97…−14.49, from −0.02); 7 columns `S-COLS` (0.20 × 0.03 m, −0.02…+2.63 on PAB-04) on its east side
   (x 7.72…7.92, y −14.44…−12.90). PAB-10, PAB-08, PAB-01.
 - **Openings:** on each placed elevation, `A-GLAZ*` + `A-DOOR*` (not the swing layer) joined within 5 mm into pieces;
   bboxes ≥ 0.3 × 0.3 m; overlapping boxes merged. Counts: PAB-10 S 6 (terrace door 1.45…4.17 × 0…2.46, two windows,
@@ -491,7 +491,8 @@ Requirements:
   sides, ridge = the sheet's z, pitch parsed from the `NN°` label on that sheet (fallback 38, flagged).
 - **"Z rzutu parteru"** (button, ADR 0005 amendment): from the ground plan around the main body, builds or updates
   "Dobudówka <side>" (long `A-WALL` lines beyond one side, bbox closed to the main wall), "Płyta n" (`A-DETL-1` chain
-  closed along the main rectangle) and "Słup n" (small closed 4-sided `A-WALL` loops). Existing blocks with the same
+  closed along the main rectangle), "Słup n" (small closed 4-sided `A-WALL` loops) and "Kolumna n" (closed 4-sided
+  `S-COLS*` loops, heights from the `S-COLS*` extent on a placed section/elevation: 7 × 0.20 × 0.03 m, −0.02…+2.63). Existing blocks with the same
   name keep their heights; new ones get −1.40 / +3.00. Counts and skipped loops/openings shown. The height list also
   offers the relative `+N.NN` labels of the elevations and sections.
 - **Drawing a flat block** (Design viewport, like the measure tool): "Dodaj blok" → click corners with endpoint
