@@ -220,7 +220,7 @@ Requirements:
 in the 3D view the grid stubs of each vertical sheet stand on the plan's grid lines (< 1 cm, top view);
 the ±0.00 line of each elevation lies at z = 0 (on PAB-01); placement survives save + reload.
 
-**M1c — 2-point alignment (site plan, PDF)** — spec sharpened 2026-11-08 on the real files (approved 2026-11-08)
+**M1c — 2-point alignment (site plan, PDF)** — done 2026-11-08 (spec sharpened 2026-11-08 on the real files, approved 2026-11-08)
 
 Facts (PZT-01 and PAB-01 after normalize):
 - **PZT-01 is the ground plan rotated, not shifted:** sheet → plan = rotation by **−11.27506°** about the

@@ -1,6 +1,6 @@
 # M1c task list
 
-Next: Task 7 (M1c acceptance). T1–T6 and Checkpoint A verified in browser 2026-11-08 (T6 incl. reference-first order and the PDF opacity slider).
+Next: M1c complete (user browser check passed 2026-11-08). Merge `feat/m1c` into main, then start M2 (spec-driven-development on PLAN.md §5 M2).
 Note (T6): tool state is `align` in the store (picks: A plan, A′ sheet, B plan, B′ sheet; user order 2026-11-08). A′ shifts the sheet at once, B′ applies the full transform, Esc restores `align.before`. Top view is forced while it runs. r3f fires onClick after drags too, so picks with `e.delta` > 4 px are ignored (`src/scene/AlignTool.tsx`).
 Note (T5): pdfjs-dist 6.x: `isEvalSupported` is gone and teardown is `loadingTask.destroy()`. pdfjs is a lazy chunk (`src/pdf/render.ts`), render state is `pdfs` in the store (not `parsed`).
 Note (T4): obstacle colour = `OBSTACLE_COLOR` via `layerColor()` in `src/project/layerGroups.ts` (lines and texts). Groups are
@@ -94,10 +94,10 @@ shown, Esc cancels. `fromTwoPairs` gives the transform, applied live, project ma
 ### Task 7: M1c acceptance
 **Description:** Final browser check against the M1c ✅ in PLAN.md; mark M1c done in PLAN.md and CLAUDE.md.
 **Acceptance criteria:**
-- [ ] Every M1c ✅ criterion checked off by the user
+- [x] Every M1c ✅ criterion checked off by the user
 **Dependencies:** T4, T6
 **Files:** `PLAN.md`, `CLAUDE.md`, `tasks/todo.md`
 **Scope:** XS
 
 ### Checkpoint B (M1c complete)
-- [ ] `pnpm check` green; user browser check passed
+- [x] `pnpm check` green; user browser check passed
