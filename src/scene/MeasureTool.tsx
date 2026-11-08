@@ -1,82 +1,31 @@
 // Measure tool "Pomiar" (PLAN.md §5 M2), Design viewport only: click A, then B, on the drawn sheets (plans, site,
 // elevations, sections); the nearest sheet plane along the ray wins.
 // Snaps to visible segment endpoints of the sheets under the cursor and to the level markers (screen px).
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useThree } from '@react-three/fiber';
+import { useEffect, useMemo, useState } from 'react';
 import { Html } from '@react-three/drei';
-import { BufferAttribute, BufferGeometry, Matrix4, Raycaster, Vector2 } from 'three';
-import type { NormalizedSheet } from '../dwg/types';
-import { layerVisible, type LayerOverrides } from '../project/layerGroups';
-import type { SheetKind } from '../project/projectFile';
+import { BufferAttribute, BufferGeometry } from 'three';
 import { formatHeight, formatRel } from '../project/levels';
 import { useRefValue } from '../state/levels';
 import { useProject } from '../state/store';
 import { t } from '../ui/strings';
-import { toScene, type SheetPlacement } from './coords';
+import { toScene } from './coords';
 import { Dot } from './Dot';
-import { useLevelMarkers } from './LevelMarkers';
-import { CLICK_PX, hitSheet, nearestOnScreen, SNAP_PX, worldPoints, type Vec3 } from './snap';
-import { designHtmlPosition, halfAt } from './split';
-
-type Drawn = { file: string; kind: SheetKind; placement: SheetPlacement; sheet: NormalizedSheet; layers?: LayerOverrides };
-type Pick = { world: Vec3; snapped: boolean };
+import { usePicker, type Pick, type PickDrawn } from './picker';
+import { CLICK_PX, type Vec3 } from './snap';
+import { designHtmlPosition } from './split';
 
 const COLORS = { line: '#cf222e', snapped: '#1a7f37', free: '#6e7781' };
 
 const dist = (a: Vec3, b: Vec3) => Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
 const horizontal = (a: Vec3, b: Vec3) => Math.hypot(b[0] - a[0], b[1] - a[1]);
 
-export function MeasureTool({ drawn }: { drawn: Drawn[] }) {
+export function MeasureTool({ drawn }: { drawn: PickDrawn[] }) {
   const measure = useProject((s) => s.measure);
   const pickMeasure = useProject((s) => s.pickMeasure);
   const stopMeasure = useProject((s) => s.stopMeasure);
-  const groups = useProject((s) => s.groups);
-  const showLevels = useProject((s) => s.showLevels);
-  const markers = useLevelMarkers(drawn);
-  const camera = useThree((s) => s.camera);
-  const el = useThree((s) => s.events.connected) as HTMLElement | undefined;
   const [hover, setHover] = useState<Pick>();
   const on = measure !== undefined;
-
-  // Drawn sheets with their visible endpoints (world), only while the tool is on.
-  const targets = useMemo(
-    () =>
-      on
-        ? drawn.flatMap((d) =>
-            d.sheet.extents
-              ? [{ placement: d.placement, extents: d.sheet.extents, points: worldPoints(d.sheet, d.placement, (l) => layerVisible(groups, d.layers, l)) }]
-              : [],
-          )
-        : [],
-    [on, drawn, groups],
-  );
-  const markerPoints = useMemo(() => Float64Array.from(showLevels ? markers.flatMap((m) => m.world) : []), [markers, showLevels]);
-
-  /** The point under the cursor (design half only): a snap point, else the nearest sheet plane hit, else none. */
-  const pickAt = (clientX: number, clientY: number): Pick | undefined => {
-    if (!el) return undefined;
-    const rect = el.getBoundingClientRect();
-    const { half, ndc } = halfAt(clientX, clientY, rect);
-    if (half !== 'design') return undefined;
-    raycaster.setFromCamera(new Vector2(...ndc), camera);
-    const { origin, direction } = raycaster.ray;
-    const ray = { origin: origin.toArray() as Vec3, dir: direction.toArray() as Vec3 };
-    const hits = targets
-      .flatMap((tg) => {
-        const h = hitSheet(ray, tg.placement, tg.extents);
-        return h ? [{ ...h, points: tg.points }] : [];
-      })
-      .sort((a, b) => a.t - b.t);
-    const m = matrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse).elements;
-    const pointer: [number, number] = [clientX - rect.left, clientY - rect.top];
-    const snapped = nearestOnScreen([...hits.map((h) => h.points), markerPoints], m, pointer, Math.floor(rect.width / 2), rect.height, SNAP_PX);
-    if (snapped) return { world: snapped, snapped: true };
-    return hits[0] && { world: hits[0].world, snapped: false };
-  };
-  const pickRef = useRef(pickAt);
-  useEffect(() => {
-    pickRef.current = pickAt;
-  });
+  const { pickRef, el } = usePicker(on, drawn);
 
   useEffect(() => {
     if (!on || !el) return;
@@ -107,7 +56,7 @@ export function MeasureTool({ drawn }: { drawn: Drawn[] }) {
       window.removeEventListener('keydown', onKey);
       setHover(undefined);
     };
-  }, [on, el, pickMeasure, stopMeasure]);
+  }, [on, el, pickRef, pickMeasure, stopMeasure]);
 
   if (!measure) return null;
   const [a, b] = measure.picks;
@@ -132,9 +81,6 @@ export function MeasureTool({ drawn }: { drawn: Drawn[] }) {
     </>
   );
 }
-
-const raycaster = new Raycaster();
-const matrix = new Matrix4();
 
 function Segment({ a, b }: { a: Vec3; b: Vec3 }) {
   const geometry = useMemo(() => {

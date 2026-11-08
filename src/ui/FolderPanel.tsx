@@ -4,6 +4,7 @@ import { useProject } from '../state/store';
 import { useVersions } from '../state/versions';
 import { SheetList } from './SheetList';
 import { t } from './strings';
+import { HousePanel } from './HousePanel';
 import { TerrainPanel } from './TerrainPanel';
 import { VersionPanel } from './VersionPanel';
 
@@ -84,6 +85,7 @@ export function FolderPanel() {
           <SheetList />
           <VersionPanel />
           <TerrainPanel />
+          <HousePanel />
         </>
       )}
     </section>

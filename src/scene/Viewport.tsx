@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ComponentRef, type RefObject } from 'react';
+import { useEffect, useMemo, useRef, useState, type ComponentRef, type ReactNode, type RefObject } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { CameraControls, Grid, OrthographicCamera, PerspectiveCamera } from '@react-three/drei';
 import { Box3, MathUtils, OrthographicCamera as OrthographicCameraImpl, Vector3 } from 'three';
@@ -14,6 +14,8 @@ import { PdfObject } from './PdfObject';
 import { AlignTool } from './AlignTool';
 import { LevelMarkers } from './LevelMarkers';
 import { TerrainMesh } from './TerrainMesh';
+import { HouseMesh } from './HouseMesh';
+import { HouseDrawReadout, HouseDrawTool } from './HouseDrawTool';
 import { MeasureReadout, MeasureTool } from './MeasureTool';
 import { VersionBar } from '../ui/VersionBar';
 import { EditTool } from './EditTool';
@@ -131,6 +133,8 @@ function Scene({ project }: { project?: string }) {
         ))}
         <LevelsToggle />
         <TerrainToggle />
+        <HouseToggle />
+        <OpeningsToggle />
         <MeasureToggle disabled={aligning} />
         <AlignPrompt />
       </div>
@@ -144,10 +148,16 @@ function Scene({ project }: { project?: string }) {
         )}
         <SplitRender />
         <color attach="background" args={['#eef1f4']} />
-        <ambientLight intensity={0.8} ref={inBothViewports} />
+        <ambientLight intensity={0.6} ref={inBothViewports} />
         <Grid args={[100, 100]} cellSize={1} sectionSize={10} infiniteGrid fadeDistance={150} />
         {!showTerrain && <Grid layers={ENV_LAYER} args={[100, 100]} cellSize={1} sectionSize={10} infiniteGrid fadeDistance={150} />}
-        <TerrainMesh />
+        <directionalLight layers={ENV_LAYER} position={[-25, 40, 30]} intensity={1} />
+        {/* Weak fill from the north-east, so the faces turned away from the sun still read apart. */}
+        <directionalLight layers={ENV_LAYER} position={[30, 20, -25]} intensity={0.3} />
+        <OrbitOnDoubleClick>
+          <TerrainMesh />
+          <HouseMesh />
+        </OrbitOnDoubleClick>
         <axesHelper args={[2]} />
         <PdfSheets />
         {drawn.map((d) => {
@@ -162,20 +172,52 @@ function Scene({ project }: { project?: string }) {
         <LevelMarkers drawn={drawn} />
         <AlignTool drawn={drawn} />
         <MeasureTool drawn={drawn} />
+        <HouseDrawTool drawn={drawn} />
         <EditTool />
-        <CameraControls makeDefault domElement={(half === 'env' ? envEl : designEl) ?? undefined} {...orthoLimits(ortho)} />
+        {/* infinityDolly: zooming in past minDistance pushes the target on, so the camera can enter the house (M5b). */}
+        <CameraControls
+          makeDefault
+          domElement={(half === 'env' ? envEl : designEl) ?? undefined}
+          {...orthoLimits(ortho)}
+          infinityDolly
+          minDistance={MIN_DOLLY}
+        />
         <CameraSync view={view} ortho={ortho} project={project} />
         <FrameOnSheets sheets={drawn} ortho={ortho} auto={!saved} tick={fitTick} />
       </Canvas>
       <div className="vp-half vp-design" ref={setDesignEl} onPointerEnter={hover('design')} onPointerMove={hover('design')}>
         <span className="vp-caption">{t.viewports.design}</span>
         <MeasureReadout />
+        <HouseDrawReadout />
       </div>
       <div className="vp-half vp-env" ref={setEnvEl} onPointerEnter={hover('env')} onPointerMove={hover('env')}>
         <span className="vp-caption">{t.viewports.env}</span>
       </div>
       </div>
     </>
+  );
+}
+
+/** Perspective camera: closest approach to the target (m) before zooming pushes the target on. */
+const MIN_DOLLY = 1;
+
+/**
+ * Double-click on a surface (terrain, house) orbits around that point from then on (M5b): with it the camera can be
+ * aimed at a room and zoomed into it. The first mesh hit counts, not the edge lines (they pick within a metre).
+ */
+function OrbitOnDoubleClick({ children }: { children: ReactNode }) {
+  const controls = useThree((s) => s.controls) as Controls | null;
+  return (
+    <group
+      onDoubleClick={(e) => {
+        const hit = e.intersections.find((i) => (i.object as { isMesh?: boolean }).isMesh);
+        if (!hit || !controls) return;
+        e.stopPropagation();
+        controls.setOrbitPoint(hit.point.x, hit.point.y, hit.point.z);
+      }}
+    >
+      {children}
+    </group>
   );
 }
 
@@ -200,6 +242,26 @@ function TerrainToggle() {
   return (
     <button type="button" aria-pressed={show} title={t.terrainToggleTitle} onClick={() => setShowTerrain(!show)}>
       {t.terrainToggle}
+    </button>
+  );
+}
+
+function HouseToggle() {
+  const show = useProject((s) => s.showHouse);
+  const setShowHouse = useProject((s) => s.setShowHouse);
+  return (
+    <button type="button" aria-pressed={show} title={t.house.toggleTitle} onClick={() => setShowHouse(!show)}>
+      {t.house.toggle}
+    </button>
+  );
+}
+
+function OpeningsToggle() {
+  const show = useProject((s) => s.showOpenings);
+  const setShowOpenings = useProject((s) => s.setShowOpenings);
+  return (
+    <button type="button" aria-pressed={show} title={t.house.openingsToggleTitle} onClick={() => setShowOpenings(!show)}>
+      {t.house.openingsToggle}
     </button>
   );
 }

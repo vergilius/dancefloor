@@ -1,5 +1,6 @@
 // App state: the open project folder, its sheets (saved or suggested) and per-file parse results.
 import { create } from 'zustand';
+import { DEFAULT_BOTTOM, DEFAULT_TOP, EMPTY_HOUSE, type Block, type House } from '../house/blocks';
 import { listSourceFiles, type SourceFile } from '../project/folder';
 import { apply, fromTwoPairs, type Similarity2D, type Vec2 } from '../project/align';
 import { DEFAULT_GROUPS, type GroupId, type Groups } from '../project/layerGroups';
@@ -47,6 +48,14 @@ export type ProjectState = {
   measure?: { picks: [number, number, number][] };
   /** Layer groups, project-wide (T9). */
   groups: Groups;
+  /** House massing (M5), saved in dancefloor.json. */
+  house: House;
+  /** House solids in the Environment viewport (M5). View setting: not saved. */
+  showHouse: boolean;
+  /** Window and door openings cut into the house (M5b). View setting: not saved. */
+  showOpenings: boolean;
+  /** House draw tool (M5): plan corners picked so far; `redraw` = index of the flat block whose outline is replaced. */
+  houseDraw?: { picks: Vec2[]; redraw?: number };
   open(dir: FileSystemDirectoryHandle): Promise<void>;
   setKind(file: string, kind: SheetKind): void;
   setZ(file: string, z: number): void;
@@ -78,7 +87,30 @@ export type ProjectState = {
   setPdfOpacity(file: string, opacity: number): void;
   setShowLevels(show: boolean): void;
   setShowTerrain(show: boolean): void;
+  setShowHouse(show: boolean): void;
+  setShowOpenings(show: boolean): void;
+  /** Hide or show one façade opening (saved in `house.hiddenOpenings`). */
+  toggleOpening(key: string): void;
+  /** Replaces the block with the same name, or appends it. */
+  putBlock(block: Block): void;
+  /** Replaces block `index`; refused (false) if the new name is taken by another block. */
+  updateBlock(index: number, block: Block): boolean;
+  removeBlock(index: number): void;
+  /** Starts drawing a new flat block, or re-drawing block `redraw` (keeps its name and heights). */
+  startHouseDraw(redraw?: number): void;
+  addHouseCorner(p: Vec2): void;
+  /** Backspace: drops the last corner. */
+  dropHouseCorner(): void;
+  /** Closes the outline (≥ 3 corners) into the block. */
+  finishHouseDraw(): void;
+  cancelHouseDraw(): void;
 };
+
+function nextBlockName(blocks: Block[]): string {
+  let n = 1;
+  while (blocks.some((b) => b.name === `Blok ${n}`)) n++;
+  return `Blok ${n}`;
+}
 
 export type Derived = { placements?: Record<string, VerticalPlacement>; transforms?: Record<string, Similarity2D> };
 
@@ -111,17 +143,22 @@ export const useProject = create<ProjectState>()((set, get) => ({
   pdfOpacity: {},
   showLevels: true,
   showTerrain: true,
+  showHouse: true,
+  showOpenings: true,
   groups: DEFAULT_GROUPS,
+  house: EMPTY_HOUSE,
 
   async open(dir) {
     const files = await listSourceFiles(dir);
     let saved: Sheet[] = [];
     let groups = DEFAULT_GROUPS;
+    let house = EMPTY_HOUSE;
     let loadError: string | undefined;
     try {
       const project = await readProjectFile(dir);
       saved = project?.sheets ?? [];
       groups = { ...DEFAULT_GROUPS, ...project?.groups };
+      house = project?.house ?? EMPTY_HOUSE;
     } catch (err) {
       loadError = errText(err);
     }
@@ -135,7 +172,7 @@ export const useProject = create<ProjectState>()((set, get) => ({
       // Saved sheets whose file is gone stay in the project (and in the next save) so nothing is lost silently.
       ...saved.filter((s) => !present.has(s.file)).map((s) => ({ ...s, source: 'saved' as const, missing: true })),
     ];
-    set({ dir, sheets, groups, dirty: false, loadError, saveError: undefined, parsed: {}, pdfs: {}, align: undefined, measure: undefined });
+    set({ dir, sheets, groups, house, dirty: false, loadError, saveError: undefined, parsed: {}, pdfs: {}, align: undefined, measure: undefined, houseDraw: undefined });
     // Plans and vertical sheets are placed in 3D, so parse them right away. The worker handles one file at a time.
     for (const s of sheets) if (AUTO_PARSE.has(s.kind) && s.type === 'dwg' && !s.missing) void get().parse(s.file);
     for (const s of sheets) if (s.kind === 'pdf' && s.type === 'pdf' && !s.missing) void get().renderPdf(s.file);
@@ -182,6 +219,7 @@ export const useProject = create<ProjectState>()((set, get) => ({
 
   startAlign(file) {
     get().cancelAlign();
+    get().cancelHouseDraw();
     const { sheets, dirty } = get();
     const transform = sheets.find((r) => r.file === file)?.transform;
     set({ measure: undefined, align: { file, picks: [], before: { transform, dirty } } });
@@ -215,6 +253,7 @@ export const useProject = create<ProjectState>()((set, get) => ({
 
   startMeasure() {
     get().cancelAlign();
+    get().cancelHouseDraw();
     set({ measure: { picks: [] } });
   },
 
@@ -245,7 +284,7 @@ export const useProject = create<ProjectState>()((set, get) => ({
   },
 
   async save({ placements = {}, transforms = {} } = {}) {
-    const { dir, groups, loadError } = get();
+    const { dir, groups, house, loadError } = get();
     if (!dir || loadError) return;
     const sheets = get().sheets.map((r) => ({
       ...r,
@@ -260,7 +299,8 @@ export const useProject = create<ProjectState>()((set, get) => ({
       ...(layers && Object.keys(layers).length > 0 && { layers }),
     }));
     try {
-      await writeProjectFile(dir, { version: 1, sheets: out, groups });
+      const withHouse = house.blocks.length > 0 || house.hiddenOpenings.length > 0;
+      await writeProjectFile(dir, { version: 1, sheets: out, groups, ...(withHouse && { house }) });
       // Keep the written placements/transforms on the rows, so they are used (not re-derived) from now on.
       set({ dirty: false, saveError: undefined, sheets: sheets.map((r) => ({ ...r, source: 'saved' })) });
     } catch (err) {
@@ -308,5 +348,75 @@ export const useProject = create<ProjectState>()((set, get) => ({
 
   setShowTerrain(showTerrain) {
     set({ showTerrain });
+  },
+
+  setShowHouse(showHouse) {
+    set({ showHouse });
+  },
+
+  setShowOpenings(showOpenings) {
+    set({ showOpenings });
+  },
+
+  toggleOpening(key) {
+    set((st) => {
+      const h = st.house.hiddenOpenings;
+      const hiddenOpenings = h.includes(key) ? h.filter((k) => k !== key) : [...h, key];
+      return { dirty: true, house: { ...st.house, hiddenOpenings } };
+    });
+  },
+
+  putBlock(block) {
+    set((st) => {
+      const i = st.house.blocks.findIndex((b) => b.name === block.name);
+      const blocks = i < 0 ? [...st.house.blocks, block] : st.house.blocks.map((b, k) => (k === i ? block : b));
+      return { dirty: true, house: { ...st.house, blocks } };
+    });
+  },
+
+  updateBlock(index, block) {
+    const { blocks } = get().house;
+    if (blocks.some((b, k) => k !== index && b.name === block.name)) return false;
+    set((st) => ({ dirty: true, house: { ...st.house, blocks: st.house.blocks.map((b, k) => (k === index ? block : b)) } }));
+    return true;
+  },
+
+  removeBlock(index) {
+    set((st) => ({ dirty: true, houseDraw: undefined, house: { ...st.house, blocks: st.house.blocks.filter((_, k) => k !== index) } }));
+  },
+
+  startHouseDraw(redraw) {
+    get().cancelAlign();
+    set({ measure: undefined, houseDraw: { picks: [], redraw } });
+  },
+
+  addHouseCorner(p) {
+    const { houseDraw } = get();
+    if (!houseDraw) return;
+    const last = houseDraw.picks.at(-1);
+    if (last && Math.hypot(p.x - last.x, p.y - last.y) < 1e-4) return; // double click on the same corner
+    set({ houseDraw: { ...houseDraw, picks: [...houseDraw.picks, p] } });
+  },
+
+  dropHouseCorner() {
+    const { houseDraw } = get();
+    if (houseDraw) set({ houseDraw: { ...houseDraw, picks: houseDraw.picks.slice(0, -1) } });
+  },
+
+  finishHouseDraw() {
+    const { houseDraw, house } = get();
+    if (!houseDraw || houseDraw.picks.length < 3) return;
+    const polygon = houseDraw.picks;
+    const old = houseDraw.redraw === undefined ? undefined : house.blocks[houseDraw.redraw];
+    const block: Block =
+      old?.kind === 'flat'
+        ? { ...old, polygon }
+        : { kind: 'flat', name: nextBlockName(house.blocks), polygon, bottom: DEFAULT_BOTTOM, top: DEFAULT_TOP };
+    const blocks = old ? house.blocks.map((b, k) => (k === houseDraw.redraw ? block : b)) : [...house.blocks, block];
+    set({ dirty: true, houseDraw: undefined, house: { ...house, blocks } });
+  },
+
+  cancelHouseDraw() {
+    set({ houseDraw: undefined });
   },
 }));

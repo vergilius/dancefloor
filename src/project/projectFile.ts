@@ -1,6 +1,7 @@
 // The project JSON (`dancefloor.json`) next to the DWGs: our own source of truth (PLAN.md §2, §4).
 // Sheets are referenced by filename. Fields from §4 are added when tasks need them; unknown fields are
 // rejected, not guessed.
+import { parseHouse, type House } from '../house/blocks';
 import type { Similarity2D } from './align';
 import { GROUP_IDS, type GroupId, type Groups, type LayerOverrides } from './layerGroups';
 import type { VerticalPlacement } from './vertical';
@@ -23,7 +24,8 @@ export type Sheet = {
   layers?: LayerOverrides;
 };
 
-export type ProjectFile = { version: 1; sheets: Sheet[]; groups?: Partial<Groups> };
+/** `house` (M5): massing blocks and hidden openings, optional. */
+export type ProjectFile = { version: 1; sheets: Sheet[]; groups?: Partial<Groups>; house?: House };
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 
@@ -88,6 +90,7 @@ export function parseProjectFile(text: string): ProjectFile {
       project.groups[g as GroupId] = on;
     }
   }
+  if (v.house !== undefined) project.house = parseHouse(v.house);
   return project;
 }
 
