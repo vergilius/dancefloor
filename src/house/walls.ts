@@ -17,6 +17,11 @@ const PARTITION_LAYERS = ['A-WALL', 'A-WALL-1'];
 /** Exterior wall thickness (m) when the plans give none (PAB-01 and PAB-02 both measure 0.475). */
 export const FALLBACK_THICKNESS = 0.475;
 const PAIR_MIN = 0.05;
+/**
+ * Partitions stop this far (m) inside the roof / the slab above and the floor slab below, instead of exactly on them:
+ * coplanar faces z-fight (flicker), and their top edges drew lines on the roof.
+ */
+const TUCK = 0.02;
 const PAIR_MAX = 0.35;
 const PAIR_OVERLAP = 0.1;
 /** A façade opening cuts the shell edge whose outer face lies this close (m) to where it was placed. */
@@ -293,7 +298,7 @@ export function hollowWalls(storeys: Storey[], blocks: Block[], openings: Openin
         const ring = [q0, q1, { x: q1.x + n.x, y: q1.y + n.y }, { x: q0.x + n.x, y: q0.y + n.y }];
         const top = (q: Vec2) => {
           const r = roof ? roof(q) : Infinity;
-          return Math.min(next ?? r, r);
+          return Math.min(next ?? r, r) - TUCK;
         };
         // Split at the ridge so the top follows both roof planes.
         const rp = ridge && next === undefined ? [ridge(q0), ridge(q1)] : [0, 0];
@@ -305,8 +310,8 @@ export function hollowWalls(storeys: Storey[], blocks: Block[], openings: Openin
             [q0, m0, m1, ring[3]!],
             [m0, q1, ring[2]!, m1],
           ])
-            prism(out, half, st.z, half.map(top));
-        } else prism(out, ring, st.z, ring.map(top));
+            prism(out, half, st.z - TUCK, half.map(top));
+        } else prism(out, ring, st.z - TUCK, ring.map(top));
         partitions++;
         length += p.t1 - p.t0;
       }

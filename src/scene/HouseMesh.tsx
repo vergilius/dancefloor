@@ -57,7 +57,8 @@ export function HouseMesh() {
         <BlockSolid key={i} block={b} hollow={hollow && (b.kind === 'gable' || hostsWalls(b, house.groundZ))} roofHoles={house.roofHoles} clean={clean} />
       ))}
       {hollow && <WallFaces triangles={house.walls} color={clean ? CLEAN_COLORS.plaster : WALL_COLOR} clean={clean} />}
-      {hollow && <WallFaces triangles={house.slabs} color={clean ? CLEAN_COLORS.slab : SLAB_COLOR} clean={clean} />}
+      {/* Slabs span the outer outline: their sides lie on the outer wall faces, so they draw behind the walls. */}
+      {hollow && <WallFaces triangles={house.slabs} color={clean ? CLEAN_COLORS.slab : SLAB_COLOR} clean={clean} offset={4} />}
       {showOpenings && <Openings elevations={house.openings} />}
       <lineSegments layers={DESIGN_LAYER}>
         <bufferGeometry>
@@ -86,7 +87,7 @@ function sceneGeometry(world: ArrayLike<number>): BufferGeometry {
 /** Hollow main body: its roof planes (with the roof windows); a hollow annex: nothing of its own. */
 const hollowTriangles = (b: Block, holes: RoofHole[]): number[] => (b.kind === 'gable' ? roofTriangles(b, holes) : []);
 
-function WallFaces({ triangles, color, clean }: { triangles: number[]; color: string; clean: boolean }) {
+function WallFaces({ triangles, color, clean, offset = 1 }: { triangles: number[]; color: string; clean: boolean; offset?: number }) {
   const geo = useMemo(() => sceneGeometry(triangles), [triangles]);
   const edges = useMemo(() => new EdgesGeometry(geo, EDGE_ANGLE), [geo]);
   useEffect(() => () => geo.dispose(), [geo]);
@@ -94,7 +95,7 @@ function WallFaces({ triangles, color, clean }: { triangles: number[]; color: st
   return (
     <>
       <mesh layers={ENV_LAYER} geometry={geo} castShadow receiveShadow>
-        <meshLambertMaterial color={color} side={DoubleSide} {...FACE_OFFSET} />
+        <meshLambertMaterial color={color} side={DoubleSide} polygonOffset polygonOffsetFactor={offset} polygonOffsetUnits={offset} />
       </mesh>
       {!clean && (
         <lineSegments layers={ENV_LAYER} geometry={edges}>
