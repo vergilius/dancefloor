@@ -375,8 +375,8 @@ Requirements:
   boundary (sampled every 0.5 m) plus its nearest point, so the surface meets the hull without a step and evens out
   towards the boundary average out to the edge (user, 2026-11-08: no "uncertain" area; was flat nearest-hull height,
   flagged uncertain and drawn lighter). Grid: 0.10 m cells over the bbox of the
-  plot outline (`PZT_ZAKRES` through PZT-01's transform) grown by 2 m with sharp (mitred) corners, every edge moved out
-  parallel; corners of the grid outside that polygon are masked out (PZT-01: 1043 m² → 1320 m²) (not drawn, edited or counted; the plot boundary is the reference, user 2026-11-08, was bbox + 1 m). Without an aligned PZT-01: seed bbox + 5 m (2.5 m per side).
+  plot outline (`PZT_ZAKRES` through PZT-01's transform) grown by 5 m (user 2026-11-08, was 2 m; existing versions keep their frozen grid) with sharp (mitred) corners, every edge moved out
+  parallel; corners of the grid outside that polygon are masked out (PZT-01: 1043 m² → 1320 m² at 2 m) (not drawn, edited or counted; the plot boundary is the reference, user 2026-11-08, was bbox + 1 m). Without an aligned PZT-01: seed bbox + 5 m (2.5 m per side).
 - **Not saved (ADR 0002):** `terrain.base` is generated from the DWGs on load (no change to `dancefloor.json`). The
   environment editor (M4 on) edits a copy of the generated model; only the copy's edits are saved.
 - **Tp:** no Tp surface in M3. The Tp points stay as M2 markers, for reference in M4 (user, 2026-11-08).
