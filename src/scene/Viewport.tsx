@@ -19,6 +19,7 @@ import { HouseDrawReadout, HouseDrawTool } from './HouseDrawTool';
 import { MeasureReadout, MeasureTool } from './MeasureTool';
 import { VersionBar } from '../ui/VersionBar';
 import { EditTool } from './EditTool';
+import { KeyPan } from './KeyPan';
 import { ENV_LAYER, inBothViewports, splitEvents, useSplitRender, type Half } from './split';
 import type { SheetRow } from '../state/store';
 import type { PdfRender } from '../pdf/render';
@@ -182,6 +183,7 @@ function Scene({ project }: { project?: string }) {
           infinityDolly
           minDistance={MIN_DOLLY}
         />
+        <KeyPan />
         <CameraSync view={view} ortho={ortho} project={project} />
         <FrameOnSheets sheets={drawn} ortho={ortho} auto={!saved} tick={fitTick} />
       </Canvas>
