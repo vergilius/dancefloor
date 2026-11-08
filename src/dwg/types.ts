@@ -109,3 +109,27 @@ export type NormalizedSheet = {
   /** Texts that still contain unknown `\\` codes after stripping. */
   textLeftovers: number;
 };
+
+/** Absolute level label (PLAN.md §5 M2): `Tp=`, `Ti=`, `Tp=Ti=` or a bare `+355.08`. */
+export type LevelKind = 'Tp' | 'Ti' | 'TpTi' | 'bare';
+
+/**
+ * Sheet metres. The measured point is the leader's circle centre, never the text. Both candidate rules are
+ * evaluated here; the main thread picks by sheet kind: `leader` for site sheets, `byHeight` for elevations/sections.
+ */
+export type LevelLabel = {
+  kind: LevelKind;
+  /** m a.s.l. */
+  value: number;
+  text: string;
+  layer: string;
+  /** Text anchor (for display only). */
+  at: P2;
+  /** Site: ARC from the label's rectangle to a circle centre. */
+  leader?: P2;
+  /** Vertical: nearest same-layer circle whose y = value − reference (± 1 cm). Needs the sheet's own reference. */
+  byHeight?: P2;
+};
+
+/** `references`: the a.s.l. values of every `0,00= +355.40 m npm` text on the sheet. */
+export type SheetLabels = { references: number[]; levels: LevelLabel[] };

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import type { NormalizedSheet } from '../dwg/types';
+import { levelPoint } from '../dwg/labels';
+import type { NormalizedSheet, SheetLabels } from '../dwg/types';
 import { SHEET_KINDS, type SheetKind } from '../project/projectFile';
 import { useProject, type PdfState, type SheetRow } from '../state/store';
 import { planeValue, withPlane } from '../project/vertical';
@@ -113,6 +114,7 @@ function SheetItem({ sheet: s }: { sheet: SheetRow }) {
             <AxisFitLine row={s} kind={s.kind} sheet={p.summary.sheet} />
           )}
           {s.kind === 'site' && <AlignLine row={s} sheet={p.summary.sheet} />}
+          <LevelsLine labels={p.summary.labels} kind={s.kind} />
           <Summary s={p.summary} />
           <SheetLayers row={s} sheet={p.summary.sheet} />
         </>
@@ -239,6 +241,25 @@ function AlignLine({ row, sheet }: { row: SheetRow; sheet?: NormalizedSheet }) {
         ({a?.ok ? `${t.align.auto} · ${t.align.share} ${pct(a.share)} = ${a.matched}/${a.total} · ${ref?.file}` : t.align.saved})
       </span>
       {tools}
+    </div>
+  );
+}
+
+/** `Rzędne: 7/8 z punktem`, plus the labels without a point (PLAN.md §5 M2). Hidden when the sheet has none. */
+function LevelsLine({ labels, kind }: { labels: SheetLabels; kind: SheetKind }) {
+  const { levels, references } = labels;
+  if (levels.length === 0 && references.length === 0) return null;
+  const missing = levels.filter((l) => !levelPoint(l, kind));
+  return (
+    <div>
+      {t.levels.title}: <strong>{levels.length - missing.length}/{levels.length}</strong> {t.levels.withPoint}
+      {references.length > 0 && <span className="muted"> · ±0.00 = {references.map((r) => r.toFixed(2)).join(', ')}</span>}
+      {missing.length > 0 && (
+        <span className="error">
+          {' '}
+          · {t.levels.without}: {missing.map((l) => l.text).join(', ')}
+        </span>
+      )}
     </div>
   );
 }

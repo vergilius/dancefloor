@@ -92,6 +92,7 @@ export const t = {
       lowShare: 'mniej niż 50 % końców ścian rzutu pasuje',
     },
   },
+  levels: { title: 'Rzędne', withPoint: 'z punktem', without: 'bez punktu' },
   pdf: {
     rendering: 'Renderowanie PDF…',
     title: 'Podkład',
