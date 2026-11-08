@@ -25,6 +25,11 @@ elevations' glazing/door pieces, are placed on the first block face behind each 
 - **Level picker:** heights are typed; a small datalist offers the level values from the M2 labels (no new parsing).
 - **Pitch parse:** `NN°` from the roof sheet's normalized texts (MTEXT already stripped).
 
+## M5b (ADR 0006, approved 2026-11-08)
+The house becomes hollow: walls are the plans' wall lines extruded per storey (`src/house/walls.ts`, pure), slabs
+from the sections, the T3 openings get sill/head fills. Main body and annex blocks stay as data (roof, opening
+placement). Order: T3 → T5 → T6 → T4.
+
 ## Task list
 See `tasks/todo.md`: T1 main body from the roof plan (model, save, mesh, toggle, panel line), T2 draw/edit flat
 blocks, checkpoint A, T3 openings from elevations, T4 hide/show openings + docs, checkpoint B (merge).

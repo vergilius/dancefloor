@@ -1,6 +1,6 @@
 # M5 task list
 
-Next: re-plan for M5b (approved 2026-11-08, ADR 0006): T3 openings, then M5b tasks, then T4; write them into this list. T1, T2, checkpoint A verified; east podcień added to the main body (ADR 0005 amendment), awaiting the user's browser check.
+Next: Task 3 (openings from the elevations). Order: T3 → T5 → T6 (M5b, ADR 0006) → T4 → checkpoint B. Podcień check by the user pending.
 T2 note: "Z rzutu parteru" (ADR 0005 amendment) builds the annex, the terrace slab (L, 31.90 m²), the deck (52.20 m²), 2 posts, 1 pier and 7 S-COLS columns from PAB-01, heights read from the elevations/section (annex +3.59, slab +2.635…+3.22, posts −0.02…+2.635, columns −0.02…+2.63).
 T2 note: the slab carries the awning opening as `holes` (6.93 × 2.14 m, net 17.07 m²).
 Real-file checks without the browser: Node 24 runs `src/` TS directly with a resolver hook adding `.ts` to extensionless imports; load a DWG via `@mlightcad/libredwg-web` + `normalize()` in a scratchpad script (never in the repo, never commit `dwg/`).
@@ -55,6 +55,32 @@ placed"). Drawn in Environment as dark quads 1 cm proud of the face. Panel line 
 **Verification:** `pnpm check`; user orbits round the house and reads the counts.
 **Dependencies:** T2
 **Files:** `src/house/openings.ts`, `src/scene/HouseMesh.tsx`, `src/ui/HousePanel.tsx`, `src/ui/strings.ts`
+**Scope:** M
+
+### Task 5 (M5b): Walls from the plans' wall lines
+**Description:** Pure `src/house/walls.ts`: storeys = placed plans with wall layers, by z; each `I-WALL`, `I-WALL-1`,
+`A-WALL`, `A-WALL-1` line (< 2 cm and cross-layer duplicates dropped) → a double-sided vertical face from the storey z
+to the next storey's z; top storey up to the gable roof planes (split at the ridge); exterior lines on the ground
+storey from the block bottom; lines in the annex up to its top; lines in no house block skipped. Environment draws
+the walls instead of the main body / annex solids (roof planes kept). Panel: per storey faces, length, skipped.
+**Acceptance criteria:**
+- [ ] Zoomed in, PAB-01 partitions and the east podcień wall stand where the plan draws them; attic gable walls reach the ridge, knee walls meet the roof
+- [ ] From outside the house still matches the renders
+**Verification:** `pnpm check`; real-file counts by script; user zooms in.
+**Dependencies:** T3 (shares the Environment drawing), T2
+**Files:** `src/house/walls.ts`, `src/scene/HouseMesh.tsx`, `src/ui/HousePanel.tsx`, `src/ui/strings.ts`
+**Scope:** M
+
+### Task 6 (M5b): Slabs, opening fills, camera inside
+**Description:** Slabs from the sections (`A-FLOR-2`): ceiling over the main body (+2.82 → +3.29), annex roof
+(+2.82 → top), ground slab (0.00 → −0.45). Each T3 opening on a plan gap gets sill/head fills through the wall
+thickness. Double-click in Environment sets the orbit point.
+**Acceptance criteria:**
+- [ ] South windows are holes with sill and head as on PAB-10; the garage door hole as on PAB-08; ceilings at +2.82
+- [ ] Double-click on a wall inside → orbiting around it
+**Verification:** `pnpm check`; user walks through living room, attic, garage.
+**Dependencies:** T5
+**Files:** `src/house/walls.ts`, `src/house/openings.ts`, `src/scene/HouseMesh.tsx`, `src/scene/Viewport.tsx`, `src/ui/HousePanel.tsx`
 **Scope:** M
 
 ### Task 4: Hide openings, docs
