@@ -1,10 +1,12 @@
 # M2 task list
 
-Next: T4 (3D level markers, in both viewports). T1–T3 done and verified 2026-11-08 (checkpoint A closed).
+Next: T5 (measure tool on horizontal sheets, Design only). T1–T4 done and verified 2026-11-08 (checkpoint A closed).
 Note (T1): the worker returns both candidate points per label (`leader`, `byHeight`); `levelPoint(l, kind)` in
 `src/dwg/labels.ts` picks by sheet kind on the main thread, so a kind change needs no re-parse.
 Note (T2): reference = `useLevelReference()` / `useRefValue()` (`src/state/levels.ts`); every shown height goes
 through `formatHeight(rel, ref)` (`src/project/levels.ts`).
+Note (T4): `levelMarkers()` (`src/scene/markers.ts`) gives world points per resolved label; T5 snaps to them. Site
+markers sit at value − reference, not at the sheet z.
 Note (T3): viewport = layer: design 0 (default), environment `ENV_LAYER` 1, both via `inBothViewports` ref
 (`src/scene/split.ts`). Lights must be on both layers to light env meshes. drei `Html` needs
 `calculatePosition={designHtmlPosition}` (it assumes a full-width canvas). The camera frustum is forced to half
@@ -64,8 +66,8 @@ caption in each half.
 origin + x·dir, height y). Small dot + label `Tp 355.08 (−0.32)` per point. Drawn in both viewports. One toggle
 "Rzędne" (store view setting, default on, not saved).
 **Acceptance criteria:**
-- [ ] Elevation markers sit on their sheet circles (< 1 cm); PZT-01 `Tp= 355,08` marker at plan (16.05, −14.46)
-- [ ] Toggle hides/shows all markers; sheets without placement show none
+- [x] Elevation markers sit on their sheet circles (< 1 cm); PZT-01 `Tp= 355,08` marker at plan (16.05, −14.46)
+- [x] Toggle hides/shows all markers; sheets without placement show none
 **Verification:** `pnpm check`; user checks markers in 3D and top view.
 **Dependencies:** T2, T3
 **Files:** `src/scene/LevelMarkers.tsx`, `src/scene/Viewport.tsx`, `src/state/store.ts`, `src/ui/LayerPanel.tsx` (or toolbar), `src/ui/strings.ts`
