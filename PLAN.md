@@ -532,7 +532,9 @@ wall without a gap. Reload → the house is back. Podgląd, versions, Design unc
 
 **M5b — Hollow house** (spec drafted 2026-11-08 on the real files, approved 2026-11-08 ("dobra"); ADR 0006). Open
 questions 1–2 unanswered: built with the spec's defaults (full-height interior door slots, attic floor = the placed PAB-02 z).
-Implementation notes (2026-11-08): openings cut the wall lines between sill and head (the plans draw lines across
+**Amended 2026-11-08 (ADR 0006 amendment): exterior walls are one shell along the block outlines (0.475 m, from the
+`I-WALL` pairs), partitions are pairs of parallel lines 5–35 cm apart, roof windows are holes in the roof planes; the
+requirements below that extrude every line are superseded.** Earlier notes: openings cut the wall lines between sill and head (the plans draw lines across
 the garage door and the podcień doors), so a plan gap isn't required; a cut needs a wall face within 0.25 m of the
 placed opening. Slabs on the real files: ground −0.45…0.00 (PAB-04), ceiling +2.82…+3.29 (PAB-05), garage floor
 −0.15…+0.30 and roof +2.82…+3.59 (PAB-04). Camera: double-click sets the orbit point, `infinityDolly` with

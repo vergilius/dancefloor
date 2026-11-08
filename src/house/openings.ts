@@ -4,7 +4,7 @@
 // bboxes ≥ MIN × MIN; overlapping boxes merged. Then each rect is moved from the elevation plane along the view
 // direction to the first house triangle hit by a ray through its centre (≤ MAX_DEPTH), and drawn there.
 import type { NormalizedSheet } from '../dwg/types';
-import type { Vec2 } from './blocks';
+import { wallFace, type GableBlock, type RoofHole, type Vec2 } from './blocks';
 
 /** Sheet rect: x along the elevation's `dir`, y = height rel. ±0.00. */
 export type OpeningRect = { x0: number; y0: number; x1: number; y1: number };
@@ -122,4 +122,30 @@ function rayTriangle(o: [number, number, number], d: [number, number, number], t
   if (w < 0 || u + w > 1) return undefined;
   const t = (e2[0]! * q[0]! + e2[1]! * q[1]! + e2[2]! * q[2]!) * inv;
   return t >= 0 ? t : undefined;
+}
+
+/**
+ * The part of an opening above the wall face, as a hole in the roof plane the elevation looks straight at (roof
+ * windows, and the eave windows' upper part, M5b). Its height range maps onto the slope through the pitch. Elevations
+ * that see the roof edge-on (the gable sides) give none.
+ */
+export function roofHole(main: GableBlock, r: OpeningRect, e: Elevation): RoofHole | undefined {
+  const alongX = main.x1 - main.x0 >= main.y1 - main.y0;
+  // The façade must run along the ridge, so the viewer faces one slope.
+  if (Math.abs(alongX ? e.dir.y : e.dir.x) > 1e-3) return undefined;
+  const hw = wallFace(main);
+  const z0 = Math.max(r.y0, hw);
+  const z1 = Math.min(r.y1, main.ridge);
+  if (z1 - z0 < 0.05) return undefined;
+  const view = { x: -e.dir.y, y: e.dir.x };
+  // The slope facing the viewer: its outward side is opposite to the view direction.
+  const sign = -(alongX ? view.y : view.x) > 0 ? 1 : -1;
+  const vc = alongX ? (main.y0 + main.y1) / 2 : (main.x0 + main.x1) / 2;
+  const tanP = Math.tan((main.pitch * Math.PI) / 180);
+  const va = vc + (sign * (main.ridge - z0)) / tanP;
+  const vb = vc + (sign * (main.ridge - z1)) / tanP;
+  const ua = alongX ? e.origin.x + r.x0 * e.dir.x : e.origin.y + r.x0 * e.dir.y;
+  const ub = alongX ? e.origin.x + r.x1 * e.dir.x : e.origin.y + r.x1 * e.dir.y;
+  const [u0, u1, v0, v1] = [Math.min(ua, ub), Math.max(ua, ub), Math.min(va, vb), Math.max(va, vb)];
+  return alongX ? { x0: u0, x1: u1, y0: v0, y1: v1 } : { x0: v0, x1: v1, y0: u0, y1: u1 };
 }

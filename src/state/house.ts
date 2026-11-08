@@ -1,10 +1,10 @@
 // Derived house geometry shared by the mesh and the panel (PLAN.md §5 M5, M5b): block triangles, the placed façade
 // openings of every placed elevation, and the hollow house (walls cut by the openings, fills, slabs).
 import { useMemo } from 'react';
-import { blockTriangles, hasRoofLayer, type GableBlock } from '../house/blocks';
-import { findOpenings, openingKey, placeOpening, type OpeningRect, type PlacedOpening } from '../house/openings';
-import { hollowSlabs, openingFills, type Slab } from '../house/slabs';
-import { hostsWalls, wallsFromPlans, WALL_LAYERS, type StoreyWalls } from '../house/walls';
+import { blockTriangles, hasRoofLayer, type GableBlock, type RoofHole } from '../house/blocks';
+import { findOpenings, openingKey, placeOpening, roofHole, type OpeningRect, type PlacedOpening } from '../house/openings';
+import { hollowSlabs, type Slab } from '../house/slabs';
+import { hollowWalls, hostsWalls, WALL_LAYERS, type StoreyWalls } from '../house/walls';
 import { t } from '../ui/strings';
 import { useDrawnSheets } from './drawn';
 import { useProject } from './store';
@@ -12,7 +12,7 @@ import { useProject } from './store';
 export type ElevationOpenings = {
   file: string;
   found: OpeningRect[];
-  /** `hole`: cut through a hollow wall (M5b); otherwise drawn as a dark quad. */
+  /** `hole`: cut through the hollow shell or the roof (M5b); otherwise drawn as a dark quad. */
   placed: (PlacedOpening & { key: string; hole: boolean })[];
   /** Found but no house face behind them within MAX_DEPTH (roof windows, mostly). */
   missed: number;
@@ -22,15 +22,19 @@ export type House3D = {
   openings: ElevationOpenings[];
   /** Hollow house (M5b); empty without wall lines on the plans. */
   walls: number[];
-  fills: number[];
   slabs: number[];
+  /** Roof windows (and the eave windows' upper part) cut out of the roof planes. */
+  roofHoles: RoofHole[];
+  /** Exterior wall thickness (m), and whether it was measured on the plan. */
+  thickness: number;
+  thicknessFound: boolean;
   slabList: Slab[];
   storeys: StoreyWalls[];
   /** The ground storey's z: blocks hosting its walls are drawn hollow. */
   groundZ: number;
 };
 
-const EMPTY: House3D = { openings: [], walls: [], fills: [], slabs: [], slabList: [], storeys: [], groundZ: 0 };
+const EMPTY: House3D = { openings: [], walls: [], slabs: [], roofHoles: [], thickness: 0, thicknessFound: false, slabList: [], storeys: [], groundZ: 0 };
 
 export function useHouse3D(): House3D {
   const drawn = useDrawnSheets();
@@ -74,11 +78,11 @@ function build(drawn: ReturnType<typeof useDrawnSheets>, blocks: Blocks): House3
       });
       return { file, found, on };
     });
-    const uncut = storeys.length ? wallsFromPlans(storeys, blocks) : undefined;
     const all = placed.flatMap((p) => p.on);
-    const fills = uncut ? openingFills(all, Float64Array.from(uncut.triangles), blocks, zs) : undefined;
-    const walls = uncut && fills ? wallsFromPlans(storeys, blocks, fills.cuts) : undefined;
+    const walls = storeys.length ? hollowWalls(storeys, blocks, all) : undefined;
     const main = blocks.find((b): b is GableBlock => b.kind === 'gable');
+    // Roof windows: every opening found on an elevation looking at a slope, placed or not.
+    const roofHoles = main && walls ? elevations.flatMap(({ sheet, e }) => findOpenings(sheet).flatMap((r) => roofHole(main, r, e) ?? [])) : [];
     const slabs = walls
       ? hollowSlabs(
           main,
@@ -93,14 +97,17 @@ function build(drawn: ReturnType<typeof useDrawnSheets>, blocks: Blocks): House3
     const openings = placed.map(({ file, found, on }) => ({
       file,
       found,
-      placed: on.map((o) => ({ ...o, hole: fills?.hole[k++] ?? false })),
+      // A hole in the shell, or (above the wall face, on a slope seen face-on) in the roof.
+      placed: on.map((o) => ({ ...o, hole: (walls?.hole[k++] ?? false) || (!!main && !!walls && roofHole(main, o.rect, o.e) !== undefined) })),
       missed: found.length - on.length,
     }));
     return {
       openings,
       walls: walls?.triangles ?? [],
-      fills: fills?.triangles ?? [],
       slabs: slabs?.triangles ?? [],
+      roofHoles,
+      thickness: walls?.thickness ?? 0,
+      thicknessFound: walls?.thicknessFound ?? false,
       slabList: slabs?.slabs ?? [],
       storeys: walls?.storeys ?? [],
       groundZ,

@@ -237,7 +237,7 @@ export function HousePanel() {
 
 /** Hollow house (M5b): per storey, the wall lines drawn as faces. */
 function WallsSummary() {
-  const { storeys, slabList } = useHouse3D();
+  const { storeys, slabList, thickness, thicknessFound, roofHoles } = useHouse3D();
   const ref = useRefValue();
   if (storeys.length === 0) return null;
   return (
@@ -246,9 +246,13 @@ function WallsSummary() {
       <ul className="house-blocks">
         {storeys.map((st) => (
           <li key={st.file}>
-            {sheetName(st.file)} ({formatRel(st.z)}): {t.house.wallsLine(st.faces, st.length, st.skipped)}
+            {sheetName(st.file)} ({formatRel(st.z)}): {t.house.wallsLine(st.partitions, st.length)}
           </li>
         ))}
+        <li>
+          {t.house.shell(thickness)}
+          {!thicknessFound && <span className="error"> {t.house.shellAssumed}</span>} · {t.house.roofHoles(roofHoles.length)}
+        </li>
       </ul>
       <h3>{t.house.slabsTitle}</h3>
       <ul className="house-blocks">

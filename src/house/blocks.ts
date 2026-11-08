@@ -365,16 +365,37 @@ function flatTriangles(b: FlatBlock): number[] {
   return out;
 }
 
-/** The two roof planes only (ridge → eave, with the overhang): the hollow house draws them over its walls. */
-export function roofTriangles(b: GableBlock): number[] {
+/** A plan rectangle cut out of a roof plane (a roof window, M5b). */
+export type RoofHole = { x0: number; y0: number; x1: number; y1: number };
+
+/**
+ * The two roof planes only (ridge → eave, with the overhang), with `holes` cut out of the plane they lie on: the
+ * hollow house draws them over its walls. Heights from the plane, so the holes sit exactly in it.
+ */
+export function roofTriangles(b: GableBlock, holes: RoofHole[] = []): number[] {
   const alongX = b.x1 - b.x0 >= b.y1 - b.y0;
-  const [u0, u1, v0, v1] = alongX ? [b.x0, b.x1, b.y0, b.y1] : [b.y0, b.y1, b.x0, b.x1];
-  const P = (u: number, v: number, h: number): P3 => (alongX ? [u, v, h] : [v, u, h]);
-  const vc = (v0 + v1) / 2;
-  const he = wallFace(b) - b.overhang * tan(b.pitch);
+  const vc = alongX ? (b.y0 + b.y1) / 2 : (b.x0 + b.x1) / 2;
+  const planes = alongX
+    ? [
+        { x0: b.x0, x1: b.x1, y0: b.y0 - b.overhang, y1: vc },
+        { x0: b.x0, x1: b.x1, y0: vc, y1: b.y1 + b.overhang },
+      ]
+    : [
+        { x0: b.x0 - b.overhang, x1: vc, y0: b.y0, y1: b.y1 },
+        { x0: vc, x1: b.x1 + b.overhang, y0: b.y0, y1: b.y1 },
+      ];
   const out: number[] = [];
-  quad(out, P(u0, v0 - b.overhang, he), P(u1, v0 - b.overhang, he), P(u1, vc, b.ridge), P(u0, vc, b.ridge));
-  quad(out, P(u1, v1 + b.overhang, he), P(u0, v1 + b.overhang, he), P(u0, vc, b.ridge), P(u1, vc, b.ridge));
+  for (const pl of planes) {
+    const inPlane = holes
+      .map((h) => ({ x0: Math.max(h.x0, pl.x0), y0: Math.max(h.y0, pl.y0), x1: Math.min(h.x1, pl.x1), y1: Math.min(h.y1, pl.y1) }))
+      .filter((h) => h.x1 - h.x0 > 0.01 && h.y1 - h.y0 > 0.01);
+    const [outer, ...rings] = rectMinus(pl, inPlane);
+    if (!outer) continue;
+    const pts = [outer, ...rings].flat();
+    const v2 = (ring: Vec2[]) => ring.map((p) => new Vector2(p.x, p.y));
+    for (const [i, j, k] of ShapeUtils.triangulateShape(v2(outer), rings.map(v2)))
+      for (const p of [pts[i!]!, pts[j!]!, pts[k!]!]) out.push(p.x, p.y, roofHeight(b, p.x, p.y));
+  }
   return out;
 }
 

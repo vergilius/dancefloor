@@ -1,11 +1,8 @@
-// Hollow house slabs and opening fills (PLAN.md §5 M5b, ADR 0006). Pure.
-// Slabs: levels read from the placed sections over each block (`A-FLOR-2` = structure faces, `A-FLOR-1` = finished
-// floors). Fills: a façade opening that lands on a gap in the plan walls gets a sill and a head fill through the wall.
+// Hollow house slabs (PLAN.md §5 M5b, ADR 0006). Pure. Levels read from the placed sections over each block
+// (`A-FLOR-2` = structure faces, `A-FLOR-1` = finished floors).
 import type { NormalizedSheet } from '../dwg/types';
-import { rectMinus, roofHeight, wallFace, type Block, type FlatBlock, type GableBlock, type Vec2 } from './blocks';
+import { rectMinus, wallFace, type FlatBlock, type GableBlock, type Vec2 } from './blocks';
 import { pointInPolygon } from './fromPlan';
-import { rayHits, type Elevation, type OpeningRect } from './openings';
-import { hostsWalls, type WallCut } from './walls';
 
 export type SectionIn = { file: string; sheet: NormalizedSheet; origin: Vec2; dir: Vec2 };
 export type Slab = { name: string; bottom: number; top: number; from: string };
@@ -125,71 +122,4 @@ export function hollowSlabs(
     slabs.push({ name: names.ceiling(h.name, h.top), bottom: bot.value, top: h.top, from: bot.file });
   }
   return { triangles: out, slabs };
-}
-
-export type FillIn = { rect: OpeningRect; e: Elevation; depth: number };
-
-/** Wall faces within this distance (m) behind the outer face belong to the same wall. */
-const WALL_MAX = 0.8;
-const SIDE = 0.05;
-const SIDE_STEPS = [SIDE, 0.15, 0.3, 0.6, 1];
-/** The wall face beside an opening lies this close (m) to where it was placed (eave windows: 0.17 behind the roof). */
-const AT_FACE = 0.25;
-
-/**
- * For each placed opening: `hole` if there is a plan wall at it (faces beside it within WALL_MAX). Then it becomes a
- * cut through the walls (sill to head, the opening's width × the wall's thickness, measured beside it) plus a sill
- * fill (wall bottom → sill) and a head fill (head → storey top, under the roof on the top storey) where the plan
- * leaves a gap. Openings with no wall at them (on the roof: the eave windows) stay dark quads.
- */
-export function openingFills(
-  openings: FillIn[],
-  wallTriangles: ArrayLike<number>,
-  blocks: Block[],
-  storeyZ: number[],
-): { triangles: number[]; hole: boolean[]; cuts: WallCut[] } {
-  const out: number[] = [];
-  const zs = [...storeyZ].sort((a, b) => a - b);
-  const main = blocks.find((b): b is GableBlock => b.kind === 'gable');
-  const cuts: WallCut[] = [];
-  const hole = openings.map(({ rect: r, e, depth }) => {
-    const v = { x: -e.dir.y, y: e.dir.x };
-    const at = (x: number, d: number): Vec2 => ({ x: e.origin.x + x * e.dir.x + d * v.x, y: e.origin.y + x * e.dir.y + d * v.y });
-    const ray = (x: number, z: number) => {
-      const p = at(x, depth - 0.3);
-      return rayHits([p.x, p.y, z], [v.x, v.y, 0], wallTriangles).map((t) => t - 0.3);
-    };
-    const cz = (r.y0 + r.y1) / 2;
-    // Wall thickness beside the opening: the faces within WALL_MAX behind the first.
-    const thick = Math.max(
-      0,
-      ...[-1, 1].map((side) => {
-        // Beside the opening, stepping outwards: windows in a row share one plan gap (the attic gable on PAB-09).
-        for (const off of SIDE_STEPS) {
-          const h = ray(side < 0 ? r.x0 - off : r.x1 + off, cz);
-          // The wall must stand where the opening was placed (not deeper: a roof window lands on the roof plane).
-          if (h.length && Math.abs(h[0]!) <= AT_FACE) return Math.max(...h.filter((t) => t - h[0]! <= WALL_MAX)) - h[0]!;
-        }
-        return 0;
-      }),
-    );
-    if (thick <= 0) return false;
-    cuts.push({ origin: e.origin, dir: e.dir, x0: r.x0, x1: r.x1, d0: depth - SIDE, d1: depth + thick + SIDE, y0: r.y0, y1: r.y1 });
-    const plan = [at(r.x0, depth), at(r.x1, depth), at(r.x1, depth + thick), at(r.x0, depth + thick)];
-    const mid = { x: (plan[0]!.x + plan[2]!.x) / 2, y: (plan[0]!.y + plan[2]!.y) / 2 };
-    const host = blocks.find((b): b is FlatBlock => hostsWalls(b, zs[0] ?? 0) && pointInPolygon(mid, b.polygon));
-    // The storey the opening is in, the wall's bottom and the top above the head.
-    const k = Math.max(0, zs.findLastIndex((z) => z <= r.y0 + 0.05));
-    const z = zs[k] ?? 0;
-    const inMain = main && mid.x > main.x0 - 0.1 && mid.x < main.x1 + 0.1 && mid.y > main.y0 - 0.1 && mid.y < main.y1 + 0.1;
-    const bottom = k === 0 ? (inMain ? main.bottom : host?.bottom ?? z) : z;
-    const tops = plan.map((p) =>
-      !inMain && host ? host.top : zs[k + 1] ?? (main ? roofHeight(main, p.x, p.y) : z),
-    );
-    if (r.y0 > bottom + 0.01) prism(out, plan, bottom, [r.y0, r.y0, r.y0, r.y0]);
-    // Head fill: from the head up to the storey top (per corner: sloped under the roof).
-    if (tops.every((t) => t > r.y1 + 0.01)) prism(out, plan, r.y1, tops);
-    return true;
-  });
-  return { triangles: out, hole, cuts };
 }

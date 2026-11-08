@@ -263,9 +263,12 @@ export const t = {
     slabRecess: 'Podcień: podsufitka',
     slabsTitle: 'Stropy z przekrojów',
     slabLine: (bottom: string, top: string, from: string) => `${bottom} … ${top} (${from})`,
-    wallsTitle: 'Ściany z rzutów (wnętrze)',
-    wallsLine: (faces: number, length: number, skipped: number) =>
-      `${faces} ${plural(faces, 'ściana', 'ściany', 'ścian')} (linii), ${length.toFixed(1)} m · pominięte ${skipped} (krótkie, podwójne, poza domem)`,
+    wallsTitle: 'Wnętrze: ściany',
+    wallsLine: (n: number, length: number) =>
+      `${n} ${plural(n, 'ścianka działowa', 'ścianki działowe', 'ścianek działowych')} (pary linii 5–35 cm), ${length.toFixed(1)} m`,
+    shell: (t: number) => `ściany zewnętrzne: obrys brył, grubość ${t.toFixed(3)} m (odstęp linii I-WALL)`,
+    shellAssumed: '(nie zmierzono, przyjęto)',
+    roofHoles: (n: number) => `${n} ${plural(n, 'otwór w dachu', 'otwory w dachu', 'otworów w dachu')}`,
     openingsTitle: 'Okna i drzwi z elewacji',
     openingsLine: (found: number, holes: number, quads: number, missed: number) =>
       `znalezione ${found}: ${holes} ${plural(holes, 'otwór w ścianie', 'otwory w ścianach', 'otworów w ścianach')}, ${quads} na bryle (ciemne)` +

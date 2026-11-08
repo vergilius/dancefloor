@@ -4,7 +4,7 @@
 // footprints on the plan plane (z 0).
 import { useEffect, useMemo } from 'react';
 import { BufferAttribute, BufferGeometry, DoubleSide, EdgesGeometry } from 'three';
-import { blockOutline, blockTriangles, polygonArea, roofTriangles, type Block } from '../house/blocks';
+import { blockOutline, blockTriangles, polygonArea, roofTriangles, type Block, type RoofHole } from '../house/blocks';
 import { hostsWalls } from '../house/walls';
 import { useHouse3D } from '../state/house';
 import { useProject } from '../state/store';
@@ -44,10 +44,9 @@ export function HouseMesh() {
   return (
     <group>
       {blocks.map((b, i) => (
-        <BlockSolid key={i} block={b} hollow={hollow && (b.kind === 'gable' || hostsWalls(b, house.groundZ))} />
+        <BlockSolid key={i} block={b} hollow={hollow && (b.kind === 'gable' || hostsWalls(b, house.groundZ))} roofHoles={house.roofHoles} />
       ))}
       {hollow && <WallFaces triangles={house.walls} color={WALL_COLOR} />}
-      {hollow && <WallFaces triangles={house.fills} color={WALL_COLOR} />}
       {hollow && <WallFaces triangles={house.slabs} color={SLAB_COLOR} />}
       <Openings elevations={house.openings} />
       <lineSegments layers={DESIGN_LAYER}>
@@ -74,8 +73,8 @@ function sceneGeometry(world: ArrayLike<number>): BufferGeometry {
   return g;
 }
 
-/** Hollow main body: its roof planes; a hollow annex: nothing of its own (walls and slabs draw it). */
-const hollowTriangles = (b: Block): number[] => (b.kind === 'gable' ? roofTriangles(b) : []);
+/** Hollow main body: its roof planes (with the roof windows); a hollow annex: nothing of its own. */
+const hollowTriangles = (b: Block, holes: RoofHole[]): number[] => (b.kind === 'gable' ? roofTriangles(b, holes) : []);
 
 function WallFaces({ triangles, color }: { triangles: number[]; color: string }) {
   const geo = useMemo(() => sceneGeometry(triangles), [triangles]);
@@ -94,11 +93,11 @@ function WallFaces({ triangles, color }: { triangles: number[]; color: string })
   );
 }
 
-function BlockSolid({ block, hollow }: { block: Block; hollow: boolean }) {
+function BlockSolid({ block, hollow, roofHoles }: { block: Block; hollow: boolean; roofHoles: RoofHole[] }) {
   // Design keeps the full block's edges (compared with the underlays); Environment shows the hollow parts.
   const full = useMemo(() => sceneGeometry(blockTriangles(block)), [block]);
   const fullEdges = useMemo(() => new EdgesGeometry(full, EDGE_ANGLE), [full]);
-  const part = useMemo(() => (hollow ? sceneGeometry(hollowTriangles(block)) : undefined), [block, hollow]);
+  const part = useMemo(() => (hollow ? sceneGeometry(hollowTriangles(block, roofHoles)) : undefined), [block, hollow, roofHoles]);
   const partEdges = useMemo(() => part && new EdgesGeometry(part, EDGE_ANGLE), [part]);
   useEffect(() => () => full.dispose(), [full]);
   useEffect(() => () => fullEdges.dispose(), [fullEdges]);
