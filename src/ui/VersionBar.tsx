@@ -1,6 +1,6 @@
 // Environment view bar (PLAN.md §5 M4a): Podgląd or an edit version, plus Nowa wersja / Zmień nazwę / Usuń.
 import { useActiveVersion, useEnvSurface, useVersions } from '../state/versions';
-import { rectSize } from '../versions/edits';
+import { rectSize, TOOLS } from '../versions/edits';
 import { t } from './strings';
 
 export function VersionBar() {
@@ -39,11 +39,12 @@ export function VersionBar() {
       <button type="button" disabled={!version} onClick={onRemove}>
         {t.versions.remove}
       </button>
-      {version && (
-        <button type="button" aria-pressed={tool === 'level'} title={t.versions.toolTitles.level} onClick={() => setTool(tool === 'level' ? undefined : 'level')}>
-          {t.versions.tools.level}
-        </button>
-      )}
+      {version &&
+        TOOLS.map((k) => (
+          <button key={k} type="button" aria-pressed={tool === k} title={t.versions.toolTitles[k]} onClick={() => setTool(tool === k ? undefined : k)}>
+            {t.versions.tools[k]}
+          </button>
+        ))}
       {draft ? (
         <span className="status">
           <strong>{t.versions.rectSize(rectSize(draft).w, rectSize(draft).h, rectSize(draft).area)}</strong>

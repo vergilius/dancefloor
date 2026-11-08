@@ -1,15 +1,16 @@
 // Edit tools in the Environment viewport (PLAN.md §5 M4a): with a tool armed in a version, a left drag that starts on
 // the terrain draws a rect snapped to the 0.5 m lattice (draped on the surface); release adds the edit. A drag that
-// starts off the terrain orbits as usual. Esc cancels the drag.
+// starts off the terrain orbits as usual. Esc cancels the drag. The edit selected in the list is outlined.
 import { useEffect, useMemo, useRef } from 'react';
 import { useThree } from '@react-three/fiber';
 import { Raycaster, Vector2 } from 'three';
 import { useEnvSurface, useVersions } from '../state/versions';
 import { rayGrid, sampleGrid, type HeightGrid } from '../terrain/grid';
-import { meanUnder, snapRect, type Rect } from '../versions/edits';
+import { DEFAULT_DZ, meanUnder, snapRect, type Edit, type Rect } from '../versions/edits';
 import { ENV_LAYER, halfAt } from './split';
 
 const COLOR = '#0969da';
+const SELECTED_COLOR = '#bf8700';
 /** Draped this far above the surface (m), sampled every STEP (m). */
 const LIFT = 0.04;
 const STEP = 0.1;
@@ -21,6 +22,7 @@ export function EditTool() {
   const { grid, version } = useEnvSurface();
   const tool = useVersions((s) => s.tool);
   const draft = useVersions((s) => s.draft);
+  const selected = useVersions((s) => version?.edits.find((e) => e.id === s.selected));
   const camera = useThree((s) => s.camera);
   const el = useThree((s) => s.events.connected) as HTMLElement | undefined;
   const on = Boolean(tool && version && grid);
@@ -62,8 +64,14 @@ export function EditTool() {
     const onUp = () => {
       const r = rect;
       end();
-      const z = r && meanUnder(grid, grid.base, r);
-      if (r && z !== undefined) addEdit({ id: newId(), tool: 'level', rect: r, z });
+      if (!r || !tool) return;
+      let edit: Edit | undefined;
+      if (tool === 'level') {
+        // Default z = mean height under the rect before the edit (1 cm).
+        const z = meanUnder(grid, grid.base, r);
+        if (z !== undefined) edit = { id: newId(), tool, rect: r, z };
+      } else edit = { id: newId(), tool, rect: r, dz: DEFAULT_DZ };
+      if (edit) addEdit(edit);
     };
     // Capture phase on the container: a drag that starts on the terrain never reaches the camera controls.
     const onDown = (e: PointerEvent) => {
@@ -86,16 +94,25 @@ export function EditTool() {
       window.removeEventListener('keydown', onKey);
       end();
     };
-  }, [on, el, grid]);
+  }, [on, el, grid, tool]);
 
-  const line = useMemo(() => draft && grid && drapedRect(grid, draft), [draft, grid]);
-  if (!on || !line) return null;
+  const line = useMemo(() => on && draft && grid && drapedRect(grid, draft), [on, draft, grid]);
+  const sel = useMemo(() => selected && grid && drapedRect(grid, selected.rect), [selected, grid]);
+  return (
+    <>
+      {line && <Outline points={line} color={COLOR} />}
+      {sel && <Outline points={sel} color={SELECTED_COLOR} />}
+    </>
+  );
+}
+
+function Outline({ points, color }: { points: Float32Array; color: string }) {
   return (
     <lineSegments layers={ENV_LAYER} renderOrder={10} frustumCulled={false}>
       <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[line, 3]} />
+        <bufferAttribute attach="attributes-position" args={[points, 3]} />
       </bufferGeometry>
-      <lineBasicMaterial color={COLOR} depthTest={false} />
+      <lineBasicMaterial color={color} depthTest={false} />
     </lineSegments>
   );
 }

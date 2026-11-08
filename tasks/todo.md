@@ -1,6 +1,6 @@
 # M4a task list
 
-Next: T3 (Podnieś / Obniż and the edit list). Volumes count edge corners: 4 × 6 m at +0.10 m → +2.50 m³, 1 × 1 m → 0.121 m³ (user OK). After M4a: M5 house massing, then M4b–M4d (ADR 0004).
+Next: T3 implemented, waiting for the user's browser check; then T4. Volumes count edge corners: 4 × 6 m at +0.10 m → +2.50 m³, 1 × 1 m → 0.121 m³ (user OK). After M4a: M5 house massing, then M4b–M4d (ADR 0004).
 Plan: `tasks/plan.md`. Spec: PLAN.md §5 M4a, ADR 0003. M3 task notes are in git history (`tasks/todo.md` at c477be0).
 
 Commands: `pnpm dev`, `pnpm check` (build + lint + guards). No automated tests (CLAUDE.md).

@@ -4,7 +4,7 @@
 import { create } from 'zustand';
 import { listFiles, readFile, removeFile, versionsDir, writeFile } from '../project/folder';
 import type { HeightGrid } from '../terrain/grid';
-import { applyEdits, type Edit, type Rect } from '../versions/edits';
+import { replay, withValue, type Edit, type EditVolume, type Rect, type Tool } from '../versions/edits';
 import { packGrid, parseVersionFile, serializeVersionFile, unpackGrid, type VersionFile } from '../versions/file';
 import { useTerrain, type Terrain } from './terrain';
 
@@ -12,7 +12,6 @@ export type Version = { id: string; name: string; created: string; grid: HeightG
 /** A version file that couldn't be read: listed with the reason, never deleted or overwritten. */
 export type BrokenVersion = { file: string; error: string };
 export type Active = 'preview' | string;
-export type Tool = Edit['tool'];
 /** The JSON is written this long after the last change (PLAN.md §5 M4a). */
 const AUTOSAVE_MS = 1000;
 
@@ -25,6 +24,8 @@ type VersionsState = {
   tool?: Tool;
   /** The rect being dragged with the tool (plan m, on the lattice), shown with its size. View state. */
   draft?: Rect;
+  /** Edit of the active version selected in the list (outlined in the view). View state. */
+  selected?: string;
   /** Versions with changes not written yet. */
   unsaved: string[];
   /** Last failed write (create / rename / delete / autosave). Cleared by the next successful one. */
@@ -41,8 +42,10 @@ type VersionsState = {
   setDraft(draft: Rect | undefined): void;
   /** Appends an edit to the active version (autosaved). */
   addEdit(edit: Edit): void;
-  /** Changes one edit of the active version (autosaved); later edits replay over it. */
-  changeEdit(id: string, change: Partial<Omit<Edit, 'id' | 'tool'>>): void;
+  /** Sets an edit's z (Wyrównaj) or dz (Podnieś / Obniż) in the active version (autosaved); later edits replay over it. */
+  setEditValue(id: string, value: number): void;
+  deleteEdit(id: string): void;
+  select(id: string | undefined): void;
 };
 
 const errText = (err: unknown) => (err instanceof Error ? err.message : String(err));
@@ -77,7 +80,7 @@ export const useVersions = create<VersionsState>()((set, get) => ({
 
   async load(dir) {
     cancelSaves();
-    set({ dir, versions: [], broken: [], active: 'preview', tool: undefined, unsaved: [], saveError: undefined });
+    set({ dir, versions: [], broken: [], active: 'preview', tool: undefined, selected: undefined, unsaved: [], saveError: undefined });
     const versions: Version[] = [];
     const broken: BrokenVersion[] = [];
     try {
@@ -142,13 +145,14 @@ export const useVersions = create<VersionsState>()((set, get) => ({
       versions: st.versions.filter((x) => x.id !== id),
       active: st.active === id ? 'preview' : st.active,
       tool: st.active === id ? undefined : st.tool,
+      selected: st.active === id ? undefined : st.selected,
       unsaved: st.unsaved.filter((x) => x !== id),
       saveError: undefined,
     }));
   },
 
   setActive(active) {
-    set({ active, tool: undefined, draft: undefined });
+    set({ active, tool: undefined, draft: undefined, selected: undefined });
   },
 
   setTool(tool) {
@@ -163,8 +167,17 @@ export const useVersions = create<VersionsState>()((set, get) => ({
     updateActive((v) => ({ ...v, edits: [...v.edits, edit] }));
   },
 
-  changeEdit(id, change) {
-    updateActive((v) => ({ ...v, edits: v.edits.map((e) => (e.id === id ? { ...e, ...change } : e)) }));
+  setEditValue(id, value) {
+    updateActive((v) => ({ ...v, edits: v.edits.map((e) => (e.id === id ? withValue(e, value) : e)) }));
+  },
+
+  deleteEdit(id) {
+    updateActive((v) => ({ ...v, edits: v.edits.filter((e) => e.id !== id) }));
+    if (get().selected === id) set({ selected: undefined });
+  },
+
+  select(selected) {
+    set({ selected });
   },
 }));
 
@@ -222,16 +235,20 @@ function saveNow(id: string): Promise<void> {
 export const useActiveVersion = (): Version | undefined =>
   useVersions((s) => (s.active === 'preview' ? undefined : s.versions.find((v) => v.id === s.active)));
 
-/** The version's surface (edits replayed over its frozen base) as a grid; one per edit list, shared by all callers. */
-export function versionSurface(v: Version): HeightGrid {
+/**
+ * The version's surface (edits replayed over its frozen base) as a grid, and each edit's cut / fill against the
+ * surface before it. One replay per edit list, shared by all callers.
+ */
+export function versionSurface(v: Version): { grid: HeightGrid; volumes: EditVolume[] } {
   let s = surfaces.get(v.edits);
   if (!s || s.base !== v.grid) {
-    s = { base: v.grid, grid: { ...v.grid, base: applyEdits(v.grid, v.edits) } };
+    const { h, volumes } = replay(v.grid, v.edits);
+    s = { base: v.grid, grid: { ...v.grid, base: h }, volumes };
     surfaces.set(v.edits, s);
   }
-  return s.grid;
+  return s;
 }
-const surfaces = new WeakMap<Edit[], { base: HeightGrid; grid: HeightGrid }>();
+const surfaces = new WeakMap<Edit[], { base: HeightGrid; grid: HeightGrid; volumes: EditVolume[] }>();
 
 /**
  * What Environment draws: the live generated terrain in Podgląd, or the active version's surface.
@@ -240,5 +257,5 @@ const surfaces = new WeakMap<Edit[], { base: HeightGrid; grid: HeightGrid }>();
 export function useEnvSurface(): { grid?: HeightGrid; live?: HeightGrid; plot?: Terrain['plot']; version?: Version } {
   const { grid: live, plot } = useTerrain();
   const version = useActiveVersion();
-  return { grid: version ? versionSurface(version) : live, live, plot, version };
+  return { grid: version ? versionSurface(version).grid : live, live, plot, version };
 }
