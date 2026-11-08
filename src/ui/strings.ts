@@ -258,6 +258,9 @@ export const t = {
     fromPlanSkipped: (loops: number) =>
       `pominięte: ${loops} ${plural(loops, 'nieprostokątny obrys', 'nieprostokątne obrysy', 'nieprostokątnych obrysów')} A-WALL`,
     holes: (n: number) => `${n} ${plural(n, 'otwór', 'otwory', 'otworów')}`,
+    openingsTitle: 'Okna i drzwi z elewacji',
+    openingsLine: (found: number, drawn: number, missed: number) =>
+      `znalezione ${found}, narysowane ${drawn}` + (missed > 0 ? `, bez ściany za nimi ${missed} (okna dachowe?)` : ''),
     addBlock: 'Dodaj blok',
     addBlockTitle: 'Narysuj blok z płaskim dachem: klikaj narożniki na rzutach (w widoku Projekt, przyciąganie do końców linii)',
     drawing: 'Nowy blok',

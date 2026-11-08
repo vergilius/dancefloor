@@ -17,6 +17,7 @@ import {
 import { blocksFromPlan, centre, columnHeights, facesSide, heightsFrom, pointInPolygon, recessesFromPlan, WALL_LAYER, type PlanBlocks } from '../house/fromPlan';
 import { formatHeight, formatRel } from '../project/levels';
 import { useDrawnSheets } from '../state/drawn';
+import { useOpenings } from '../state/house';
 import { useRefValue } from '../state/levels';
 import { useProject } from '../state/store';
 import { t } from './strings';
@@ -214,6 +215,7 @@ export function HousePanel() {
         </p>
       )}
       <LevelOptions />
+      <OpeningsSummary />
       {blocks.length === 0 ? (
         <p className="muted">{t.house.none}</p>
       ) : (
@@ -225,6 +227,24 @@ export function HousePanel() {
           ))}
         </ul>
       )}
+    </>
+  );
+}
+
+/** Per placed elevation: openings found / drawn / not placed (T3). */
+function OpeningsSummary() {
+  const elevations = useOpenings();
+  if (elevations.length === 0) return null;
+  return (
+    <>
+      <h3>{t.house.openingsTitle}</h3>
+      <ul className="house-blocks">
+        {elevations.map((e) => (
+          <li key={e.file}>
+            {sheetName(e.file)}: {t.house.openingsLine(e.found.length, e.placed.length, e.missed)}
+          </li>
+        ))}
+      </ul>
     </>
   );
 }

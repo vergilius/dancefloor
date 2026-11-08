@@ -4,6 +4,7 @@
 import { useEffect, useMemo } from 'react';
 import { BufferAttribute, BufferGeometry, DoubleSide, EdgesGeometry } from 'three';
 import { blockOutline, blockTriangles, polygonArea, type Block } from '../house/blocks';
+import { useOpenings } from '../state/house';
 import { useProject } from '../state/store';
 import { DESIGN_LAYER, ENV_LAYER } from './split';
 
@@ -15,6 +16,7 @@ const FOOTPRINT_COLOR = '#8250df';
 /** Edges between faces bent less than this (deg) are left out (e.g. wall face vs gable triangle). */
 const EDGE_ANGLE = 1;
 const THIN_AREA = 1;
+const OPENING_COLOR = '#2b3036';
 
 export function HouseMesh() {
   const show = useProject((s) => s.showHouse);
@@ -36,6 +38,7 @@ export function HouseMesh() {
       {blocks.map((b, i) => (
         <BlockSolid key={i} block={b} />
       ))}
+      <Openings />
       <lineSegments layers={DESIGN_LAYER}>
         <bufferGeometry>
           <bufferAttribute attach="attributes-position" args={[footprints, 3]} />
@@ -79,5 +82,29 @@ function BlockSolid({ block }: { block: Block }) {
         <lineBasicMaterial color={DESIGN_EDGE_COLOR} />
       </lineSegments>
     </>
+  );
+}
+
+/** Façade openings (T3): dark quads 1 cm in front of the face they were placed on. Environment only. */
+function Openings() {
+  const elevations = useOpenings();
+  const geo = useMemo(() => {
+    const pos: number[] = [];
+    for (const e of elevations)
+      for (const o of e.placed) {
+        const [a, b, c, d] = o.corners.map(([x, y, z]) => [x, z, -y]) as [number[], number[], number[], number[]];
+        pos.push(...a, ...b, ...c, ...a, ...c, ...d);
+      }
+    if (pos.length === 0) return undefined;
+    const g = new BufferGeometry();
+    g.setAttribute('position', new BufferAttribute(Float32Array.from(pos), 3));
+    return g;
+  }, [elevations]);
+  useEffect(() => () => geo?.dispose(), [geo]);
+  if (!geo) return null;
+  return (
+    <mesh layers={ENV_LAYER} geometry={geo}>
+      <meshBasicMaterial color={OPENING_COLOR} side={DoubleSide} />
+    </mesh>
   );
 }
