@@ -1,6 +1,6 @@
 # M3 task list
 
-Next: user browser check of T4 (contours, implemented, unverified), then Checkpoint B. T4: `src/terrain/contours.ts`
+Next: M3 done (all verified 2026-11-08); merge `feat/m3` → `main`, then spec M4. T4: `src/terrain/contours.ts`
 (marching squares, skips uncertain cells, saddles by centre average); minor = `lineSegments`, major (whole metres) =
 drei `<Line segments>` 2 px. T3 done 2026-11-08: mesh = two indexed geometries
 (certain / uncertain cells) sharing positions + normals; "Teren" toggle sits in the view bar (not LayerPanel); a
@@ -63,12 +63,12 @@ environment layer. Toggle "Teren" (store view setting, default on, not saved).
 **Description:** Pure `src/terrain/contours.ts` (marching squares on the grid corners) → segments at every 0.25 m;
 `src/scene/TerrainMesh.tsx` draws them just above the surface, every 1 m thicker/darker. Hidden with the terrain.
 **Acceptance criteria:**
-- [ ] Contours every 0.25 m, 1 m ones distinct; they follow the profiles (a contour crosses a profile at its height)
-- [ ] Orbiting the Environment view stays smooth (60 fps)
+- [x] Contours every 0.25 m, 1 m ones distinct; they follow the profiles (a contour crosses a profile at its height)
+- [x] Orbiting the Environment view stays smooth (60 fps)
 **Verification:** `pnpm check`; user orbits and reads a contour vs a Ti marker.
 **Dependencies:** T3
 **Files:** `src/terrain/contours.ts`, `src/scene/TerrainMesh.tsx`
 **Scope:** S
 
 ### Checkpoint B (after T3–T4)
-- [ ] `pnpm check` green; all M3 ✅ in PLAN.md verified by the user; PLAN.md/CLAUDE.md status updated; merge
+- [x] `pnpm check` green; all M3 ✅ in PLAN.md verified by the user; PLAN.md/CLAUDE.md status updated; merge

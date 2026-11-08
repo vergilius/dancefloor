@@ -335,7 +335,7 @@ PZT's circles (e.g. the `Tp= 355,08` circle at sheet (18.565, −11.038) is at p
 tank rectangle on PZT-01 is 3.00 × 2.40 m (± 1 cm), PAB-01's `A-WALL` x-extent is 15.090 m (± 1 cm), and on
 PAB-08 Δh from ±0.00 to the ridge is 9.12 m (± 1 cm).
 
-**M3 — Terrain grid** (spec sharpened 2026-11-08 on the real files, approved 2026-11-08)
+**M3 — Terrain grid** — done 2026-11-08 (spec sharpened 2026-11-08 on the real files, approved 2026-11-08)
 
 Facts (raw model-space LINEs on `PZT_TEREN ISTNIEJĄCY` / `PZT_TEREN PROJEKTOWANY`, sheet coords in m):
 - **Elevations** PAB-07..10: one existing-terrain profile each (8–12 LINEs, sheet x along the façade, y = height
