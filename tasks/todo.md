@@ -1,8 +1,14 @@
 # M2 task list
 
-Next: T2 (reference header + height formatter). T1 done and verified 2026-11-08.
+Next: T4 (3D level markers, in both viewports). T1–T3 done and verified 2026-11-08 (checkpoint A closed).
 Note (T1): the worker returns both candidate points per label (`leader`, `byHeight`); `levelPoint(l, kind)` in
 `src/dwg/labels.ts` picks by sheet kind on the main thread, so a kind change needs no re-parse.
+Note (T2): reference = `useLevelReference()` / `useRefValue()` (`src/state/levels.ts`); every shown height goes
+through `formatHeight(rel, ref)` (`src/project/levels.ts`).
+Note (T3): viewport = layer: design 0 (default), environment `ENV_LAYER` 1, both via `inBothViewports` ref
+(`src/scene/split.ts`). Lights must be on both layers to light env meshes. drei `Html` needs
+`calculatePosition={designHtmlPosition}` (it assumes a full-width canvas). The camera frustum is forced to half
+width every frame; CameraControls connect to the half div under the pointer.
 M1c task notes are in git history (`tasks/todo.md` at 655ecaa).
 
 Commands: `pnpm dev`, `pnpm check` (build + lint + guards). No automated tests (CLAUDE.md).
@@ -28,15 +34,15 @@ leader; vertical: height-matched circle using the sheet's own reference). Called
 Sheet list header shows `±0.00 = 355.40 m n.p.m. (4 arkusze)` or a flag (none / disagree); plan z in the list uses
 the formatter.
 **Acceptance criteria:**
-- [ ] Header shows 355.40 from 4 sheets
-- [ ] Plan z reads e.g. `+3.29 (358.69 m n.p.m.)`; with no reference (only plans opened) rel only and the flag
+- [x] Header shows 355.40 from 4 sheets
+- [x] Plan z reads e.g. `+3.29 (358.69 m n.p.m.)`; with no reference (only plans opened) rel only and the flag
 **Verification:** `pnpm check`; user reads the header and plan z values.
 **Dependencies:** T1
 **Files:** `src/project/levels.ts`, `src/ui/SheetList.tsx`, `src/ui/strings.ts`
 **Scope:** S
 
 ### Checkpoint A (after T1–T2)
-- [ ] `pnpm check` green; reference and counts match the spec (user check)
+- [x] `pnpm check` green; reference and counts match the spec (user check)
 
 ### Task 3: Design and environment viewports (ADR 0001)
 **Description:** Split the viewport into Design (left, everything that exists now, unchanged) and Environment (right)
@@ -45,9 +51,9 @@ camera aspect / ortho frustum set per half, and objects assigned by three.js lay
 Pointer events map to the half under the cursor. Environment shows the ground grid. A small "Projekt" / "Otoczenie"
 caption in each half.
 **Acceptance criteria:**
-- [ ] Orbit, pan, zoom, top/ortho views and "Dopasuj widok" in either half move both identically; resize keeps both undistorted
-- [ ] Design shows everything as before (sheets, PDF, layers); Environment shows only the grid
-- [ ] The align tool still picks correctly in Design; the saved view still restores
+- [x] Orbit, pan, zoom, top/ortho views and "Dopasuj widok" in either half move both identically; resize keeps both undistorted
+- [x] Design shows everything as before (sheets, PDF, layers); Environment shows only the grid
+- [x] The align tool still picks correctly in Design; the saved view still restores
 **Verification:** `pnpm check`; user checks both halves and runs the align tool once.
 **Dependencies:** none (independent of T1–T2)
 **Files:** `src/scene/Viewport.tsx`, `src/scene/split.ts` (render + event mapping), `src/scene/AlignTool.tsx`, `src/ui/strings.ts`
