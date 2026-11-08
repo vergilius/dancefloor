@@ -89,8 +89,9 @@ placed in 3D. They supply parameters only.
 
 - **Web app**, local-only (no backend). Performance is a non-issue at this scale (<5k entities/sheet).
 - **DWG is a read-only underlay.** Never write DWG. Own JSON scene model for everything designed.
-- **Generated model, edited as a copy (ADR 0002):** DWG-derived 3D (terrain, massing) is generated on load and never
-  saved; the environment editor works on a copy, and only that copy is saved.
+- **Generated model, edited as a copy (ADR 0002, 0003):** DWG-derived 3D (terrain, massing) is generated on load and
+  never saved or edited. Environment previews it; edits happen in **versions** (frozen snapshots, many per project,
+  saved as files in `dancefloor-versions/`), never in the generated model or `dancefloor.json`.
 - **Terrain = regular height grid** (default 10 cm cells), not a TIN. Platforms/slopes write into the
   grid; cut/fill = Σ(Δh × cell area). Avoids constrained triangulation and mesh booleans.
 - **GPL isolation:** run libredwg-web in a dedicated Web Worker (GPL-3.0); rest of app any license.
@@ -157,6 +158,8 @@ type Feature =
 ```
 
 Designed surface = evaluate features in order over the grid. Never mutate `terrain.base`.
+**Superseded for M4 (ADR 0003):** `terrain` and `features` are not in the project JSON. Each edit version holds its
+own frozen grid and ordered edits (rect tools Podnieś / Obniż / Wyrównaj in M4a); see §5 M4a.
 
 Saved as `dancefloor.json` in the project folder, `version: 1` (M1a T7, `src/project/projectFile.ts`). The
 filename is the sheet's key, so there is no separate `id`. Fields are added as tasks need them (T7: `file`,
@@ -388,71 +391,65 @@ Requirements:
 ✅ Ti check: all Ti / Tp=Ti points within 2 cm, except the PAB-09 353.48 drawing conflict (see facts). Legend segments, the PAB-08 stub and the PAB-10 piece are dropped (6 in all). Contours every
 0.25 m; uncertain area visibly different; orbiting the Environment view stays smooth (60 fps).
 
-**M4 — Garden tools (core value)**, three sub-milestones (capability map approved 2026-11-08):
+**M4 — Terrain editing (core value)**, four sub-milestones (capability map, user 2026-11-08):
+
+How editing works (ADR 0003): Design places the DWGs and produces the **generated model**. Environment previews it
+live and read-only (**"Podgląd"**). The user exports it to an **edit version**: a frozen snapshot that only edits
+change. There can be many versions, each created, edited and deleted independently, saved as files in the project
+folder automatically. Tools act on **areas** (rectangles on a 0.5 m tile lattice), like the terrain tools of old
+simulation games, not on single cells and not on drawn polygons.
 
 | Sub-milestone | Contents | Depends on |
 |---|---|---|
-| **M4a** Platforms + editor core | features over the generated terrain, flat platforms, edit/undo/save, cut/fill, Δh map | M3 |
-| **M4b** Slopes, walls, cross-fall | slope 1:n from a platform edge to the terrain, retaining wall alternative, paving cross-fall 1.5 % | M4a |
-| **M4c** Obstacles | utilities + tank (1.7 m + 0.2 m bed) with depth, warning when a cut reaches them, truck access fence → tank | M4a |
+| **M4a** Versions + editor core | export / list / rename / delete versions, file storage with autosave, preview vs edit, edit list with undo/redo, tools Podnieś / Obniż / Wyrównaj, cut/fill, Δh map | M3 |
+| **M4b** Bevel + retaining wall | edges of an edit slope 1:n to the surroundings instead of a step; a retaining wall along an edit edge instead | M4a |
+| **M4c** Textured path | a path strip with width and material (paving with build-up T1 = 0.51 m, PAB-11; gravel), cross-fall open | M4a |
+| **M4d** Obstacles | utilities + tank (1.7 m + 0.2 m bed) with depth, warning when a cut reaches them, truck access fence → tank | M4a |
 
-Build order M4a → M4b → M4c. The original M4 ✅ (terrace at +0.30 next to the house with a 1:2 slope to −0.32,
+Build order M4a → M4b → M4c → M4d. The original ✅ (terrace at +0.30 next to the house with a 1:2 slope to −0.32,
 volumes update live) closes with M4b.
 
-**M4a — Platforms + editor core** (spec draft 2026-11-08, awaiting approval)
-
-Decisions (ADR 0003):
-- **Saved = features, replayed** over the `base` regenerated on every load. No grid snapshot in `dancefloor.json`.
-  "Designed surface" = `base` with the features applied in list order; a later feature wins where it overlaps.
-- **Editing lives in the Environment viewport only** (user, 2026-11-08). Design stays unchanged (sheets, align,
-  measure). The shared camera means the top view of both halves line up, so the drawing on the left is the reference.
-- Platforms are **flat** at Z in M4a; cross-fall comes with M4b (it needs a fall direction).
+**M4a — Versions + editor core** (spec draft 2026-11-08, awaiting approval)
 
 Requirements:
-- **Feature model** (`src/project/projectFile.ts`, `version` stays 1, new optional `features`):
-  `{ id: string; kind: 'platform'; name: string; polygon: Vec2[] /* plan m, ≥ 3, simple */; z: number /* m rel ±0.00 */;
-  material: 'grass' | 'paving' | 'gravel'; buildUp?: number /* m, paving only, default 0.51 (T1, PAB-11) */ }`.
-  Parsed strictly like the sheets; edits mark the project dirty and go out with the normal save.
-- **Apply (pure `src/terrain/features.ts`):** a grid corner inside a platform polygon (even-odd, corner on the edge
-  counts as inside) gets `z`. Output: the designed heights (new array, `base` untouched) and, per corner, the index of
-  the feature that set it (−1 = existing). Recomputed from scratch on every change (≈ 134k corners; target < 30 ms).
-- **Volumes (same module):** each corner stands for one cell area (0.10 × 0.10 m). Per feature, over the corners it
-  wins: **cut** = Σ max(0, existing − ref) × a, **fill** = Σ max(0, ref − existing) × a, area = n × a, where ref = z,
-  or z − buildUp for paving (earthwork measured at the sub-grade; the build-up volume area × buildUp is a separate
-  line, "podbudowa"). Total = sum over features (= designed − existing, no double counting). Share of the feature's
-  corners on uncertain terrain shown next to its volumes.
-- **Tools (Environment view bar, Polish labels):** "Edycja" on/off. While on:
-  - **Platforma:** click points on the terrain (ray against the terrain mesh, BVH via `three-mesh-bvh`); a rubber-band
-    line follows the cursor; click the first point or Enter closes, Backspace drops the last point, Esc cancels.
-    Self-intersecting polygons can't be closed (message). Default z = mean existing height under the polygon, rounded
-    to 1 cm; default material grass.
-  - **Snapping** (see open question): vertices of other platforms, then drawing endpoints (visible plan + PZT-01
-    layers, as the measure tool), within 10 px; snapped point marked with a dot. Shift disables snapping.
-  - **Select** a platform by clicking it: its vertex handles show; drag a vertex (live update), click an edge
-    midpoint handle to insert a vertex, Delete with a vertex selected removes it (≥ 3 kept), Delete with none
-    selected removes the platform.
-  - **Undo/redo:** Ctrl+Z / Ctrl+Shift+Z (and buttons) over add, delete, vertex edit and property change (zustand
-    command stack, one drag = one step). Not saved; cleared on folder load.
-- **Feature panel** (right side, like the terrain panel): list of platforms (name, material, z rel + abs, area,
-  cut / fill / podbudowa m³, uncertain share), select from the list, edit name / z (numeric, rel; abs shown) /
-  material / build-up. Totals line: Σ cut, Σ fill, net (fill − cut), all in m³ to 0.01.
-- **Environment view:** the mesh shows the designed surface; contours follow it (may update on drag end).
-  Platform outlines drawn on top (selected one highlighted). Toggle **"Różnice"**: colours by Δh = designed − existing,
-  red = cut, blue = fill, white = 0, saturated at ±1.0 m, small legend. Off = the height tint of M3.
+- **Preview vs version (Environment view bar):** a selector "Podgląd" | the versions by name. Podgląd shows the
+  generated model live (as in M3), read-only, no edit tools. Buttons: **"Nowa wersja"** (snapshot of the current
+  generated terrain, named "Wersja n", opened right away), **"Zmień nazwę"**, **"Usuń"** (confirm). The Design
+  viewport is unchanged in every mode.
+- **A version** = frozen `base` + `uncertain` + grid geometry (copied at export, never regenerated) + an ordered
+  list of **edits**. Its surface = edits applied in order over its frozen base. Changing the DWGs later doesn't touch
+  existing versions. Without a generated terrain (no seeds), "Nowa wersja" is disabled.
+- **Storage (pure `src/versions/file.ts` + folder I/O):** subfolder `dancefloor-versions/` in the project folder;
+  per version `<id>.json` (`{ version: 1, id, name, created, grid: { cell, origin, cols, rows }, edits: [...] }`,
+  parsed strictly) and `<id>.bin` (base Float32 + uncertain Uint8, ≈ 0.7 MB). Listed on folder load (unreadable
+  files flagged, not deleted). **Autosave:** the JSON is written 1 s after the last change; the .bin only at export.
+  A save error shows in the bar. Versions are not in `dancefloor.json`.
+- **Edits** (pure `src/versions/edits.ts`): `{ id, tool, rect: { x0, y0, x1, y1 } /* plan m, on the 0.5 m lattice */,
+  … }` with tools **Podnieś** (`dz` > 0, default 0.10 m), **Obniż** (`dz` > 0, applied down, default 0.10 m), and
+  **Wyrównaj** (`z` rel ±0.00, default = mean height under the rect before the edit, rounded to 1 cm). A grid corner
+  inside the rect (edges included) is changed; a later edit wins on top of an earlier one. Replayed from scratch on
+  every change (target < 30 ms).
+- **Picking:** with a tool active, drag on the terrain (ray against the version's mesh, `three-mesh-bvh`); the rect
+  snaps to the 0.5 m lattice and shows its size (m × m) while dragging; release applies the edit. Esc cancels the drag.
+  Tile lattice anchored at plan (0, 0) = the S-GRID-1 origin.
+- **Edit list (panel):** each edit with tool, size, dz or z (rel + abs), its cut / fill (m³, against the surface
+  before it). Select = rect outlined in the view; change dz / z numerically; delete. Undo / redo (Ctrl+Z /
+  Ctrl+Shift+Z, and buttons) over add, change and delete, per version, not saved (cleared on folder load).
+- **Volumes:** each grid corner stands for one cell area (0.10 × 0.10 m). Version totals against its frozen base:
+  **cut** = Σ max(0, base − h) × a, **fill** = Σ max(0, h − base) × a, net = fill − cut, m³ to 0.01. Share of changed
+  corners on uncertain terrain shown with the totals.
+- **View in a version:** mesh and contours show the version's surface (contours may update on release). Toggle
+  **"Różnice"**: colours by Δh = surface − frozen base, red = cut, blue = fill, white = 0, saturated at ±1.0 m, with
+  a small legend. The step at an edit's edge is a one-cell-wide steep strip until M4b's bevel.
 
-Out of M4a: slopes, walls, cross-fall (M4b); obstacles and warnings (M4c); moving/rotating whole platforms; holes in
-polygons; materials beyond the three; Tp surface.
+Out of M4a: bevel, walls (M4b); paths, materials, build-up (M4c); obstacles (M4d); moving or resizing an edit's rect
+(delete and redraw); duplicating a version; a Tp surface.
 
-✅ Draw a paving platform of about 4 × 6 m next to the house at +0.30 (snapped to wall endpoints of PAB-01): the
-panel shows area ≈ 24 m², cut/fill and podbudowa (≈ 24 × 0.51 ≈ 12.2 m³), and the Δh map is red/blue where expected.
-Changing z by +0.10 changes fill − cut by ≈ +2.4 m³ (area × 0.10, a visible check of the volume maths). Drag a
-vertex → volumes update live; undo/redo restore exactly; save + reload restores the platform and the same totals.
-Design view unchanged; orbiting stays smooth.
-
-Open question:
-- **Snapping in Environment:** the drawing isn't shown there. Proposed: snap to drawing endpoints anyway (dot shown in
-  Environment; the Design half shows the same spot because the camera is shared), plus other platforms' vertices.
-  Alternative: snap only to platform vertices and the plot outline, no drawing snaps.
+✅ "Nowa wersja" from Podgląd; Wyrównaj a 4 × 6 m rect next to the house to +0.30: the list shows 24.00 m² and the
+totals change. Change z to +0.40: net grows by ≈ 2.40 m³ (area × 0.10, a visible check of the maths). Podnieś a 1 × 1 m
+rect by 0.10 → net +0.10 m³ (± one cell row). Undo/redo restore the totals exactly. A second version edited
+differently keeps its own totals. Reload the app → both versions and their totals are back. Delete one → its files
+are gone. Podgląd and Design unchanged; orbiting stays smooth.
 
 **M5 — House massing**
 - Semi-auto: select closed loop from `A-WALL` lines (loose LINEs → join endpoints within 1 mm

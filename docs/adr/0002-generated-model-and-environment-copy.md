@@ -1,6 +1,6 @@
 # ADR 0002: Generated model, edited as a copy
 
-Date: 2026-11-08 · Status: accepted (user)
+Date: 2026-11-08 · Status: accepted (user); open question resolved by ADR 0003
 
 ## Context
 M3 builds the existing terrain from the DWG profiles. Later milestones add more 3D content derived from the drawings
