@@ -320,7 +320,7 @@ Requirements:
   sheets through `origin + x·dir` (M1b). Sheets without a placement or transform show no markers.
 - **Sheet list:** per sheet with absolute labels, `Rzędne: 7/8 z punktem`.
 - **3D markers** for the resolved points: a small dot at (plan x, y, rel height) with a short label
-  (`Tp 355.08 (−0.32)`). One toggle (default on, view setting, not saved). The markers are the browser check.
+  (`Tp 355.08 (−0.32)`). One toggle (default on, view setting, not saved); a second one shows them in Environment too (default off). The markers are the browser check.
 - **Rel + abs wherever we show a height:** one formatter, e.g. `+3.29 (358.69 m n.p.m.)`, used by the sheet list
   (plan z), the markers and the measure readout. The drawn sheet texts stay as drawn.
 - **Measure tool "Pomiar"** (any view, Design viewport): click A, then B. Each click hits the plane of a drawn sheet under the

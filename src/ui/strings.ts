@@ -12,7 +12,9 @@ export const t = {
   fitView: 'Dopasuj widok',
   viewShort: { top: 'Góra', north: 'N', east: 'E', south: 'S', west: 'W' },
   levelMarkers: 'Punkty rzędnych',
-  levelMarkersTitle: 'Pokaż/ukryj punkty rzędnych Tp/Ti z arkuszy (w obu widokach)',
+  levelMarkersTitle: 'Pokaż/ukryj punkty rzędnych Tp/Ti z arkuszy',
+  levelMarkersEnv: 'Punkty rzędnych w Otoczeniu',
+  levelMarkersEnvTitle: 'Pokaż punkty rzędnych także w widoku Otoczenie (domyślnie tylko w Projekcie)',
   terrainToggle: 'Teren',
   terrainToggleTitle: 'Pokaż/ukryj teren istniejący i granicę działki (w widoku Otoczenie)',
   measure: {

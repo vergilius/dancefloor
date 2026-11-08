@@ -268,6 +268,7 @@ function ShowMenu() {
       </summary>
       <div className="menu-body">
         {item(t.levelMarkers, t.levelMarkersTitle, p.showLevels, p.setShowLevels)}
+        {p.showLevels && item(t.levelMarkersEnv, t.levelMarkersEnvTitle, p.showLevelsEnv, p.setShowLevelsEnv)}
         {item(t.terrainToggle, t.terrainToggleTitle, p.showTerrain, p.setShowTerrain)}
         {item(t.house.toggle, t.house.toggleTitle, p.showHouse, p.setShowHouse)}
         {item(t.house.openingsToggle, t.house.openingsToggleTitle, p.showOpenings, p.setShowOpenings)}

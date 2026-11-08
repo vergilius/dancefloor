@@ -41,6 +41,8 @@ export type ProjectState = {
   pdfOpacity: Record<string, number>;
   /** 3D level markers on/off (M2). View setting: not saved, doesn't mark the project dirty. */
   showLevels: boolean;
+  /** Level markers also in the Environment viewport (off by default). View setting: not saved. */
+  showLevelsEnv: boolean;
   /** Terrain mesh + plot outline in the Environment viewport (M3). View setting: not saved. */
   showTerrain: boolean;
   align?: AlignTool;
@@ -86,6 +88,7 @@ export type ProjectState = {
   renderPdf(file: string): Promise<void>;
   setPdfOpacity(file: string, opacity: number): void;
   setShowLevels(show: boolean): void;
+  setShowLevelsEnv(show: boolean): void;
   setShowTerrain(show: boolean): void;
   setShowHouse(show: boolean): void;
   setShowOpenings(show: boolean): void;
@@ -144,6 +147,7 @@ export const useProject = create<ProjectState>()((set, get) => ({
   pdfs: {},
   pdfOpacity: {},
   showLevels: true,
+  showLevelsEnv: false,
   showTerrain: true,
   showHouse: true,
   showOpenings: false,
@@ -346,6 +350,10 @@ export const useProject = create<ProjectState>()((set, get) => ({
 
   setShowLevels(showLevels) {
     set({ showLevels });
+  },
+
+  setShowLevelsEnv(showLevelsEnv) {
+    set({ showLevelsEnv });
   },
 
   setShowTerrain(showTerrain) {
