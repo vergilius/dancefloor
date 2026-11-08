@@ -1,6 +1,8 @@
 # M4a task list
 
-Next: M4a done and merged (2026-11-08). Start M5 house massing (ADR 0004): sharpen PLAN.md §5 M5 on the real files with `spec-driven-development`, then plan and tasks.
+Next: M5 spec sharpened on branch `m5-house-massing` (PLAN.md §5 M5, ADR 0005 proposed), awaiting user approval.
+After approval: `planning-and-task-breakdown` → new `tasks/plan.md` + this file for M5. Analysis scripts were throwaway
+(scratchpad); the facts are in PLAN.md §5 M5.
 Plan: `tasks/plan.md`. Spec: PLAN.md §5 M4a, ADR 0003. M3 task notes are in git history (`tasks/todo.md` at c477be0).
 
 Commands: `pnpm dev`, `pnpm check` (build + lint + guards). No automated tests (CLAUDE.md).

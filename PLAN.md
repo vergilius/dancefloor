@@ -455,13 +455,68 @@ rect by 0.10 → net +0.10 m³ (± one cell row). Undo/redo restore the totals e
 differently keeps its own totals. Reload the app → both versions and their totals are back. Delete one → its files
 are gone. Podgląd and Design unchanged; orbiting stays smooth.
 
-**M5 — House massing**
-- Semi-auto: select closed loop from `A-WALL` lines (loose LINEs → join endpoints within 1 mm
-  tolerance → polygons) → extrude to heights from sections (ground floor to +3.02/+3.29, eaves
-  ~+3.59, ridge +9.12); roof from `A-ROOF-OTLN` (PAB-03) + 38° pitch, or manual.
-- Sections/elevations as vertical underlays help verify the massing visually.
-- Alternative path if IFC arrives: load via `web-ifc`, align with grid.
-- ✅ Recognisable massing aligned with the ground-floor plan; terrace touches the façade.
+**M5 — House massing** (spec sharpened 2026-11-08 on the real files, awaiting approval; ADR 0005)
+
+Facts (normalized sheets, plan coords in m, heights rel ±0.00):
+- **No wall loops:** PAB-01 `A-WALL` = 246 LINEs, 186 open ends, no closed loop at 1 or 10 mm. Auto-tracing the
+  footprint failed in three prototypes (ADR 0005). Not attempted.
+- **Main body = plain gable house.** PAB-03 `A-ROOF` extent x 0.334…15.134, y −11.776…−1.476 (14.80 × 10.30 m) =
+  the attic walls; `A-ROOF-OTLN` reaches y −11.932…−1.319 (overhang 0.156 m on the long sides, 0 on the gable ends).
+  Ridge along x at +9.12 (= PAB-03's z), pitch label `38° / 78.13%`. Roof surface at the wall face = 9.12 − 5.15 ×
+  tan 38° = **+5.10**, matching `A-ROOF-OTLN` 4.86…5.10 on PAB-04/07/08/10. Two eave windows break the south eave
+  (x 5.29…6.93, 9.19…10.01); not modelled as roof shape.
+- **North annex** (garage, floor ≈ +0.28/+0.30): single storey, flat roof with parapet at **+3.59** (PAB-04, PAB-07,
+  PAB-08), outside the main roof towards y +3.05. Its corners are on PAB-01 `A-WALL`.
+- **Terrace roof** (south-west): slab **+2.635…+3.22** over x 0.03…8.12, from the south wall out to y −14.97, on two
+  0.55 × 0.48 m posts (x 0.03…0.58 and 7.57…8.12, y −14.97…−14.49, from −0.02); slats `S-COLS` on its east side
+  (x 7.72…7.92, y −14.44…−12.90). PAB-10, PAB-08, PAB-01.
+- **Openings:** on each placed elevation, `A-GLAZ*` + `A-DOOR*` (not the swing layer) joined within 5 mm into pieces;
+  bboxes ≥ 0.3 × 0.3 m; overlapping boxes merged. Counts: PAB-10 S 6 (terrace door 1.45…4.17 × 0…2.46, two windows,
+  two eave windows 4.23…6.25, side door), PAB-09 W 8, PAB-08 E 7, PAB-07 N 1. Known faults: on PAB-08 the gable
+  windows and roof windows merge into one box (sheet x −10.07…−6.68, +3.29…+8.00); roof windows (PAB-07's single
+  box, two on PAB-08) come out as façade openings.
+- Ground at the house: Ti at the corners 354.05…355.70 (−1.35…+0.30); foundations −1.40/−1.70/−2.00 (sections).
+
+Requirements:
+- **Blocks** (pure `src/house/blocks.ts`): the house is an ordered list of blocks, each a closed solid; they may
+  overlap (no booleans).
+  - `gable`: rectangle `{x0, y0, x1, y1}`, `bottom`, `ridge`, `pitch` (deg), `overhang` (m, long sides only). Ridge
+    along the long side, centred. Derived and shown: wall-face height = ridge − (short side / 2) × tan(pitch).
+  - `flat`: polygon (≥ 3 corners, plan m), `bottom`, `top`.
+  - Defaults: `bottom` = −1.40 (top of the shallowest foundation, so walls reach into the sloped terrain without a
+    gap); heights typed in the panel or picked from the level values found on the sheets (M2 labels). Rel + abs
+    shown everywhere.
+- **"Z rzutu dachu"** (button): builds or replaces the block named "Bryła główna" as a `gable` from the horizontal
+  sheet that has an `A-ROOF` layer: rect = `A-ROOF` extent, overhang = (`A-ROOF-OTLN` extent − rect) on the long
+  sides, ridge = the sheet's z, pitch parsed from the `NN°` label on that sheet (fallback 38, flagged).
+- **Drawing a flat block** (Design viewport, like the measure tool): "Dodaj blok" → click corners with endpoint
+  snapping (`snap.ts`); click the first corner or press Enter to close; Esc cancels; Backspace removes the last
+  corner. While drawing: outline + edge lengths. Then it gets name "Blok n", top +3.00 (to be changed). A block is
+  re-drawn the same way ("Rysuj ponownie" keeps its heights). Footprints of all blocks show as outlines in Design
+  while the house panel is open.
+- **Openings** (pure `src/house/openings.ts`, from every placed elevation, M1b placement): rects as in the facts,
+  mapped to 3D on the elevation plane, then moved along the view direction to the first block face hit by a ray
+  through the rect centre (three `Raycaster` on the house meshes; no hit within 20 m → not drawn, counted). Drawn as
+  dark quads 1 cm proud of that face. Each opening can be hidden (key = sheet + rect rounded to 1 cm); the hidden list
+  is saved. Only façade openings, no roof windows on the roof plane, no reveals.
+- **Saved** in `dancefloor.json` as optional `house: { blocks, hiddenOpenings }` (file `version` stays 1). Not in the
+  edit versions: one house for all terrain versions.
+- **Environment viewport:** blocks as plain light-grey solids with flat shading, openings dark; toggle **"Dom"** next
+  to "Teren" (view setting, default on, not saved). Terrain is not cut under the house. Design shows no solids.
+- **House panel ("Dom"):** block list (name, kind, size m × m or area m², heights rel + abs, wall-face height and
+  pitch for gables), rename, change heights, re-draw, delete; "Z rzutu dachu", "Dodaj blok"; openings line:
+  found / drawn / not placed / hidden per elevation, with a list to hide/show each.
+
+Out of M5: roof shapes other than one gable per block (hips, dormers, the eave-window breaks), wall thickness,
+interior, openings on the roof plane, editing an opening's rect, materials/textures, IFC (`web-ifc`, only if the file
+arrives), cutting the terrain under the house.
+
+✅ "Z rzutu dachu" → "Bryła główna" 14.80 × 10.30 m, ridge +9.12 (364.52 m a.s.l.), pitch 38°, wall face +5.10,
+overhang 0.16 m. Its edges coincide with PAB-10 and PAB-08 placed as underlays (eaves, ridge, gable outline, < 1 cm
+by measuring). Annex drawn by snapping to PAB-01 `A-WALL` corners, top +3.59; terrace roof slab +2.635…+3.22 and two
+posts drawn the same way. Openings: PAB-10 shows its 6 on the south face (terrace door under the terrace roof), the
+merged PAB-08 box can be hidden, and hiding survives a reload. A Wyrównaj +0.30 next to the south façade meets the
+wall without a gap. Reload → the house is back. Podgląd, versions, Design unchanged; orbiting stays smooth.
 
 **M6 — Output**
 - Save/load project JSON; screenshot; glTF export (`GLTFExporter`).
@@ -471,7 +526,8 @@ are gone. Podgląd and Design unchanged; orbiting stays smooth.
 - MTEXT contains inline formatting (`\fArial|b0|i0|c238|p34|;\W.8;…`, `\P`) — strip before display/regex.
 - Level markers are INSERTs without readable attributes; the value is a separate MTEXT nearby —
   associate by proximity if needed.
-- Walls are segmented LINEs with gaps at openings; loop detection (M5) needs tolerance + manual fallback.
+- Walls are segmented LINEs with gaps at openings; loop detection failed on the real files (ADR 0005), so M5
+  footprints are drawn by hand except the main body (from the roof plan).
 - Default libredwg-web build has DXF read disabled — if the site map arrives as DXF, use a small DXF
   parser or convert to DWG; don't rebuild the WASM. (Verified in practice; the 0.8.6 README claims
   DXF read works in the default build, which is not true for the published WASM.)
