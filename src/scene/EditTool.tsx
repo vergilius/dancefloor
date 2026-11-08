@@ -6,7 +6,7 @@
 // clears the selection. A drag that starts anywhere else orbits as usual.
 import { useEffect, useMemo, useRef } from 'react';
 import { useThree } from '@react-three/fiber';
-import { Plane, Raycaster, Vector2, Vector3, type Camera } from 'three';
+import { Box3, Plane, Raycaster, Vector2, Vector3, type Camera } from 'three';
 import { useProject } from '../state/store';
 import { useEnvSurface, useVersions, versionSurface } from '../state/versions';
 import { isOutside, rayGrid, sampleGrid, type HeightGrid } from '../terrain/grid';
@@ -66,17 +66,17 @@ function inPolygon([px, py]: [number, number], poly: [number, number][]): boolea
   return true;
 }
 
-/** A wall under the pointer, in screen space on its top outline: a side (resize) or its top face (lift). */
-function wallHover(camera: Camera, el: HTMLElement, e: Edit & { tool: 'wall' }, client: [number, number]): Side | 'inside' | undefined {
+/** A side of the wall's top outline within WALL_SIDE_PX of the pointer (resize), else whether the box is hit (lift). */
+function wallHover(camera: Camera, el: HTMLElement, e: Edit & { tool: 'wall' }, client: [number, number], boxHit: boolean): Side | 'inside' | undefined {
   const r = e.rect;
   // Top corners in order s-w, s-e, n-e, n-w; side k joins corner k and k + 1 (s, e, n, w).
   const pts = [[r.x0, r.y0], [r.x1, r.y0], [r.x1, r.y1], [r.x0, r.y1]].map(([x, y]) => toClient(camera, el, new Vector3(x!, e.top, -y!)));
-  if (pts.some((q) => !q)) return undefined;
+  if (pts.some((q) => !q)) return boxHit ? 'inside' : undefined;
   const poly = pts as [number, number][];
   const sides: Side[] = ['s', 'e', 'n', 'w'];
   const best = sides.map((s, k) => [s, segDist(client, poly[k]!, poly[(k + 1) % 4]!)] as const).sort((a, b) => a[1] - b[1])[0]!;
   if (best[1] <= WALL_SIDE_PX) return best[0];
-  return inPolygon(client, poly) ? 'inside' : undefined;
+  return boxHit || inPolygon(client, poly) ? 'inside' : undefined;
 }
 
 /** The wall's rect with one side moved to plan coordinate v (5 cm snap), at least one snap wide. */
@@ -129,10 +129,25 @@ export function EditTool() {
     const j = Math.round((hit[1] - g.origin.y) / g.cell);
     return isOutside(g, j * (g.cols + 1) + i) ? undefined : [hit[0], hit[1]];
   };
+  /** Distance along the pointer ray to the wall's box (lowest surface under it … top), if the ray hits it. */
+  const wallHit = (g: HeightGrid, w: Edit & { tool: 'wall' }, clientX: number, clientY: number): number | undefined => {
+    if (!el) return undefined;
+    const { half, ndc } = halfAt(clientX, clientY, el.getBoundingClientRect());
+    if (half !== 'env') return undefined;
+    raycaster.setFromCamera(new Vector2(...ndc), camera);
+    const r = w.rect;
+    const lo = Math.min(groundUnder(g, r).min, w.top);
+    // Scene (x, height, −y); a few cm of slack so a thin wall is easy to hit.
+    const box = new Box3(new Vector3(r.x0 - 0.03, lo, -r.y1 - 0.03), new Vector3(r.x1 + 0.03, w.top + 0.03, -r.y0 + 0.03));
+    const hit = raycaster.ray.intersectBox(box, new Vector3());
+    return hit ? hit.distanceTo(raycaster.ray.origin) : undefined;
+  };
   const pickRef = useRef(pick);
+  const wallHitRef = useRef(wallHit);
   const cameraRef = useRef(camera);
   useEffect(() => {
     pickRef.current = pick;
+    wallHitRef.current = wallHit;
     cameraRef.current = camera;
   });
 
@@ -188,7 +203,10 @@ export function EditTool() {
     const onMove = (e: PointerEvent) => {
       if (!drag) {
         const sel = selectedEdit();
-        if (sel?.tool === 'wall') return setOver(wallHover(cameraRef.current, el, sel, [e.clientX, e.clientY]));
+        if (sel?.tool === 'wall') {
+          const hit = wallHitRef.current(grid, sel, e.clientX, e.clientY) !== undefined;
+          return setOver(wallHover(cameraRef.current, el, sel, [e.clientX, e.clientY], hit));
+        }
         const p = sel && pickRef.current(grid, e.clientX, e.clientY);
         if (!sel || !p) return setOver(undefined);
         const side = nearSide(sel.rect, p);
@@ -261,11 +279,28 @@ export function EditTool() {
         e.stopPropagation();
         e.preventDefault();
       };
-      if (sel?.tool === 'wall' && over && over !== 'inside') {
+      // 1. The selected wall: a side resizes it, its box lifts its top.
+      if (sel?.tool === 'wall' && over) {
         grab();
-        drag = { kind: 'resize', edit: sel, side: over, y0: e.clientY, moved: false };
+        drag = over === 'inside' ? { kind: 'lift', edit: sel, y0: e.clientY, moved: false } : { kind: 'resize', edit: sel, side: over, y0: e.clientY, moved: false };
         return;
       }
+      // 2. Another wall under the pointer (the nearest box along the ray) gets selected, even on a selected terrace.
+      const s = st();
+      let wall: Edit | undefined;
+      let nearest = Infinity;
+      for (const w of s.versions.find((v) => v.id === s.active)?.edits ?? []) {
+        if (w.tool !== 'wall' || w.id === sel?.id) continue;
+        const d = wallHitRef.current(grid, w, e.clientX, e.clientY);
+        if (d !== undefined && d < nearest) [wall, nearest] = [w, d];
+      }
+      if (wall) {
+        grab();
+        setOver(undefined);
+        select(wall.id);
+        return;
+      }
+      // 3. The selected terrain edit: an edge tilts / toggles, the inside lifts.
       if (sel && over && over !== 'inside') {
         grab();
         drag = { kind: 'edge', edit: sel, side: over, y0: e.clientY, moved: false };
@@ -274,16 +309,6 @@ export function EditTool() {
       if (sel && over === 'inside' && liftable(sel)) {
         grab();
         drag = { kind: 'lift', edit: sel, y0: e.clientY, moved: false };
-        return;
-      }
-      // A click on a wall (its top face, the topmost one) selects it.
-      const s = st();
-      const wall = s.versions
-        .find((v) => v.id === s.active)
-        ?.edits.findLast((w) => w.tool === 'wall' && wallHover(cameraRef.current, el, w, [e.clientX, e.clientY]) !== undefined);
-      if (wall && wall.id !== sel?.id) {
-        grab();
-        select(wall.id);
         return;
       }
       if (!st().tool) return;
