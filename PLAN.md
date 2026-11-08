@@ -455,6 +455,50 @@ rect by 0.10 → net +0.10 m³ (± one cell row). Undo/redo restore the totals e
 differently keeps its own totals. Reload the app → both versions and their totals are back. Delete one → its files
 are gone. Podgląd and Design unchanged; orbiting stays smooth.
 
+**M4b — Bevel + retaining wall** — spec draft 2026-11-08 (not approved yet)
+
+Facts: the drawings show no slopes or retaining walls (no `skarpa` / `mur oporowy` labels or layers on the site plan,
+PAB-11 or PAB-12; PAB-11 only gives the 1.5 % fall of the path). So every slope and wall is the user's design; nothing
+is read from the DWGs. Ground next to the house is about −0.32 (Tp 355.08).
+
+Requirements:
+- **Edges are a property of an edit,** not a separate tool. Each of an edit's 4 rect edges (← → ↑ ↓ as seen in the
+  Design top view) is one of: **Uskok** (step, as in M4a), **Skarpa** (slope 1:n), **Mur** (retaining wall). One
+  ratio **1:n** per edit (n = horizontal per 1 m vertical, default 2, n > 0) for all its sloped edges. Saved in the edit
+  as optional `edges: { w, e, s, n: 'step' | 'slope' | 'wall' }` and `slope: number`; missing = all Uskok, so M4a
+  files load unchanged (still `version: 2`).
+- **New edits** take the edge mode chosen in the view bar next to the tools ("Krawędzie: Uskok | Skarpa 1:n | Mur",
+  remembered, default Skarpa 1:2) on all 4 edges. Change any edge later in the edit list.
+- **Skarpa (pure, in `replay`):** the rect is the flat top (or bottom) you dragged; the slope goes **outside** it until
+  it meets the surface (daylight). For a grid corner outside the rect, p = the nearest rect-edge corner, d = distance
+  to p (m), top = h(p) after the edit. Fill side (top above the corner): h = max(h, top − d/n); cut side: h =
+  min(h, top + d/n). Each sloped edge covers the band beside it; a corner zone (beyond both edges) gets the rounded
+  slope only if both edges are Skarpa, otherwise nothing there. The slope is part of the edit: it is in the edit's
+  cut / fill, in the totals and in Różnice; a later edit still wins over it; corners outside the modelled area are
+  never changed. Replay of all edits stays < 30 ms.
+- **Mur:** the terrain keeps the step (as Uskok). A wall solid is drawn along the edge in Environment, standing on the
+  **high side** with its face on the edge line, thickness 0.25 m, top = the high side's surface along the edge, bottom
+  = the low side's surface (visible part only, no footing). The panel shows per wall its length, height min–max and
+  volume (m³ = length × 0.25 × mean height). Walls are not in cut / fill.
+- **Edit list:** per edit 4 edge selects (← → ↑ ↓), the 1:n field (when an edge is Skarpa) and its walls. Hovering an
+  edge select outlines that edge in the view. Edge and ratio changes go through undo / redo like value changes.
+
+Out of M4b: slopes or walls along drawn lines (only rect edges); per-edge ratios; wall footings, drainage, parapets
+above the high side; stairs; materials (M4c); moving or resizing a rect.
+
+✅ In a version, Wyrównaj a 4 × 6 m rect next to the south façade to +0.30 with Skarpa 1:2, the house-side edge
+Uskok. The slope runs out about 1.24 m (0.62 × 2, ± one cell) to the −0.32 ground (check with the measure tool) and
+the edit's fill grows. Set n = 3: the slope widens to about 1.86 m, volumes update live. Switch one edge to Mur: its
+slope goes, a 0.25 m wall about 0.62 m high appears with its length and m³ in the list. Undo / redo restore each step.
+Save, reload: edges and ratio are back. An M4a version without edges loads unchanged (same totals).
+
+Open questions:
+1. Default edge mode for new edits: Skarpa 1:2 (proposed) or Uskok (as M4a)?
+2. Slope outside the dragged rect (proposed: the rect stays the flat area you drew) or inside it (the footprint stays,
+   the flat top shrinks)?
+3. Wall: on the high side, 0.25 m, no footing (proposed)? Or a thickness field per edit?
+4. Corner with one Skarpa and one Uskok/Mur edge: nothing beyond the corner (proposed), or let the slope wrap around?
+
 **M5 — House massing** — done 2026-11-08 (spec sharpened 2026-11-08 on the real files, approved 2026-11-08; ADR 0005)
 
 Facts (normalized sheets, plan coords in m, heights rel ±0.00):

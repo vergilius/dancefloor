@@ -1,6 +1,6 @@
 # M5 task list
 
-Next: M5 done (user check 2026-11-08: "looking good"). Next milestone M4b (PLAN.md §5): sharpen the spec with `spec-driven-development`, then a new task list.
+Next: M4b spec drafted in PLAN.md §5 (branch m4b-spec), waiting for approval of its open questions; then `planning-and-task-breakdown`. Wyrównaj change (start-point height) on branch level-from-start-point, waiting for the browser check.
 T4 note: hidden openings still count in "znalezione", not in "bez ściany"; stale keys (rect moved > 1 cm in the DWG) are kept in the file but match nothing.
 T3 note: pieces are joined where their boxes touch (the garage door's panel lines end mid-frame); counts 6/8/7/1 as specified. Rays start 0.3 m in front of the elevation plane (PAB-08's plane is 1 cm inside the gable).
 T6 note: openings cut the wall lines (plans draw lines across some openings: garage door, podcień doors) and get sill/head fills; a cut needs a wall face within 0.25 m of where the opening was placed (roof windows stay dark quads). West recess (0.60 m, under the terrace roof) found too; soffits via `soffitFrom`.
