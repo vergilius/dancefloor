@@ -1,6 +1,8 @@
 # M3 task list
 
-Next: T4 (contour lines, draw them in `src/scene/TerrainMesh.tsx`). T3 done 2026-11-08: mesh = two indexed geometries
+Next: user browser check of T4 (contours, implemented, unverified), then Checkpoint B. T4: `src/terrain/contours.ts`
+(marching squares, skips uncertain cells, saddles by centre average); minor = `lineSegments`, major (whole metres) =
+drei `<Line segments>` 2 px. T3 done 2026-11-08: mesh = two indexed geometries
 (certain / uncertain cells) sharing positions + normals; "Teren" toggle sits in the view bar (not LayerPanel); a
 directional light on ENV_LAYER only; the env ground Grid is hidden while the terrain is shown. `useTerrain()` also
 returns `plot` (PZT_ZAKRES segments in plan coords). Known: `useTerrain()` computes per caller (panel + mesh), fine so far.

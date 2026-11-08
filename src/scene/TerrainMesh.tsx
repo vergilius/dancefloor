@@ -1,10 +1,13 @@
 // Existing terrain in the Environment viewport (PLAN.md §5 M3): one vertex per grid corner, height-tinted.
 // Cells with an uncertain corner (outside the profiles' hull) are a second, lighter and semi-transparent index
-// over the same positions. Plot outline (`PZT_ZAKRES`) draped just above the surface.
+// over the same positions. Plot outline (`PZT_ZAKRES`) draped just above the surface. Contours every 0.25 m
+// (certain cells only), whole metres thicker and darker.
+import { Line } from '@react-three/drei';
 import { useMemo } from 'react';
 import { BufferAttribute, BufferGeometry, Color, DoubleSide } from 'three';
 import { useProject } from '../state/store';
 import { useTerrain } from '../state/terrain';
+import { contours, type Contour } from '../terrain/contours';
 import { sampleGrid, type HeightGrid } from '../terrain/grid';
 import { ENV_LAYER } from './split';
 
@@ -17,12 +20,18 @@ const OUTLINE_COLOR = '#b3261e';
 /** Outline sits this far above the surface (m), sampled every OUTLINE_STEP (m) so it follows the relief. */
 const OUTLINE_LIFT = 0.03;
 const OUTLINE_STEP = 0.5;
+/** Contours sit this far above their level (m), so the surface doesn't hide them. */
+const CONTOUR_LIFT = 0.02;
+const MINOR_COLOR = '#5b6b3a';
+const MAJOR_COLOR = '#2e3a1c';
+const MAJOR_WIDTH = 2; // px
 
 export function TerrainMesh() {
   const show = useProject((s) => s.showTerrain);
   const { grid, plot } = useTerrain();
   const geo = useMemo(() => grid && terrainGeometry(grid), [grid]);
   const outline = useMemo(() => grid && plot && drapedOutline(grid, plot), [grid, plot]);
+  const lines = useMemo(() => grid && contourLines(contours(grid)), [grid]);
   if (!show || !geo) return null;
   return (
     <group>
@@ -33,6 +42,17 @@ export function TerrainMesh() {
       <mesh layers={ENV_LAYER} geometry={geo.uncertain}>
         <meshLambertMaterial vertexColors side={DoubleSide} transparent opacity={UNCERTAIN_OPACITY} depthWrite={false} />
       </mesh>
+      {lines && lines.minor.length > 0 && (
+        <lineSegments layers={ENV_LAYER}>
+          <bufferGeometry>
+            <bufferAttribute attach="attributes-position" args={[lines.minor, 3]} />
+          </bufferGeometry>
+          <lineBasicMaterial color={MINOR_COLOR} />
+        </lineSegments>
+      )}
+      {lines && lines.major.length > 0 && (
+        <Line layers={ENV_LAYER} segments points={lines.major} color={MAJOR_COLOR} lineWidth={MAJOR_WIDTH} />
+      )}
       {outline && (
         <lineSegments layers={ENV_LAYER}>
           <bufferGeometry>
@@ -126,4 +146,18 @@ function drapedOutline(g: HeightGrid, s: Float64Array): Float32Array {
     }
   }
   return Float32Array.from(out);
+}
+
+/** Plan contours → scene segments: minor as a flat position buffer, major as point tuples for drei's fat lines. */
+function contourLines(cs: Contour[]): { minor: Float32Array; major: [number, number, number][] } {
+  const minor: number[] = [];
+  const major: [number, number, number][] = [];
+  for (const c of cs) {
+    const y = c.h + CONTOUR_LIFT;
+    for (let k = 0; k < c.segs.length; k += 2) {
+      if (c.major) major.push([c.segs[k]!, y, -c.segs[k + 1]!]);
+      else minor.push(c.segs[k]!, y, -c.segs[k + 1]!);
+    }
+  }
+  return { minor: Float32Array.from(minor), major };
 }
