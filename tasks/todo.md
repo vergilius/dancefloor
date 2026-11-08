@@ -1,8 +1,9 @@
 # M4b task list
 
-Next: Task 1 (Skarpa per edge). Spec approved 2026-11-08 (PLAN.md §5 M4b); plan `tasks/plan.md`.
+Next: Task 1 (Skarpa per edge) implemented, waiting for the browser check; then Task 2. Spec approved 2026-11-08 (PLAN.md §5 M4b); plan `tasks/plan.md`.
 Branch: m4b-spec (on top of level-from-start-point: Wyrównaj levels to the drag's start height, browser check pending).
 Drawings have no slopes or walls (checked PZT, PAB-11, PAB-12): all M4b geometry is the user's design.
+T1 note: scratchpad check on a flat −0.32 grid: 4 × 6 m to +0.30, 1:2 → slope 1.20 m wide (last corner above ground; 1.24 exact), 1:3 → 1.80 m; no edges = M4a fill to 4 decimals; 10 sloped edits (Δ 1.5 m, n = 3) replay in ~14 ms warm (36 ms first run).
 Real-file checks without the browser: Node 24 runs `src/` TS directly with a resolver hook adding `.ts` to extensionless imports; load a DWG via `@mlightcad/libredwg-web` + `normalize()` in a scratchpad script (never in the repo, never commit `dwg/`).
 
 Commands: `pnpm dev`, `pnpm check` (build + lint + guards). No automated tests (CLAUDE.md).

@@ -15,9 +15,25 @@ export type Draft = Rect & { z?: number };
  * Corners inside the rect: Wyrównaj (`level`) sets them to `z`; Podnieś / Obniż (`raise` / `lower`) move them up /
  * down by `dz` > 0.
  */
-export type Edit = { id: string; rect: Rect } & ({ tool: 'level'; z: number } | { tool: 'raise' | 'lower'; dz: number });
+export type Edit = { id: string; rect: Rect; edges?: Edges; slope?: number } & (
+  | { tool: 'level'; z: number }
+  | { tool: 'raise' | 'lower'; dz: number }
+);
 export type Tool = Edit['tool'];
 export const TOOLS: readonly Tool[] = ['level', 'raise', 'lower'];
+/** Rect edges (PLAN.md §5 M4b): w = x0, e = x1, s = y0, n = y1 (←, →, ↓, ↑ in the Design top view). */
+export type Side = 'w' | 'e' | 's' | 'n';
+export const SIDES: readonly Side[] = ['w', 'e', 's', 'n'];
+/** Uskok (step, as M4a), Skarpa (slope 1:n outside the rect), Mur (step + a wall drawn on the high side). */
+export type EdgeMode = 'step' | 'slope' | 'wall';
+export const EDGE_MODES: readonly EdgeMode[] = ['step', 'slope', 'wall'];
+export type Edges = Record<Side, EdgeMode>;
+export const ALL_STEP: Edges = { w: 'step', e: 'step', s: 'step', n: 'step' };
+/** Skarpa 1:n default: n m horizontal per 1 m vertical. */
+export const DEFAULT_SLOPE = 2;
+export const edgesOf = (e: Edit): Edges => e.edges ?? ALL_STEP;
+export const slopeOf = (e: Edit): number => e.slope ?? DEFAULT_SLOPE;
+
 /** Podnieś / Obniż default step (m). */
 export const DEFAULT_DZ = 0.1;
 
@@ -51,7 +67,7 @@ export type EditVolume = { cut: number; fill: number };
 
 /**
  * The version's surface: a copy of the frozen base with the edits applied in order (a later edit wins), and each
- * edit's cut / fill against the surface before it.
+ * edit's cut / fill against the surface before it (its Skarpa included).
  */
 export function replay(g: HeightGrid, edits: readonly Edit[]): { h: Float32Array; volumes: EditVolume[] } {
   const h = g.base.slice();
@@ -61,20 +77,74 @@ export function replay(g: HeightGrid, edits: readonly Edit[]): { h: Float32Array
     const c = cornerRange(g, e.rect);
     const v = { cut: 0, fill: 0 };
     if (!c) return v;
+    const set = (k: number, after: number) => {
+      const before = h[k]!;
+      h[k] = after;
+      if (after > before) v.fill += (after - before) * a;
+      else v.cut += (before - after) * a;
+    };
     for (let j = c.j0; j <= c.j1; j++) {
       for (let i = c.i0; i <= c.i1; i++) {
         const k = j * w + i;
         if (isOutside(g, k)) continue; // outside the modelled area: never edited
         const before = h[k]!;
-        const after = Math.fround(e.tool === 'level' ? e.z : e.tool === 'raise' ? before + e.dz : before - e.dz);
-        h[k] = after;
-        if (after > before) v.fill += (after - before) * a;
-        else v.cut += (before - after) * a;
+        set(k, Math.fround(e.tool === 'level' ? e.z : e.tool === 'raise' ? before + e.dz : before - e.dz));
       }
     }
+    applySlope(g, h, c, edgesOf(e), slopeOf(e), set);
     return v;
   });
   return { h, volumes };
+}
+
+type Range = { i0: number; i1: number; j0: number; j1: number };
+
+/**
+ * Skarpa (PLAN.md §5 M4b): outside the rect, from the nearest rect-edge corner p at distance d, the surface becomes
+ * max(h, top − d/n) where p is above it (fill) or min(h, top + d/n) where p is below it (cut), top = h(p) after the
+ * edit. A side band follows its edge's mode; a corner zone is sloped only when both of its edges are Skarpa.
+ */
+function applySlope(g: HeightGrid, h: Float32Array, c: Range, edges: Edges, n: number, set: (k: number, v: number) => void) {
+  if (!Object.values(edges).includes('slope')) return;
+  const w = g.cols + 1;
+  // Band width: far enough for the largest height difference between the edge tops and the surface.
+  let topMin = Infinity, topMax = -Infinity, hMin = Infinity, hMax = -Infinity;
+  for (let k = 0; k < h.length; k++) {
+    if (isOutside(g, k)) continue;
+    hMin = Math.min(hMin, h[k]!);
+    hMax = Math.max(hMax, h[k]!);
+  }
+  for (let j = c.j0; j <= c.j1; j++) {
+    for (let i = c.i0; i <= c.i1; i++) {
+      if (i !== c.i0 && i !== c.i1 && j !== c.j0 && j !== c.j1) continue;
+      const k = j * w + i;
+      if (isOutside(g, k)) continue;
+      topMin = Math.min(topMin, h[k]!);
+      topMax = Math.max(topMax, h[k]!);
+    }
+  }
+  if (topMin > topMax) return;
+  const band = Math.ceil((n * Math.max(topMax - hMin, hMax - topMin, 0)) / g.cell) + 1;
+  const I0 = Math.max(0, c.i0 - band), I1 = Math.min(g.cols, c.i1 + band);
+  const J0 = Math.max(0, c.j0 - band), J1 = Math.min(g.rows, c.j1 + band);
+  for (let j = J0; j <= J1; j++) {
+    const sj = j < c.j0 ? edges.s : j > c.j1 ? edges.n : undefined;
+    for (let i = I0; i <= I1; i++) {
+      const si = i < c.i0 ? edges.w : i > c.i1 ? edges.e : undefined;
+      if (si === undefined && sj === undefined) continue; // inside the rect
+      if ((si ?? 'slope') !== 'slope' || (sj ?? 'slope') !== 'slope') continue;
+      const k = j * w + i;
+      const pi = Math.min(c.i1, Math.max(c.i0, i));
+      const pj = Math.min(c.j1, Math.max(c.j0, j));
+      const p = pj * w + pi;
+      if (isOutside(g, k) || isOutside(g, p)) continue;
+      const top = h[p]!;
+      const drop = (g.cell * Math.hypot(i - pi, j - pj)) / n;
+      const cur = h[k]!;
+      const next = top > cur ? Math.max(cur, top - drop) : Math.min(cur, top + drop);
+      if (next !== cur) set(k, Math.fround(next));
+    }
+  }
 }
 
 /** Against the frozen base, each corner standing for one cell area. m³. */
@@ -100,7 +170,7 @@ const onLattice = (v: number) => Math.abs(v / LATTICE - Math.round(v / LATTICE))
 /** Strict parse of one saved edit; throws with the field at fault. */
 export function parseEdit(v: unknown, where: string): Edit {
   if (typeof v !== 'object' || v === null || Array.isArray(v)) throw new Error(`${where}: not an object`);
-  const { id, tool, rect, z, dz } = v as Record<string, unknown>;
+  const { id, tool, rect, z, dz, edges, slope } = v as Record<string, unknown>;
   if (typeof id !== 'string' || !id) throw new Error(`${where}.id: expected a string`);
   const r = rect as Record<string, unknown> | null;
   const ok =
@@ -111,13 +181,24 @@ export function parseEdit(v: unknown, where: string): Edit {
     (r.y0 as number) < (r.y1 as number);
   if (!ok) throw new Error(`${where}.rect: expected { x0 < x1, y0 < y1 } on the ${LATTICE} m lattice`);
   const box = { x0: r.x0 as number, y0: r.y0 as number, x1: r.x1 as number, y1: r.y1 as number };
+  const shape: { edges?: Edges; slope?: number } = {};
+  if (edges !== undefined) {
+    const ed = edges as Record<string, unknown> | null;
+    if (typeof ed !== 'object' || ed === null || !SIDES.every((k) => EDGE_MODES.includes(ed[k] as EdgeMode)))
+      throw new Error(`${where}.edges: expected { w, e, s, n } of ${EDGE_MODES.join(' | ')}`);
+    shape.edges = { w: ed.w, e: ed.e, s: ed.s, n: ed.n } as Edges;
+  }
+  if (slope !== undefined) {
+    if (!(Number.isFinite(slope) && (slope as number) > 0)) throw new Error(`${where}.slope: expected a number > 0`);
+    shape.slope = slope as number;
+  }
   if (tool === 'level') {
     if (!Number.isFinite(z)) throw new Error(`${where}.z: expected a number`);
-    return { id, tool, rect: box, z: z as number };
+    return { id, tool, rect: box, ...shape, z: z as number };
   }
   if (tool === 'raise' || tool === 'lower') {
     if (!(Number.isFinite(dz) && (dz as number) > 0)) throw new Error(`${where}.dz: expected a number > 0`);
-    return { id, tool, rect: box, dz: dz as number };
+    return { id, tool, rect: box, ...shape, dz: dz as number };
   }
   throw new Error(`${where}.tool: unknown "${String(tool)}"`);
 }

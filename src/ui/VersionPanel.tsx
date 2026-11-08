@@ -4,13 +4,13 @@ import { useMemo } from 'react';
 import { formatHeight } from '../project/levels';
 import { useRefValue } from '../state/levels';
 import { useActiveVersion, useVersions, versionSurface } from '../state/versions';
-import { editValue, rectSize, totals } from '../versions/edits';
+import { EDGE_MODES, edgesOf, editValue, rectSize, SIDES, slopeOf, totals } from '../versions/edits';
 import { ZInput } from './SheetList';
 import { t } from './strings';
 
 export function VersionPanel() {
   const version = useActiveVersion();
-  const { selected, select, setEditValue, deleteEdit } = useVersions();
+  const { selected, select, setEditValue, setEditShape, deleteEdit } = useVersions();
   const ref = useRefValue();
   const surface = useMemo(() => version && versionSurface(version), [version]);
   const sum = useMemo(() => version && surface && totals(version.grid, surface.grid.base), [version, surface]);
@@ -34,6 +34,7 @@ export function VersionPanel() {
             {version.edits.map((e, i) => {
               const size = rectSize(e.rect);
               const vol = surface.volumes[i]!;
+              const edges = edgesOf(e);
               return (
                 <li key={e.id} className={e.id === selected ? 'selected' : undefined}>
                   <button type="button" className="link" onClick={() => select(e.id === selected ? undefined : e.id)}>
@@ -54,6 +55,27 @@ export function VersionPanel() {
                   </label>{' '}
                   <span className="muted">
                     {e.tool === 'level' ? formatHeight(e.z, ref) : `${e.tool === 'raise' ? '+' : '−'}${e.dz.toFixed(2)} m`}
+                  </span>
+                  <br />
+                  <span className="edge-row">
+                    {SIDES.map((side) => (
+                      <label key={side} title={t.versions.sideTitles[side]}>
+                        {t.versions.sides[side]}
+                        <select value={edges[side]} onChange={(ev) => setEditShape(e.id, { edges: { ...edges, [side]: ev.target.value } })}>
+                          {EDGE_MODES.map((m) => (
+                            <option key={m} value={m}>
+                              {t.versions.edgeModes[m]}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ))}
+                    {SIDES.some((side) => edges[side] === 'slope') && (
+                      <label title={t.versions.slopeTitle}>
+                        1:
+                        <ZInput key={`${e.id}/slope`} value={slopeOf(e)} accept={(v) => v > 0} onChange={(v) => setEditShape(e.id, { slope: v })} />
+                      </label>
+                    )}
                   </span>
                   <br />
                   <span className="muted">{t.versions.editVolume(vol.cut, vol.fill)}</span>

@@ -4,7 +4,7 @@
 import { create } from 'zustand';
 import { listFiles, readFile, removeFile, versionsDir, writeFile } from '../project/folder';
 import type { HeightGrid } from '../terrain/grid';
-import { replay, withValue, type Edit, type Draft, type EditVolume, type Tool } from '../versions/edits';
+import { replay, withValue, type Edit, type Draft, type Edges, type EditVolume, type Tool } from '../versions/edits';
 import { packGrid, parseVersionFile, serializeVersionFile, unpackGrid, type VersionFile } from '../versions/file';
 import { useTerrain, type Terrain } from './terrain';
 
@@ -48,6 +48,8 @@ type VersionsState = {
   addEdit(edit: Edit): void;
   /** Sets an edit's z (Wyrównaj) or dz (Podnieś / Obniż) in the active version (autosaved); later edits replay over it. */
   setEditValue(id: string, value: number): void;
+  /** Sets an edit's edge modes and / or its Skarpa ratio 1:n (M4b); a run of ratio changes is one undo step. */
+  setEditShape(id: string, shape: { edges?: Edges; slope?: number }): void;
   deleteEdit(id: string): void;
   select(id: string | undefined): void;
   undo(): void;
@@ -186,6 +188,10 @@ export const useVersions = create<VersionsState>()((set, get) => ({
   setEditValue(id, value) {
     // Typing into the field changes the value per keystroke: one undo step per run of changes to the same edit.
     command((edits) => edits.map((e) => (e.id === id ? withValue(e, value) : e)), id);
+  },
+
+  setEditShape(id, shape) {
+    command((edits) => edits.map((e) => (e.id === id ? { ...e, ...shape } : e)), shape.edges ? undefined : `${id}/slope`);
   },
 
   deleteEdit(id) {
