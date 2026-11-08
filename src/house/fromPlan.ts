@@ -410,3 +410,72 @@ export const centre = (poly: Vec2[]): Vec2 => {
   const b = bbox(poly);
   return { x: (b.x0 + b.x1) / 2, y: (b.y0 + b.y1) / 2 };
 };
+
+/** A stretch of the main body's side with no wall face on the ground plan must be this long (m) to be a recess. */
+const RECESS_MIN_LEN = 2;
+/** Its wall is set back this far (m): more than the exterior wall thickness (0.48), so inner faces don't count. */
+const RECESS_DEPTH: [number, number] = [0.6, 1.5];
+
+export type RecessIn = { side: Side; x0: number; y0: number; x1: number; y1: number };
+
+/**
+ * Recesses (podcień) of the main body on the ground plan: per side of the main rectangle, the stretches ≥ 2 m with no
+ * `I-WALL` / `A-WALL` line on that side, whose wall is a parallel `I-WALL` line 0.6…1.5 m inside covering ≥ half of
+ * the stretch. PAB-01: east, x 14.334…15.134, y −7.536…−1.476.
+ */
+export function recessesFromPlan(sheet: NormalizedSheet, main: GableBlock): RecessIn[] {
+  const r: Rect = { x0: main.x0, y0: main.y0, x1: main.x1, y1: main.y1 };
+  const faces = [...segments(sheet, WALL_LAYER), ...segments(sheet, 'I-WALL')];
+  const inner = segments(sheet, 'I-WALL');
+  const out: RecessIn[] = [];
+  // Each side: the fixed coordinate, the along-axis span, and the inward direction.
+  const sides: { side: Side; horiz: boolean; at: number; lo: number; hi: number; inward: 1 | -1 }[] = [
+    { side: 'south', horiz: true, at: r.y0, lo: r.x0, hi: r.x1, inward: 1 },
+    { side: 'north', horiz: true, at: r.y1, lo: r.x0, hi: r.x1, inward: -1 },
+    { side: 'west', horiz: false, at: r.x0, lo: r.y0, hi: r.y1, inward: 1 },
+    { side: 'east', horiz: false, at: r.x1, lo: r.y0, hi: r.y1, inward: -1 },
+  ];
+  const span = (s: Seg, horiz: boolean): [number, number] => (horiz ? [Math.min(s[0], s[2]), Math.max(s[0], s[2])] : [Math.min(s[1], s[3]), Math.max(s[1], s[3])]);
+  const offset = (s: Seg, horiz: boolean) => (horiz ? (s[1] + s[3]) / 2 : (s[0] + s[2]) / 2);
+  const parallel = (s: Seg, horiz: boolean) => (horiz ? Math.abs(s[1] - s[3]) < 0.002 : Math.abs(s[0] - s[2]) < 0.002);
+  for (const sd of sides) {
+    const covered = faces
+      .filter((s) => parallel(s, sd.horiz) && Math.abs(offset(s, sd.horiz) - sd.at) < FACE_TOL)
+      .map((s) => span(s, sd.horiz))
+      .sort((a, b) => a[0] - b[0]);
+    // Uncovered stretches along the side.
+    const gaps: [number, number][] = [];
+    let at = sd.lo;
+    for (const [a, b] of covered) {
+      if (a - at >= RECESS_MIN_LEN) gaps.push([at, a]);
+      at = Math.max(at, b);
+    }
+    if (sd.hi - at >= RECESS_MIN_LEN) gaps.push([at, sd.hi]);
+    for (const [a, b] of gaps) {
+      const walls = inner.filter((s) => {
+        if (!parallel(s, sd.horiz)) return false;
+        const d = (offset(s, sd.horiz) - sd.at) * sd.inward;
+        const [p, q] = span(s, sd.horiz);
+        return d >= RECESS_DEPTH[0] && d <= RECESS_DEPTH[1] && Math.min(q, b) - Math.max(p, a) > 0;
+      });
+      if (walls.length === 0) continue;
+      // The nearest set-back line, and how much of the stretch its pieces cover.
+      const depth = Math.min(...walls.map((s) => (offset(s, sd.horiz) - sd.at) * sd.inward));
+      const at2 = walls.filter((s) => Math.abs((offset(s, sd.horiz) - sd.at) * sd.inward - depth) < JOIN);
+      const cover = at2.reduce((n, s) => {
+        const [p, q] = span(s, sd.horiz);
+        return n + Math.max(0, Math.min(q, b) - Math.max(p, a));
+      }, 0);
+      if (cover < (b - a) / 2) continue;
+      const inside = sd.at + depth * sd.inward;
+      const [c0, c1] = [Math.min(sd.at, inside), Math.max(sd.at, inside)];
+      out.push(sd.horiz ? { side: sd.side, x0: mm(a), x1: mm(b), y0: mm(c0), y1: mm(c1) } : { side: sd.side, x0: mm(c0), x1: mm(c1), y0: mm(a), y1: mm(b) });
+    }
+  }
+  return out;
+}
+
+const OUTWARD: Record<Side, Vec2> = { north: { x: 0, y: 1 }, south: { x: 0, y: -1 }, east: { x: 1, y: 0 }, west: { x: -1, y: 0 } };
+
+/** The elevation looks straight at this side of the house (its view direction (−dir.y, dir.x) points inwards). */
+export const facesSide = (e: ElevationIn, side: Side) => -e.dir.y * OUTWARD[side].x + e.dir.x * OUTWARD[side].y < -0.9;

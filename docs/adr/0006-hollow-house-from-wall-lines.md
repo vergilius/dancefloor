@@ -1,6 +1,6 @@
 # ADR 0006: Hollow house from the plans' wall lines
 
-Date: 2026-11-08 · Status: proposed (awaiting the user's approval of PLAN.md §5 M5b)
+Date: 2026-11-08 · Status: accepted (user, 2026-11-08)
 
 ## Context
 M5 (ADR 0005) models the house as solid blocks; wall thickness and the interior were out of scope. The user wants to
@@ -8,7 +8,7 @@ put the camera inside and see every wall and the window and door holes (option 1
 On the real plans the wall layers form no closed pieces (PAB-01 `I-WALL`: 40 pieces, 0 closed, 81 open ends), so
 walls can't be found as solids without the heuristics ADR 0005 rejected.
 
-## Decision (proposed)
+## Decision
 - Every wall line of a storey's plan becomes a vertical, double-sided face from the storey floor to the next storey
   (top storey: to the roof planes). Walls drawn with two lines read as thick; plan gaps are the openings.
 - Exterior openings get sill and head fills from the elevation rectangles (M5 T3); interior door gaps stay full

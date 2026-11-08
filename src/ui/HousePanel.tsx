@@ -14,7 +14,7 @@ import {
   type MainBody,
   type Vec2,
 } from '../house/blocks';
-import { blocksFromPlan, centre, columnHeights, heightsFrom, pointInPolygon, WALL_LAYER, type PlanBlocks } from '../house/fromPlan';
+import { blocksFromPlan, centre, columnHeights, facesSide, heightsFrom, pointInPolygon, recessesFromPlan, WALL_LAYER, type PlanBlocks } from '../house/fromPlan';
 import { formatHeight, formatRel } from '../project/levels';
 import { useDrawnSheets } from '../state/drawn';
 import { useRefValue } from '../state/levels';
@@ -107,6 +107,29 @@ export function HousePanel() {
         slab ? { ...(standOn && { bottom: standOn.z }), top: slab.top, from: t.house.pierFrom(slab.from, standOn !== undefined) } : {},
       );
     });
+    // Recesses (podcień) of the main body: top = the soffit line on the elevation looking straight at that side.
+    const recesses = recessesFromPlan(ground.sheet, main).flatMap((q) => {
+      const ring = [
+        { x: q.x0, y: q.y0 },
+        { x: q.x1, y: q.y0 },
+        { x: q.x1, y: q.y1 },
+        { x: q.x0, y: q.y1 },
+      ];
+      const h = heightsFrom(ring, elevations.filter((e) => facesSide(e, q.side)), 1, ring);
+      if (!h) {
+        unset.push(t.house.recessName(q.side));
+        return [];
+      }
+      notes.push(t.house.heightsRead(t.house.recessName(q.side), undefined, h.heights[0]!, src(h)));
+      // Its floor: the ground plan's level (PAB-01 at ±0.00).
+      const floor = ground.placement.type === 'horizontal' ? ground.placement.z : 0;
+      return [{ x0: q.x0, y0: q.y0, x1: q.x1, y1: q.y1, bottom: floor, top: h.heights[0]! }];
+    });
+    const body = useProject.getState().house.blocks.find((b) => b.kind === 'gable');
+    if (body?.kind === 'gable') {
+      const withRecesses = { ...body, ...(recesses.length > 0 ? { recesses } : { recesses: undefined }) };
+      putBlock(isValidBlock(withRecesses) ? withRecesses : body);
+    }
     setFromPlan({ ...r, file: ground.file, notes, unset });
   };
 
@@ -114,7 +137,10 @@ export function HousePanel() {
     if (!roof || roof.placement.type !== 'horizontal') return;
     const body = mainBodyFromRoof(roof.sheet, roof.placement.z, t.house.mainBodyName);
     if (!body) return;
-    putBlock(body.block);
+    // Recesses come from the ground plan ("Z rzutu parteru"): keep them when the roof is read again.
+    const old = useProject.getState().house.blocks.find((b) => b.name === body.block.name);
+    const kept = old?.kind === 'gable' && old.recesses ? { ...body.block, recesses: old.recesses } : body.block;
+    putBlock(isValidBlock(kept) ? kept : body.block);
     setLast({ ...body, file: roof.file });
   };
 
@@ -270,6 +296,11 @@ function BlockEntry({ index, block: b, refValue }: { index: number; block: Block
           <div>
             {t.house.wallFace} {h(wallFace(b))}
           </div>
+          {b.recesses?.map((q, i) => (
+            <div key={i}>
+              {t.house.recess(q.x1 - q.x0, q.y1 - q.y0)} {formatRel(q.bottom)}…{h(q.top)}
+            </div>
+          ))}
           {height(t.house.bottom, b.bottom, (bottom) => ({ ...b, bottom }))}
         </>
       ) : (

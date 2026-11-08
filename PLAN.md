@@ -482,6 +482,8 @@ Requirements:
   overlap (no booleans).
   - `gable`: rectangle `{x0, y0, x1, y1}`, `bottom`, `ridge`, `pitch` (deg), `overhang` (m, long sides only). Ridge
     along the long side, centred. Derived and shown: wall-face height = ridge − (short side / 2) × tan(pitch).
+    Optional `recesses` (rectangles with `bottom`, `top`) cut out of its walls: the east podcień, from
+    "Z rzutu parteru" (ADR 0005 amendment).
   - `flat`: polygon (≥ 3 corners, plan m), optional `holes` (openings through it), `bottom`, `top`.
   - Defaults: `bottom` = −1.40 (top of the shallowest foundation, so walls reach into the sloped terrain without a
     gap); heights typed in the panel or picked from the level values found on the sheets (M2 labels). Rel + abs
@@ -528,7 +530,8 @@ posts drawn the same way. Openings: PAB-10 shows its 6 on the south face (terrac
 merged PAB-08 box can be hidden, and hiding survives a reload. A Wyrównaj +0.30 next to the south façade meets the
 wall without a gap. Reload → the house is back. Podgląd, versions, Design unchanged; orbiting stays smooth.
 
-**M5b — Hollow house** (spec drafted 2026-11-08 on the real files, **awaiting approval**; ADR 0006). User,
+**M5b — Hollow house** (spec drafted 2026-11-08 on the real files, approved 2026-11-08 ("dobra"); ADR 0006). Open
+questions 1–2 unanswered: built with the spec's defaults (full-height interior door slots, attic floor = the placed PAB-02 z). User,
 2026-11-08: "żeby bryła domu i garażu była dziurawa w środku … kamera wjedzie do domu … zobaczyć wszystkie ściany i
 dziury z okien i drzwi", option 1 (all walls, exterior and partitions, real openings). Built after M5 T3 (the
 elevation openings are its input); M5 T4 (hiding openings) stays.
@@ -546,7 +549,7 @@ Facts (PAB-01, PAB-02, PAB-04, PAB-05; plan coords m, heights rel ±0.00):
 - Interior doors are not on the elevations; their heads aren't known from the files read so far.
 
 Requirements:
-- **Storeys** = horizontal plan sheets with wall layers, by z (PAB-01 at 0.00, PAB-02 at +3.29). A storey's wall
+- **Storeys** = horizontal plan sheets with wall layers, by z (PAB-01 at 0.00, PAB-02 at +3.29). The main body's recesses (podcień) come for free: its ground wall is drawn there. A storey's wall
   lines (`I-WALL`, `I-WALL-1`, `A-WALL`, `A-WALL-1`; segments < 2 cm and duplicates of another layer's line dropped)
   are extruded as double-sided vertical faces from its z to the next storey's z; on the top storey up to the gable
   roof surface (each face's top follows the roof planes, split at the ridge). Exterior walls (`I-WALL`, `A-WALL`

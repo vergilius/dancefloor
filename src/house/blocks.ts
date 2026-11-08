@@ -18,7 +18,12 @@ export type GableBlock = {
   /** Degrees. */
   pitch: number;
   overhang: number;
+  /** Recesses cut out of the walls from `bottom` (their floor) to `top` (the soffit): the east podcień. */
+  recesses?: Recess[];
 };
+
+/** A rectangle inside the block's x0…x1 × y0…y1. */
+export type Recess = { x0: number; y0: number; x1: number; y1: number; bottom: number; top: number };
 
 /** Polygon prism; `holes` = openings through it (the awning opening in the terrace slab). */
 export type FlatBlock = { kind: 'flat'; name: string; polygon: Vec2[]; holes?: Vec2[][]; bottom: number; top: number };
@@ -93,6 +98,18 @@ function parseBlock(v: unknown, where: string): Block {
     if (!(b.pitch > 0 && b.pitch < 90)) throw new Error(`${where}.pitch: expected 0 < pitch < 90 (deg)`);
     if (!(b.overhang >= 0)) throw new Error(`${where}.overhang: expected ≥ 0`);
     if (!(wallFace(b) > bottom)) throw new Error(`${where}: the wall face is not above the bottom`);
+    if (v.recesses !== undefined) {
+      if (!Array.isArray(v.recesses)) throw new Error(`${where}.recesses: expected an array`);
+      b.recesses = v.recesses.map((r, i) => {
+        const w = `${where}.recesses[${i}]`;
+        if (!isObj(r)) throw new Error(`${w}: not an object`);
+        const q: Recess = { x0: num(r, 'x0', w), y0: num(r, 'y0', w), x1: num(r, 'x1', w), y1: num(r, 'y1', w), bottom: num(r, 'bottom', w), top: num(r, 'top', w) };
+        if (!(q.x1 > q.x0 && q.y1 > q.y0 && q.x0 >= b.x0 && q.x1 <= b.x1 && q.y0 >= b.y0 && q.y1 <= b.y1))
+          throw new Error(`${w}: expected a rectangle inside the block`);
+        if (!(q.bottom >= bottom && q.top > q.bottom && q.top < wallFace(b))) throw new Error(`${w}: expected bottom ≤ … < top < the wall face`);
+        return q;
+      });
+    }
     return b;
   }
   if (v.kind === 'flat') {
@@ -237,6 +254,24 @@ function gableTriangles(b: GableBlock): number[] {
   const he = hw - b.overhang * tan(b.pitch);
   const z0 = b.bottom;
   const out: number[] = [];
+  const recesses = b.recesses ?? [];
+  if (recesses.length > 0) {
+    // Full footprint up to the lowest recess floor B; the footprint minus the recesses from B to the highest soffit T;
+    // a recess with a higher floor or a lower soffit is filled in between; the gable from T up.
+    const B = Math.min(...recesses.map((r) => r.bottom));
+    const T = Math.max(...recesses.map((r) => r.top));
+    const prism = (polygon: Vec2[], bottom: number, top: number, holes?: Vec2[][]) =>
+      top > bottom + 1e-6 && out.push(...flatTriangles({ kind: 'flat', name: '', polygon, holes, bottom, top }));
+    prism(rectRing(b), z0, B);
+    const [outer, ...holes] = rectMinus(b, recesses);
+    if (outer) prism(outer, B, T, holes);
+    for (const r of recesses) {
+      prism(rectRing(r), B, r.bottom);
+      prism(rectRing(r), r.top, T);
+    }
+    out.push(...gableTriangles({ ...b, bottom: T, recesses: undefined }));
+    return out;
+  }
   // Walls up to the wall face, and the bottom.
   quad(out, P(u0, v0, z0), P(u1, v0, z0), P(u1, v0, hw), P(u0, v0, hw));
   quad(out, P(u1, v1, z0), P(u0, v1, z0), P(u0, v1, hw), P(u1, v1, hw));
@@ -250,6 +285,62 @@ function gableTriangles(b: GableBlock): number[] {
   quad(out, P(u0, v0 - b.overhang, he), P(u1, v0 - b.overhang, he), P(u1, vc, b.ridge), P(u0, vc, b.ridge));
   quad(out, P(u1, v1 + b.overhang, he), P(u0, v1 + b.overhang, he), P(u0, vc, b.ridge), P(u1, vc, b.ridge));
   return out;
+}
+
+const rectRing = (r: { x0: number; y0: number; x1: number; y1: number }): Vec2[] => [
+  { x: r.x0, y: r.y0 },
+  { x: r.x1, y: r.y0 },
+  { x: r.x1, y: r.y1 },
+  { x: r.x0, y: r.y1 },
+];
+
+/**
+ * Rectangle minus axis-aligned rectangles inside it, as rings: the outline (counter-clockwise) first, then holes
+ * (clockwise). Built from the grid of all their x and y coordinates: boundary cell edges, chained.
+ */
+export function rectMinus(r: { x0: number; y0: number; x1: number; y1: number }, cuts: { x0: number; y0: number; x1: number; y1: number }[]): Vec2[][] {
+  const xs = [...new Set([r.x0, r.x1, ...cuts.flatMap((c) => [c.x0, c.x1])])].sort((a, b) => a - b);
+  const ys = [...new Set([r.y0, r.y1, ...cuts.flatMap((c) => [c.y0, c.y1])])].sort((a, b) => a - b);
+  const filled = (i: number, j: number) => {
+    if (i < 0 || j < 0 || i >= xs.length - 1 || j >= ys.length - 1) return false;
+    const cx = (xs[i]! + xs[i + 1]!) / 2;
+    const cy = (ys[j]! + ys[j + 1]!) / 2;
+    return !cuts.some((c) => cx > c.x0 && cx < c.x1 && cy > c.y0 && cy < c.y1);
+  };
+  // Directed boundary edges with the filled cell on their left, keyed by start corner (grid indices).
+  const next = new Map<string, [number, number]>();
+  const k = (i: number, j: number) => `${i},${j}`;
+  for (let i = 0; i < xs.length - 1; i++)
+    for (let j = 0; j < ys.length - 1; j++) {
+      if (!filled(i, j)) continue;
+      if (!filled(i, j - 1)) next.set(k(i, j), [i + 1, j]);
+      if (!filled(i + 1, j)) next.set(k(i + 1, j), [i + 1, j + 1]);
+      if (!filled(i, j + 1)) next.set(k(i + 1, j + 1), [i, j + 1]);
+      if (!filled(i - 1, j)) next.set(k(i, j + 1), [i, j]);
+    }
+  const rings: Vec2[][] = [];
+  while (next.size) {
+    const [start] = next.keys();
+    const ring: Vec2[] = [];
+    let cur = start!;
+    for (let guard = 0; guard < 10_000; guard++) {
+      const to = next.get(cur);
+      if (!to) break;
+      next.delete(cur);
+      const [i, j] = cur.split(',').map(Number) as [number, number];
+      ring.push({ x: xs[i]!, y: ys[j]! });
+      cur = k(...to);
+      if (cur === start) break;
+    }
+    // Drop corners on straight runs.
+    const clean = ring.filter((p, n) => {
+      const a = ring[(n + ring.length - 1) % ring.length]!;
+      const c = ring[(n + 1) % ring.length]!;
+      return !((a.x === p.x && p.x === c.x) || (a.y === p.y && p.y === c.y));
+    });
+    if (clean.length >= 3) rings.push(clean);
+  }
+  return rings.sort((p, q) => signedArea(q) - signedArea(p));
 }
 
 function flatTriangles(b: FlatBlock): number[] {

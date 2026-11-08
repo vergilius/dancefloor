@@ -247,6 +247,9 @@ export const t = {
     deckName: 'Podest',
     deckFrom: (support: string) => `wierzch = spód: ${support} (stoją na podeście)`,
     pierName: (n: number) => `Filar ${n}`,
+    recessName: (side: 'north' | 'south' | 'east' | 'west') =>
+      `Podcień ${{ north: 'północny', south: 'południowy', east: 'wschodni', west: 'zachodni' }[side]}`,
+    recess: (a: number, b: number) => `podcień ${a.toFixed(2)} × ${b.toFixed(2)} m,`,
     pierFrom: (slab: string, onDeck: boolean) => `${onDeck ? 'od podestu ' : ''}do wierzchu: ${slab}`,
     columnsAll: (n: number) => `Kolumny 1–${n}`,
     heightsRead: (name: string, bottom: number | undefined, top: number | undefined, from: string) =>

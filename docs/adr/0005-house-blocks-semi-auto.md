@@ -51,6 +51,13 @@ simple, so "Z rzutu parteru" builds them from the ground plan (rules in `src/hou
   stairs). Its top = the supports' read bottom (−0.02), bottom −1.40. Piers: open `A-WALL` chains ≤ 1 m against the
   main body (the wall is their missing side). PAB-01: one, 0.45 × 0.49 m at x 13.667…14.117; no lines across it on the
   elevations, so it runs from the deck to the top of the slab above it (+3.22).
+- **Recess (podcień)** (user, 2026-11-08: "wcięcie z wschodniej strony … podcień, którego nie ma w bryle"): the
+  gable block gets `recesses` (rectangles cut from their floor to their soffit). Found on the ground plan: a stretch
+  ≥ 2 m of a main-body side with no `I-WALL`/`A-WALL` face, whose wall is a parallel `I-WALL` line 0.6…1.5 m inside
+  (deeper than the 0.48 m exterior walls, so window gaps don't count) covering ≥ half of it. PAB-01: east, x
+  14.334…15.134, y −7.536…−1.476 (0.80 × 6.06 m). Floor = the ground plan's z (±0.00); soffit = the line across it on
+  the elevation looking straight at that side: PAB-08 `PZT_UTWARDZENIA` +2.635 (PAB-07 also has a +2.635 there, but
+  sees it edge-on). Kept when "Z rzutu dachu" runs again.
 - **Heights from the elevations** (user, 2026-11-08, screenshot: the slab at the −1.40/+3.00 defaults filled the
   whole terrace): per block, the horizontal lines of a placed elevation lying within the block's width there (ends
   ± 3 cm) and covering ≥ half of it, `A-WALL` first, then `PZT_UTWARDZENIA`. Elevations on which the block stands
