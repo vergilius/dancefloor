@@ -271,7 +271,7 @@ corners) reproduces the same values within 0.01° / 1 cm.
 
 PAB-11 and PAB-12 are detail sheets: no placement, used only for the parameters recorded in §1.
 
-**M2 — Levels & references** (spec sharpened 2026-11-08 on the real files, approved 2026-11-08: keep it
+**M2 — Levels & references** — done 2026-11-08 (spec sharpened 2026-11-08 on the real files, approved 2026-11-08: keep it
 minimal, the labels won't be used much)
 
 Facts (raw entities and normalized texts of all 12 DWGs, model space only):
@@ -318,7 +318,7 @@ Requirements:
   (`Tp 355.08 (−0.32)`). One toggle (default on, view setting, not saved). The markers are the browser check.
 - **Rel + abs wherever we show a height:** one formatter, e.g. `+3.29 (358.69 m n.p.m.)`, used by the sheet list
   (plan z), the markers and the measure readout. The drawn sheet texts stay as drawn.
-- **Measure tool "Pomiar"** (any view): click A, then B. Each click hits the plane of a drawn sheet under the
+- **Measure tool "Pomiar"** (any view, Design viewport): click A, then B. Each click hits the plane of a drawn sheet under the
   cursor (horizontal: its z; vertical: its plane) and snaps to that sheet's visible segment endpoints and to the
   markers (screen-px radius, as in M1c). Readout: 3D distance, horizontal distance, Δh (m, 3 decimals), and both
   heights as rel + abs. The A–B line stays visible until Esc or the next measurement. Not saved.

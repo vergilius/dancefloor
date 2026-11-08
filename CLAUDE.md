@@ -9,7 +9,8 @@ acceptance criteria, and risks. Read only the section you need for the current t
 changes, update PLAN.md in the same change.
 
 ## Status
-- M1a and M1b done and merged (2026-11-07). M1c (2-point alignment, PLAN.md §5) done on `feat/m1c` (2026-11-08), not merged yet.
+- M1a, M1b (2026-11-07), M1c and M2 (levels & references, measure tool, two viewports; 2026-11-08) done and merged.
+  Next: M3 (terrain grid, PLAN.md §5), not specced yet.
 - Track milestone/task progress in PLAN.md (or a `tasks/` file created via `planning-and-task-breakdown`).
 
 ## Stack (planned, see PLAN.md §3)

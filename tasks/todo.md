@@ -1,6 +1,7 @@
 # M2 task list
 
-Next: T6 (measure on vertical sheets). T1–T5 done and verified 2026-11-08 (checkpoint A closed).
+Next: M2 done and merged 2026-11-08. Start M3 (terrain grid): sharpen PLAN.md §5 M3 with `spec-driven-development`,
+then a new task list. Note (T6): `hitSheet` (`src/scene/snap.ts`) dispatches to `hitHorizontal` / `hitVertical`.
 Note (T5): `MeasureTool` (`src/scene/MeasureTool.tsx`) listens on the canvas container (DOM events, not r3f), hits
 sheet planes with `hitHorizontal` and snaps in screen px over all hit sheets + markers (`nearestOnScreen`,
 `src/scene/snap.ts`). T6 adds a `hitVertical` next to it; `worldPoints` already handles vertical placements.
@@ -93,12 +94,12 @@ measurement. Readout overlay: 3D distance, horizontal distance, Δh (3 decimals)
 **Description:** Extend the hit test to vertical sheet planes (origin + x·dir, height y) and snapping to their
 endpoints; nearest hit along the ray wins when sheets overlap.
 **Acceptance criteria:**
-- [ ] PAB-08: Δh from ±0.00 to the ridge = 9.12 m (± 1 cm), heights shown rel + abs
-- [ ] Mixed A on a plan, B on an elevation works
+- [x] PAB-08: Δh from ±0.00 to the ridge = 9.12 m (± 1 cm), heights shown rel + abs
+- [x] Mixed A on a plan, B on an elevation works
 **Verification:** `pnpm check`; user measures on PAB-08.
 **Dependencies:** T5
 **Files:** `src/scene/MeasureTool.tsx`, `src/scene/snap.ts`
 **Scope:** S
 
 ### Checkpoint B (after T3–T6)
-- [ ] `pnpm check` green; all M2 ✅ in PLAN.md verified by the user; PLAN.md/CLAUDE.md status updated; merge
+- [x] `pnpm check` green; all M2 ✅ in PLAN.md verified by the user; PLAN.md/CLAUDE.md status updated; merge
