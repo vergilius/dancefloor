@@ -34,30 +34,81 @@ export function cellOutside(g: HeightGrid, a: number): boolean {
   return (g.outside[a]! | g.outside[a + 1]! | g.outside[a + w]! | g.outside[a + w + 1]!) === 1;
 }
 
+/** Endpoints closer than this (m) are the same outline vertex. */
+const JOIN = 0.01;
+
 /**
- * Corners farther than `margin` (m) outside a closed outline (segments [x1, y1, x2, y2, …], any order) → 1.
- * Inside = even-odd crossings of a ray towards +x.
+ * A closed outline (segments [x1, y1, x2, y2, …], any order and direction) grown outward by `margin` (m), every edge
+ * moved out parallel and neighbours joined at a sharp (mitred) corner. Vertices [x, y, …]. Undefined if the
+ * segments don't form one closed loop.
  */
-export function outsideMask(g: HeightGrid, s: Float64Array, margin: number): Uint8Array {
+export function offsetOutline(s: Float64Array, margin: number): Float64Array | undefined {
+  const n = s.length / 4;
+  if (n < 3) return undefined;
+  // Chain the segments into one loop of vertices.
+  const used = new Uint8Array(n);
+  const loop: [number, number][] = [[s[0]!, s[1]!]];
+  let [cx, cy] = [s[2]!, s[3]!];
+  used[0] = 1;
+  for (let step = 1; step < n; step++) {
+    loop.push([cx, cy]);
+    let next = -1;
+    for (let q = 0; q < n && next < 0; q++) {
+      if (used[q]) continue;
+      for (let e = 0; e < 2; e++) {
+        if (Math.hypot(s[4 * q + 2 * e]! - cx, s[4 * q + 2 * e + 1]! - cy) > JOIN) continue;
+        next = q;
+        [cx, cy] = [s[4 * q + 2 * (1 - e)]!, s[4 * q + 2 * (1 - e) + 1]!];
+        break;
+      }
+    }
+    if (next < 0) return undefined;
+    used[next] = 1;
+  }
+  if (Math.hypot(cx - loop[0]![0], cy - loop[0]![1]) > JOIN) return undefined; // not closed
+  // Counter-clockwise, so "outward" is to the right of each edge.
+  let area = 0;
+  for (let k = 0; k < loop.length; k++) {
+    const [x1, y1] = loop[k]!;
+    const [x2, y2] = loop[(k + 1) % loop.length]!;
+    area += x1 * y2 - x2 * y1;
+  }
+  if (area < 0) loop.reverse();
+  const m = loop.length;
+  // Each edge's outward unit normal.
+  const normals = loop.map(([x1, y1], k) => {
+    const [x2, y2] = loop[(k + 1) % m]!;
+    const len = Math.hypot(x2 - x1, y2 - y1);
+    return [(y2 - y1) / len, -(x2 - x1) / len] as const;
+  });
+  const out = new Float64Array(2 * m);
+  for (let k = 0; k < m; k++) {
+    // Vertex k joins edge k−1 and edge k: move it along the bisector of their normals so both edges shift by `margin`.
+    const [ax, ay] = normals[(k - 1 + m) % m]!;
+    const [bx, by] = normals[k]!;
+    const cos = Math.max(ax * bx + ay * by, -0.9); // limit the spike at very sharp corners
+    const scale = margin / (1 + cos);
+    out[2 * k] = loop[k]![0] + (ax + bx) * scale;
+    out[2 * k + 1] = loop[k]![1] + (ay + by) * scale;
+  }
+  return out;
+}
+
+/** Corners outside a polygon (vertices [x, y, …]) → 1. Even-odd crossings of a ray towards +x. */
+export function outsideMask(g: HeightGrid, poly: Float64Array): Uint8Array {
   const w = g.cols + 1;
   const out = new Uint8Array(w * (g.rows + 1));
-  const m2 = margin * margin;
+  const m = poly.length / 2;
   for (let j = 0, k = 0; j <= g.rows; j++) {
     const y = g.origin.y + j * g.cell;
     for (let i = 0; i < w; i++, k++) {
       const x = g.origin.x + i * g.cell;
       let inside = false;
-      let near = false;
-      for (let q = 0; q < s.length; q += 4) {
-        const x1 = s[q]!, y1 = s[q + 1]!, x2 = s[q + 2]!, y2 = s[q + 3]!;
+      for (let p = 0, q = m - 1; p < m; q = p++) {
+        const x1 = poly[2 * p]!, y1 = poly[2 * p + 1]!, x2 = poly[2 * q]!, y2 = poly[2 * q + 1]!;
         if (y1 > y !== y2 > y && x < x1 + ((y - y1) * (x2 - x1)) / (y2 - y1)) inside = !inside;
-        const dx = x2 - x1, dy = y2 - y1;
-        const len2 = dx * dx + dy * dy;
-        const t = len2 > 0 ? Math.min(1, Math.max(0, ((x - x1) * dx + (y - y1) * dy) / len2)) : 0;
-        const ex = x1 + t * dx - x, ey = y1 + t * dy - y;
-        if (ex * ex + ey * ey <= m2) near = true;
       }
-      out[k] = inside || near ? 0 : 1;
+      out[k] = inside ? 0 : 1;
     }
   }
   return out;

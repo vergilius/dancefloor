@@ -1,14 +1,15 @@
 // Existing terrain derived from the drawn sheets (PLAN.md §5 M3, ADR 0002: generated, never saved).
 import { useMemo } from 'react';
 import { sheetToWorld } from '../scene/coords';
-import { grow, heightGrid, outsideMask, segmentsBox, type Box, type HeightGrid } from '../terrain/grid';
+import { grow, heightGrid, offsetOutline, outsideMask, segmentsBox, type Box, type HeightGrid } from '../terrain/grid';
 import { connectedSegments, profileSeeds, type Seeds } from '../terrain/seeds';
 import { useDrawnSheets, type DrawnSheet } from './drawn';
 
 export const PLOT_LAYER = 'PZT_ZAKRES';
 /**
- * Modelled area = the plot outline grown by this (m), the plot boundary being the reference (user, 2026-11-08): the
- * grid covers its bbox, corners beyond it are masked out. Without an aligned plot: the seed bbox + SEED_MARGIN, no mask.
+ * Modelled area = the plot outline grown by this (m) with sharp corners, the plot boundary being the reference (user,
+ * 2026-11-08): the grid covers its bbox, corners beyond it are masked out. If the outline isn't one closed loop: its
+ * bbox grown by this, no mask. Without an aligned plot: the seed bbox + SEED_MARGIN, no mask.
  */
 export const PLOT_MARGIN = 2;
 const SEED_MARGIN = 2.5;
@@ -26,9 +27,11 @@ export function useTerrain(): Terrain {
     );
     const plot = plotOutline(drawn);
     const plotBox = plot && segmentsBox(plot, (x, y) => [x, y]);
-    const box = plotBox ? grow(plotBox, PLOT_MARGIN) : seedBox(seeds.points);
+    const area = plot && offsetOutline(plot, PLOT_MARGIN);
+    const areaBox = area && segmentsBox(area, (x, y) => [x, y]);
+    const box = areaBox ?? (plotBox ? grow(plotBox, PLOT_MARGIN) : seedBox(seeds.points));
     const raw = box && heightGrid(seeds.points, box);
-    const grid = raw && plot && plotBox ? { ...raw, outside: outsideMask(raw, plot, PLOT_MARGIN) } : raw;
+    const grid = raw && area ? { ...raw, outside: outsideMask(raw, area) } : raw;
     const out: Terrain = { seeds, grid, extent: plotBox ? 'plot' : 'seeds', plot };
     cache.set(drawn, out);
     return out;
