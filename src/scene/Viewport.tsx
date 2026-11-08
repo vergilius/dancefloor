@@ -14,6 +14,7 @@ import { PdfObject } from './PdfObject';
 import { AlignTool } from './AlignTool';
 import { LevelMarkers } from './LevelMarkers';
 import { TerrainMesh } from './TerrainMesh';
+import { HouseMesh } from './HouseMesh';
 import { MeasureReadout, MeasureTool } from './MeasureTool';
 import { VersionBar } from '../ui/VersionBar';
 import { EditTool } from './EditTool';
@@ -131,6 +132,7 @@ function Scene({ project }: { project?: string }) {
         ))}
         <LevelsToggle />
         <TerrainToggle />
+        <HouseToggle />
         <MeasureToggle disabled={aligning} />
         <AlignPrompt />
       </div>
@@ -147,7 +149,9 @@ function Scene({ project }: { project?: string }) {
         <ambientLight intensity={0.8} ref={inBothViewports} />
         <Grid args={[100, 100]} cellSize={1} sectionSize={10} infiniteGrid fadeDistance={150} />
         {!showTerrain && <Grid layers={ENV_LAYER} args={[100, 100]} cellSize={1} sectionSize={10} infiniteGrid fadeDistance={150} />}
+        <directionalLight layers={ENV_LAYER} position={[-25, 40, 30]} intensity={0.9} />
         <TerrainMesh />
+        <HouseMesh />
         <axesHelper args={[2]} />
         <PdfSheets />
         {drawn.map((d) => {
@@ -200,6 +204,16 @@ function TerrainToggle() {
   return (
     <button type="button" aria-pressed={show} title={t.terrainToggleTitle} onClick={() => setShowTerrain(!show)}>
       {t.terrainToggle}
+    </button>
+  );
+}
+
+function HouseToggle() {
+  const show = useProject((s) => s.showHouse);
+  const setShowHouse = useProject((s) => s.setShowHouse);
+  return (
+    <button type="button" aria-pressed={show} title={t.house.toggleTitle} onClick={() => setShowHouse(!show)}>
+      {t.house.toggle}
     </button>
   );
 }

@@ -34,7 +34,6 @@ export function TerrainMesh() {
   if (!show || !geo) return null;
   return (
     <group>
-      <directionalLight layers={ENV_LAYER} position={[-25, 40, 30]} intensity={0.9} />
       <mesh layers={ENV_LAYER} geometry={geo}>
         <meshLambertMaterial vertexColors side={DoubleSide} />
       </mesh>

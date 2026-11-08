@@ -1,6 +1,6 @@
 # M5 task list
 
-Next: plan written, awaiting the user's OK. Then start Task 1.
+Next: T1 implemented, awaiting the user's browser check (then tick T1, start T2).
 Plan: `tasks/plan.md`. Spec: PLAN.md §5 M5, ADR 0005. M4a task notes are in git history (`tasks/todo.md` at e859430).
 
 Commands: `pnpm dev`, `pnpm check` (build + lint + guards). No automated tests (CLAUDE.md).
