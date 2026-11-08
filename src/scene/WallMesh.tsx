@@ -5,11 +5,13 @@ import { BufferAttribute, BufferGeometry, DoubleSide, EdgesGeometry } from 'thre
 import { useEnvSurface, useVersions } from '../state/versions';
 import { useProject } from '../state/store';
 import { wallSolid } from '../versions/walls';
-import { COLORS, ENV_EDGE_COLOR } from './HouseMesh';
+import { CLEAN_COLORS, COLORS, ENV_EDGE_COLOR } from './HouseMesh';
+import { useUi } from '../state/ui';
 import { ENV_LAYER } from './split';
 
 export function WallMesh() {
   const show = useProject((s) => s.showTerrain);
+  const clean = useUi((s) => s.clean);
   const { grid, version } = useEnvSurface();
   const preview = useVersions((s) => s.preview);
   const geo = useMemo(() => {
@@ -34,12 +36,14 @@ export function WallMesh() {
   if (!show || !geo || !edges) return null;
   return (
     <>
-      <mesh layers={ENV_LAYER} geometry={geo}>
-        <meshLambertMaterial color={COLORS.gable} side={DoubleSide} />
+      <mesh layers={ENV_LAYER} geometry={geo} castShadow receiveShadow>
+        <meshLambertMaterial color={clean ? CLEAN_COLORS.stone : COLORS.gable} side={DoubleSide} />
       </mesh>
-      <lineSegments layers={ENV_LAYER} geometry={edges}>
-        <lineBasicMaterial color={ENV_EDGE_COLOR} />
-      </lineSegments>
+      {!clean && (
+        <lineSegments layers={ENV_LAYER} geometry={edges}>
+          <lineBasicMaterial color={ENV_EDGE_COLOR} />
+        </lineSegments>
+      )}
     </>
   );
 }

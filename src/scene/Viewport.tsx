@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type ComponentRef, type ReactNode, type RefObject } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentRef, type ReactNode, type RefObject } from 'react';
+import { ChevronDown, Eye, Focus, X } from 'lucide-react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { CameraControls, Grid, OrthographicCamera, PerspectiveCamera } from '@react-three/drei';
-import { Box3, MathUtils, OrthographicCamera as OrthographicCameraImpl, Vector3 } from 'three';
+import { Box3, MathUtils, OrthographicCamera as OrthographicCameraImpl, PerspectiveCamera as PerspectiveCameraImpl, Vector3, type DirectionalLight as DirectionalLightImpl } from 'three';
 import { layerVisible } from '../project/layerGroups';
 import { useProject } from '../state/store';
 import { useDrawnSheets, type DrawnSheet } from '../state/drawn';
-import { useReference } from '../state/vertical';
 import { sheetBox } from './coords';
 import { loadView, storeView, type SavedView, type Side } from './savedView';
 import { SheetObject } from './SheetObject';
@@ -18,10 +18,11 @@ import { HouseMesh } from './HouseMesh';
 import { WallMesh } from './WallMesh';
 import { HouseDrawReadout, HouseDrawTool } from './HouseDrawTool';
 import { MeasureReadout, MeasureTool } from './MeasureTool';
-import { VersionBar } from '../ui/VersionBar';
 import { EditTool } from './EditTool';
 import { KeyPan } from './KeyPan';
-import { ENV_LAYER, inBothViewports, splitEvents, useSplitRender, type Half } from './split';
+import { ENV_LAYER, HORIZON, inBothViewports, splitEvents, useSplitRender, type Half } from './split';
+import { drawnLayout, useUi } from '../state/ui';
+import { useEnvSurface, useVersions } from '../state/versions';
 import type { SheetRow } from '../state/store';
 import type { PdfRender } from '../pdf/render';
 import { t } from '../ui/strings';
@@ -67,12 +68,12 @@ const ORTHO_ANGLES: Record<Ortho, [number, number]> = {
   north: [Math.PI, Math.PI / 2],
   west: [-Math.PI / 2, Math.PI / 2],
 };
-const ORTHO_BUTTONS: [Ortho, string][] = [
-  ['top', t.viewTop],
-  ['north', t.viewNorth],
-  ['east', t.viewEast],
-  ['south', t.viewSouth],
-  ['west', t.viewWest],
+const ORTHO_BUTTONS: [Ortho, string, string][] = [
+  ['top', t.viewTop, t.viewShort.top],
+  ['north', t.viewNorth, t.viewShort.north],
+  ['east', t.viewEast, t.viewShort.east],
+  ['south', t.viewSouth, t.viewShort.south],
+  ['west', t.viewWest, t.viewShort.west],
 ];
 const savedOrtho = (v?: SavedView): Ortho | null => (v?.top ? (v.side ?? 'top') : null);
 
@@ -119,30 +120,24 @@ function Scene({ project }: { project?: string }) {
   const [envEl, setEnvEl] = useState<HTMLDivElement | null>(null);
   const [half, setHalf] = useState<Half>('design');
   const hover = (h: Half) => (e: { buttons: number }) => e.buttons === 0 && setHalf(h);
+  // Ctrl+Space: maximize the viewport under the pointer, or back to both.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== 'Space' || !e.ctrlKey || e.metaKey || e.altKey) return;
+      e.preventDefault();
+      const ui = useUi.getState();
+      ui.setLayout(ui.layout === 'both' ? half : 'both');
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [half]);
+  const layout = useUi(drawnLayout);
+  const clean = useUi((s) => s.clean);
   return (
-    <>
-      <div className="view-bar">
-        <button type="button" onClick={() => setFitTick((n) => n + 1)}>
-          {t.fitView}
-        </button>
-        <button type="button" aria-pressed={!top} disabled={aligning} onClick={() => setOrtho(null)}>
-          {t.view3d}
-        </button>
-        {ORTHO_BUTTONS.map(([o, label]) => (
-          <button key={o} type="button" aria-pressed={ortho === o} disabled={aligning} onClick={() => setOrtho(o)}>
-            {label}
-          </button>
-        ))}
-        <LevelsToggle />
-        <TerrainToggle />
-        <HouseToggle />
-        <OpeningsToggle />
-        <MeasureToggle disabled={aligning} />
-        <AlignPrompt />
-      </div>
-      {project && <VersionBar />}
+    <div className={`viewport-area layout-${layout}`}>
+      {!clean && <ViewOverlay ortho={ortho} aligning={aligning} setOrtho={setOrtho} fit={() => setFitTick((n) => n + 1)} />}
       <div className="viewports" ref={container}>
-      <Canvas eventSource={container as RefObject<HTMLElement>} events={splitEvents}>
+      <Canvas eventSource={container as RefObject<HTMLElement>} events={splitEvents} shadows>
         {top ? (
           <OrthographicCamera makeDefault position={[0, TOP_ALTITUDE, 0]} near={0.1} far={5000} />
         ) : (
@@ -152,10 +147,11 @@ function Scene({ project }: { project?: string }) {
         <color attach="background" args={['#eef1f4']} />
         <ambientLight intensity={0.6} ref={inBothViewports} />
         <Grid args={[100, 100]} cellSize={1} sectionSize={10} infiniteGrid fadeDistance={150} />
-        {!showTerrain && <Grid layers={ENV_LAYER} args={[100, 100]} cellSize={1} sectionSize={10} infiniteGrid fadeDistance={150} />}
-        <directionalLight layers={ENV_LAYER} position={[-25, 40, 30]} intensity={1} />
+        {!showTerrain && !clean && <Grid layers={ENV_LAYER} args={[100, 100]} cellSize={1} sectionSize={10} infiniteGrid fadeDistance={150} />}
+        <Sun />
         {/* Weak fill from the north-east, so the faces turned away from the sun still read apart. */}
         <directionalLight layers={ENV_LAYER} position={[30, 20, -25]} intensity={0.3} />
+        <CleanFog />
         <OrbitOnDoubleClick>
           <TerrainMesh />
           <WallMesh />
@@ -180,7 +176,7 @@ function Scene({ project }: { project?: string }) {
         {/* infinityDolly: zooming in past minDistance pushes the target on, so the camera can enter the house (M5b). */}
         <CameraControls
           makeDefault
-          domElement={(half === 'env' ? envEl : designEl) ?? undefined}
+          domElement={(layout === 'env' || (layout === 'both' && half === 'env') ? envEl : designEl) ?? undefined}
           {...orthoLimits(ortho)}
           infinityDolly
           minDistance={MIN_DOLLY}
@@ -190,16 +186,133 @@ function Scene({ project }: { project?: string }) {
         <FrameOnSheets sheets={drawn} ortho={ortho} auto={!saved} tick={fitTick} />
       </Canvas>
       <div className="vp-half vp-design" ref={setDesignEl} onPointerEnter={hover('design')} onPointerMove={hover('design')}>
-        <span className="vp-caption">{t.viewports.design}</span>
         <MeasureReadout />
         <HouseDrawReadout />
       </div>
-      <div className="vp-half vp-env" ref={setEnvEl} onPointerEnter={hover('env')} onPointerMove={hover('env')}>
-        <span className="vp-caption">{t.viewports.env}</span>
+      <div className="vp-half vp-env" ref={setEnvEl} onPointerEnter={hover('env')} onPointerMove={hover('env')} />
       </div>
-      </div>
-    </>
+      {!clean && <Captions active={half} />}
+    </div>
   );
+}
+
+/** Viewport captions with a close button. Outside the canvas event container, so clicks don't reach the controls. */
+function Captions({ active }: { active: Half }) {
+  const layout = useUi((s) => s.layout);
+  const setLayout = useUi((s) => s.setLayout);
+  const halves: Half[] = layout === 'both' ? ['design', 'env'] : [layout];
+  return (
+    <div className="vp-captions">
+      {halves.map((h) => (
+        <span key={h} className={`vp-caption vp-caption-${h}${layout === 'both' && active === h ? ' hot' : ''}`}>
+          {t.viewports[h]}
+          <button type="button" title={t.shell.closeViewport} disabled={layout !== 'both'} onClick={() => setLayout(h === 'design' ? 'env' : 'design')}>
+            <X size={12} />
+          </button>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** Top-right overlay: camera views, Dopasuj, and the Pokaż menu. Acts on the shared camera (both viewports). */
+function ViewOverlay({ ortho, aligning, setOrtho, fit }: { ortho: Ortho | null; aligning: boolean; setOrtho: (o: Ortho | null) => void; fit: () => void }) {
+  return (
+    <div className="view-overlay">
+      <div className="seg">
+        <button type="button" aria-pressed={ortho === null} disabled={aligning} title={t.view3d} onClick={() => setOrtho(null)}>
+          3D
+        </button>
+        {ORTHO_BUTTONS.map(([o, label, short]) => (
+          <button key={o} type="button" aria-pressed={ortho === o} disabled={aligning} title={label} onClick={() => setOrtho(o)}>
+            {short}
+          </button>
+        ))}
+      </div>
+      <button type="button" className="tb icon" title={t.fitView} onClick={fit}>
+        <Focus size={16} />
+      </button>
+      <ShowMenu />
+    </div>
+  );
+}
+
+function ShowMenu() {
+  const p = useProject();
+  const { showDiff, setShowDiff } = useVersions();
+  const hasVersion = useVersions((s) => s.active !== 'preview');
+  const ref = useRef<HTMLDetailsElement>(null);
+  const item = (label: string, title: string, on: boolean, set: (v: boolean) => void) => (
+    <label title={title}>
+      <input type="checkbox" checked={on} onChange={(e) => set(e.target.checked)} /> {label}
+    </label>
+  );
+  return (
+    <details className="menu" ref={ref} onMouseLeave={() => ref.current?.removeAttribute('open')}>
+      <summary className="tb">
+        <Eye size={16} /> {t.shell.show} <ChevronDown size={14} />
+      </summary>
+      <div className="menu-body">
+        {item(t.levelMarkers, t.levelMarkersTitle, p.showLevels, p.setShowLevels)}
+        {item(t.terrainToggle, t.terrainToggleTitle, p.showTerrain, p.setShowTerrain)}
+        {item(t.house.toggle, t.house.toggleTitle, p.showHouse, p.setShowHouse)}
+        {item(t.house.openingsToggle, t.house.openingsToggleTitle, p.showOpenings, p.setShowOpenings)}
+        {hasVersion && item(t.versions.diff, t.versions.diffTitle, showDiff, setShowDiff)}
+      </div>
+    </details>
+  );
+}
+
+/**
+ * The sun (Environment). In the clean view it casts shadows: the shadow camera covers the terrain (or 60 m around the
+ * origin) and sees the Environment layer (shadow cameras default to layer 0, where Environment meshes aren't).
+ */
+function Sun() {
+  const clean = useUi((s) => s.clean);
+  const { grid } = useEnvSurface();
+  const light = useRef<DirectionalLightImpl>(null);
+  const box = useMemo(() => {
+    if (!grid) return { cx: 0, cz: 0, r: 60 };
+    const w = grid.cols * grid.cell;
+    const h = grid.rows * grid.cell;
+    return { cx: grid.origin.x + w / 2, cz: -(grid.origin.y + h / 2), r: Math.max(w, h) / 2 + 5 };
+  }, [grid]);
+  useLayoutEffect(() => {
+    const l = light.current;
+    if (!l) return;
+    l.target.position.set(box.cx, 0, box.cz);
+    l.target.updateMatrixWorld();
+    const c = l.shadow.camera;
+    c.layers.set(ENV_LAYER);
+    c.left = -box.r;
+    c.right = box.r;
+    c.top = box.r;
+    c.bottom = -box.r;
+    c.near = 1;
+    c.far = 400;
+    c.updateProjectionMatrix();
+  }, [box]);
+  return (
+    <directionalLight
+      ref={light}
+      layers={ENV_LAYER}
+      position={[box.cx - 25 * SUN_SCALE, 40 * SUN_SCALE, box.cz + 30 * SUN_SCALE]}
+      intensity={clean ? 1.6 : 1}
+      castShadow={clean}
+      shadow-mapSize={[4096, 4096]}
+      shadow-bias={-0.0005}
+      shadow-normalBias={0.02}
+    />
+  );
+}
+/** The sun stands this many times its old offset (−25, 40, 30) from the terrain centre, outside any plot. */
+const SUN_SCALE = 3;
+
+/** Clean view, perspective camera: haze towards the horizon colour of the sky. (Ortho views sit 500 m away: no fog.) */
+function CleanFog() {
+  const clean = useUi((s) => s.clean);
+  const perspective = useThree((s) => s.camera instanceof PerspectiveCameraImpl);
+  return clean && perspective ? <fog attach="fog" args={[HORIZON, 120, 600]} /> : null;
 }
 
 /** Perspective camera: closest approach to the target (m) before zooming pushes the target on. */
@@ -229,79 +342,6 @@ function SplitRender() {
   useSplitRender();
   return null;
 }
-
-function LevelsToggle() {
-  const show = useProject((s) => s.showLevels);
-  const setShowLevels = useProject((s) => s.setShowLevels);
-  return (
-    <button type="button" aria-pressed={show} title={t.levelMarkersTitle} onClick={() => setShowLevels(!show)}>
-      {t.levelMarkers}
-    </button>
-  );
-}
-
-function TerrainToggle() {
-  const show = useProject((s) => s.showTerrain);
-  const setShowTerrain = useProject((s) => s.setShowTerrain);
-  return (
-    <button type="button" aria-pressed={show} title={t.terrainToggleTitle} onClick={() => setShowTerrain(!show)}>
-      {t.terrainToggle}
-    </button>
-  );
-}
-
-function HouseToggle() {
-  const show = useProject((s) => s.showHouse);
-  const setShowHouse = useProject((s) => s.setShowHouse);
-  return (
-    <button type="button" aria-pressed={show} title={t.house.toggleTitle} onClick={() => setShowHouse(!show)}>
-      {t.house.toggle}
-    </button>
-  );
-}
-
-function OpeningsToggle() {
-  const show = useProject((s) => s.showOpenings);
-  const setShowOpenings = useProject((s) => s.setShowOpenings);
-  return (
-    <button type="button" aria-pressed={show} title={t.house.openingsToggleTitle} onClick={() => setShowOpenings(!show)}>
-      {t.house.openingsToggle}
-    </button>
-  );
-}
-
-function MeasureToggle({ disabled }: { disabled: boolean }) {
-  const on = useProject((s) => s.measure !== undefined);
-  const startMeasure = useProject((s) => s.startMeasure);
-  const stopMeasure = useProject((s) => s.stopMeasure);
-  return (
-    <button type="button" aria-pressed={on} disabled={disabled} title={t.measure.title} onClick={on ? stopMeasure : startMeasure}>
-      {t.measure.button}
-    </button>
-  );
-}
-
-/** What the 2-point tool wants clicked next. */
-function AlignPrompt() {
-  const align = useProject((s) => s.align);
-  const cancelAlign = useProject((s) => s.cancelAlign);
-  const ref = useReference();
-  if (!align) return null;
-  const n = align.picks.length;
-  const step = t.align.steps[n];
-  return (
-    <span className="align-prompt">
-      <span className="muted">{t.align.stepOf(n + 1)}</span> <strong>{step?.(sheetName(align.file), ref ? sheetName(ref.file) : t.align.referenceFallback)}</strong> ·{' '}
-      {t.align.escHint}{' '}
-      <button type="button" onClick={cancelAlign}>
-        {t.align.cancel}
-      </button>
-    </span>
-  );
-}
-
-/** Short sheet name for prompts: "PAB-01 - RZUT PARTERU.dwg" → "PAB-01", others without the extension. */
-const sheetName = (file: string) => file.replace(/\.(dwg|pdf)$/i, '').split(' - ')[0]!;
 
 const isOrtho = (c: Controls) => c.camera instanceof OrthographicCameraImpl;
 

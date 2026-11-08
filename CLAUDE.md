@@ -13,7 +13,9 @@ changes, update PLAN.md in the same change.
   contours), M4a (edit versions: Wyrównaj / Podnieś / Obniż, volumes, undo, Różnice) and M5 + M5b (house massing,
   façade openings, hollow house with walls/slabs/roof holes; 2026-11-08) and M4b (slopes 1:n, ramps, drawn walls,
   sim-builder editing; WASD/Q/E camera; 2026-11-08) done.
-  Next: M4c textured path, then M4d (ADR 0004). Later: rework the left sidebar UI/UX (user).
+  Editor shell UI (header, tool strip, right panel with tabs + Inspector, status bar, workspaces Rysunki/Model,
+  closable viewports, clean view F; branch `ui-shell`, 2026-11-08) awaiting the user's browser check.
+  Next: M4c textured path, then M4d (ADR 0004).
 - Track milestone/task progress in PLAN.md (or a `tasks/` file created via `planning-and-task-breakdown`).
 
 ## Stack (planned, see PLAN.md §3)
