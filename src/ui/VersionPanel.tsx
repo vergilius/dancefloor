@@ -4,13 +4,16 @@ import { useMemo } from 'react';
 import { formatHeight } from '../project/levels';
 import { useRefValue } from '../state/levels';
 import { useActiveVersion, useVersions, versionSurface } from '../state/versions';
-import { editValue, rectSize, totals } from '../versions/edits';
+import { edgeHeights, edgesOf, editValue, rectSize, SIDES, slopeOf, totals, type Edit } from '../versions/edits';
+import type { HeightGrid } from '../terrain/grid';
+import { EdgeControls } from './EdgeControls';
+import { wallSolid } from '../versions/walls';
 import { ZInput } from './SheetList';
 import { t } from './strings';
 
 export function VersionPanel() {
   const version = useActiveVersion();
-  const { selected, select, setEditValue, deleteEdit } = useVersions();
+  const { selected, select, setEditValue, setEditShape, deleteEdit } = useVersions();
   const ref = useRefValue();
   const surface = useMemo(() => version && versionSurface(version), [version]);
   const sum = useMemo(() => version && surface && totals(version.grid, surface.grid.base), [version, surface]);
@@ -44,19 +47,37 @@ export function VersionPanel() {
                   </button>
                   <br />
                   <label>
-                    {e.tool === 'level' ? t.versions.zLabel : t.versions.dzLabel}{' '}
+                    {e.tool === 'level' ? t.versions.zLabel : e.tool === 'wall' ? t.versions.topLabel : t.versions.dzLabel}{' '}
                     <ZInput
                       key={e.id}
                       value={editValue(e)}
-                      accept={e.tool === 'level' ? undefined : (v) => v > 0}
+                      accept={e.tool === 'level' || e.tool === 'wall' ? undefined : (v) => v > 0}
                       onChange={(v) => setEditValue(e.id, v)}
                     />
                   </label>{' '}
                   <span className="muted">
-                    {e.tool === 'level' ? formatHeight(e.z, ref) : `${e.tool === 'raise' ? '+' : '−'}${e.dz.toFixed(2)} m`}
+                    {e.tool === 'level' || e.tool === 'wall'
+                      ? formatHeight(editValue(e), ref)
+                      : `${e.tool === 'raise' ? '+' : '−'}${e.dz.toFixed(2)} m`}
                   </span>
+                  {e.tool === 'level' && e.tilt && (e.tilt.x !== 0 || e.tilt.y !== 0) && (
+                    <>
+                      <br />
+                      <span className="muted">
+                        {t.versions.rampLabel}: {SIDES.map((s) => `${t.versions.sides[s]} ${formatHeight(edgeHeights(e)[s], undefined)}`).join(' · ')}
+                      </span>
+                    </>
+                  )}
                   <br />
-                  <span className="muted">{t.versions.editVolume(vol.cut, vol.fill)}</span>
+                  {e.tool === 'wall' ? (
+                    <WallInfo grid={surface.grid} edit={e} />
+                  ) : (
+                    <>
+                      <EdgeControls id={`${e.id}/list`} edges={edgesOf(e)} slope={slopeOf(e)} onChange={(shape) => setEditShape(e.id, shape)} />
+                      <br />
+                      <span className="muted">{t.versions.editVolume(vol.cut, vol.fill)}</span>
+                    </>
+                  )}
                 </li>
               );
             })}
@@ -65,4 +86,10 @@ export function VersionPanel() {
       )}
     </>
   );
+}
+
+/** A wall's height above the terrain and its volume, on the version's current surface. */
+function WallInfo({ grid, edit }: { grid: HeightGrid; edit: Edit & { tool: 'wall' } }) {
+  const w = useMemo(() => wallSolid(grid, edit), [grid, edit]);
+  return <span className="muted">{t.versions.wallInfo(w.hMin, w.hMax, w.volume)}</span>;
 }

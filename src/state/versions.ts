@@ -4,7 +4,7 @@
 import { create } from 'zustand';
 import { listFiles, readFile, removeFile, versionsDir, writeFile } from '../project/folder';
 import type { HeightGrid } from '../terrain/grid';
-import { replay, withValue, type Edit, type EditVolume, type Rect, type Tool } from '../versions/edits';
+import { replay, withValue, type Edit, DEFAULT_SLOPE, type Draft, type Edges, type EditVolume, type Side, type Tool } from '../versions/edits';
 import { packGrid, parseVersionFile, serializeVersionFile, unpackGrid, type VersionFile } from '../versions/file';
 import { useTerrain, type Terrain } from './terrain';
 
@@ -22,10 +22,16 @@ type VersionsState = {
   active: Active;
   /** Edit tool armed in the active version (none in Podgląd). */
   tool?: Tool;
-  /** The rect being dragged with the tool (plan m, on the lattice), shown with its size. View state. */
-  draft?: Rect;
+  /** The rect being dragged with the tool (plan m, on the lattice), shown with its size (and Wyrównaj's z). View state. */
+  draft?: Draft;
   /** Edit of the active version selected in the list (outlined in the view). View state. */
   selected?: string;
+  /** 1:n for the next dragged edit (the last one set in the bar). View state, default 2. */
+  newSlope: number;
+  /** An edit being dragged up / down or tilted: drawn on the surface in place of its listed version. View state. */
+  preview?: Edit;
+  /** Edge under the pointer in the edge controls: outlined on the selected edit. View state. */
+  hoverSide?: Side;
   /** Undo / redo per version: edit lists before each command. Not saved; cleared on folder load. */
   history: Record<string, { undo: Edit[][]; redo: Edit[][] }>;
   /** "Różnice": colour the version's surface by Δh against its frozen base. View state. */
@@ -43,13 +49,20 @@ type VersionsState = {
   remove(id: string): Promise<void>;
   setActive(active: Active): void;
   setTool(tool: Tool | undefined): void;
-  setDraft(draft: Rect | undefined): void;
+  setDraft(draft: Draft | undefined): void;
   /** Appends an edit to the active version (autosaved). */
   addEdit(edit: Edit): void;
   /** Sets an edit's z (Wyrównaj) or dz (Podnieś / Obniż) in the active version (autosaved); later edits replay over it. */
   setEditValue(id: string, value: number): void;
+  /** Sets an edit's edge modes and / or its Skarpa ratio 1:n (M4b); a run of ratio changes is one undo step. */
+  setEditShape(id: string, shape: { edges?: Edges; slope?: number }): void;
+  /** Replaces the edit with the same id (a finished lift or tilt drag): one undo step. */
+  replaceEdit(edit: Edit): void;
   deleteEdit(id: string): void;
   select(id: string | undefined): void;
+  setNewSlope(slope: number): void;
+  setPreview(edit: Edit | undefined): void;
+  setHoverSide(side: Side | undefined): void;
   undo(): void;
   redo(): void;
   setShowDiff(show: boolean): void;
@@ -87,6 +100,7 @@ export const useVersions = create<VersionsState>()((set, get) => ({
   unsaved: [],
   history: {},
   showDiff: false,
+  newSlope: DEFAULT_SLOPE,
 
   async load(dir) {
     cancelSaves();
@@ -168,11 +182,11 @@ export const useVersions = create<VersionsState>()((set, get) => ({
   },
 
   setActive(active) {
-    set({ active, tool: undefined, draft: undefined, selected: undefined });
+    set({ active, tool: undefined, draft: undefined, preview: undefined, selected: undefined });
   },
 
   setTool(tool) {
-    if (get().active !== 'preview') set({ tool, draft: undefined });
+    if (get().active !== 'preview') set({ tool, draft: undefined, preview: undefined });
   },
 
   setDraft(draft) {
@@ -186,6 +200,14 @@ export const useVersions = create<VersionsState>()((set, get) => ({
   setEditValue(id, value) {
     // Typing into the field changes the value per keystroke: one undo step per run of changes to the same edit.
     command((edits) => edits.map((e) => (e.id === id ? withValue(e, value) : e)), id);
+  },
+
+  replaceEdit(edit) {
+    command((edits) => edits.map((e) => (e.id === edit.id ? edit : e)));
+  },
+
+  setEditShape(id, shape) {
+    command((edits) => edits.map((e) => (e.id === id ? { ...e, ...shape } : e)), shape.edges ? undefined : `${id}/slope`);
   },
 
   deleteEdit(id) {
@@ -207,6 +229,18 @@ export const useVersions = create<VersionsState>()((set, get) => ({
 
   select(selected) {
     set({ selected });
+  },
+
+  setNewSlope(newSlope) {
+    set({ newSlope });
+  },
+
+  setPreview(preview) {
+    set({ preview });
+  },
+
+  setHoverSide(hoverSide) {
+    set({ hoverSide });
   },
 }));
 
@@ -314,5 +348,16 @@ const surfaces = new WeakMap<Edit[], { base: HeightGrid; grid: HeightGrid; volum
 export function useEnvSurface(): { grid?: HeightGrid; live?: HeightGrid; plot?: Terrain['plot']; version?: Version } {
   const { grid: live, plot } = useTerrain();
   const version = useActiveVersion();
-  return { grid: version ? versionSurface(version).grid : live, live, plot, version };
+  const preview = useVersions((s) => s.preview);
+  const grid = version && (preview ? previewSurface(version, preview) : versionSurface(version).grid);
+  return { grid: grid ?? live, live, plot, version };
 }
+
+/** The version's surface with the dragged edit in place of its listed one. One entry: it changes on every mouse move. */
+function previewSurface(v: Version, preview: Edit): HeightGrid {
+  if (last?.edits !== v.edits || last.preview !== preview || last.base !== v.grid) {
+    last = { edits: v.edits, preview, base: v.grid, grid: { ...v.grid, base: replay(v.grid, v.edits.map((e) => (e.id === preview.id ? preview : e))).h } };
+  }
+  return last.grid;
+}
+let last: { edits: Edit[]; preview: Edit; base: HeightGrid; grid: HeightGrid } | undefined;

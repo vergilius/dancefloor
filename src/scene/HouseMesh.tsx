@@ -11,8 +11,8 @@ import { useProject } from '../state/store';
 import { DESIGN_LAYER, ENV_LAYER } from './split';
 
 /** Main body (gable), other blocks, and thin ones (posts, columns: footprint < 1 m²). */
-const COLORS = { gable: '#ece8e1', flat: '#cfc8bc', thin: '#7d766b' };
-const ENV_EDGE_COLOR = '#55504a';
+export const COLORS = { gable: '#ece8e1', flat: '#cfc8bc', thin: '#7d766b' };
+export const ENV_EDGE_COLOR = '#55504a';
 const DESIGN_EDGE_COLOR = '#24292f';
 const FOOTPRINT_COLOR = '#8250df';
 /** Edges between faces bent less than this (deg) are left out (e.g. wall face vs gable triangle). */

@@ -33,7 +33,7 @@ it can't reach the registry it fails, which is correct: an unrun scan doesn't co
 
 | Entry | Budget | Today (2026-11-07) | Why this number |
 |-------|--------|-------|-----------------|
-| Bundle `index-*.js` | ≤ 1500 kB | 1196 kB | three + r3f + drei dominate. ~25% headroom for the rest of M1a (zustand, drei `<Text>`, UI) |
+| Bundle `index-*.js` | ≤ 1600 kB | 1500 kB (2026-11-08) | three + r3f + drei dominate. Was 1500 kB (2026-11-07, 1196 kB then); raised by the user 2026-11-08 when M4b (walls, edit interaction) reached it: ~100 kB headroom for M4c–M6 |
 | Bundle `dwg.worker-*.js` | ≤ 300 kB | 196 kB | libredwg glue plus normalization (T4–T6). Pure code should stay small |
 
 The libredwg `.wasm` (11.4 MB, two copies, see `tasks/todo.md`) is a pinned vendor file and isn't budgeted.

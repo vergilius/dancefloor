@@ -1,17 +1,28 @@
 // Environment view bar (PLAN.md §5 M4a): Podgląd or an edit version, plus Nowa wersja / Zmień nazwę / Usuń.
 import { useEffect } from 'react';
+import { formatHeight } from '../project/levels';
+import { useRefValue } from '../state/levels';
 import { CUT_COLOR, DIFF_SATURATION, FILL_COLOR } from '../scene/TerrainMesh';
 import { useActiveVersion, useEnvSurface, useVersions } from '../state/versions';
-import { rectSize, TOOLS } from '../versions/edits';
+import { rectSize, slopeOf, TOOLS } from '../versions/edits';
+import { ZInput } from './SheetList';
 import { t } from './strings';
 
 export function VersionBar() {
   const { live } = useEnvSurface();
   const { versions, broken, active, saveError, unsaved, tool, draft, history, showDiff, create, rename, remove, setActive, setTool, undo, redo, setShowDiff } =
     useVersions();
+  const { selected, newSlope, preview, setNewSlope, setEditShape } = useVersions();
   const version = useActiveVersion();
+  const ref = useRefValue();
 
   const h = version && history[version.id];
+  // 1:n acts on the selected edit (and becomes the default for the next one), else on the next edit only.
+  const sel = version?.edits.find((e) => e.id === selected);
+  const onSlope = (slope: number) => {
+    setNewSlope(slope);
+    if (sel) setEditShape(sel.id, { slope });
+  };
 
   // Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z (and Ctrl+Y). Not while typing in a field: there the field's own undo applies.
   useEffect(() => {
@@ -66,6 +77,12 @@ export function VersionBar() {
             {t.versions.tools[k]}
           </button>
         ))}
+      {version && sel?.tool !== 'wall' && tool !== 'wall' && (
+        <span className="status" title={sel ? t.versions.slopeSelectedTitle : t.versions.slopeNewTitle}>
+          <span className="muted">{sel ? t.versions.slopeSelected(version.edits.indexOf(sel) + 1) : t.versions.slopeNew}</span> 1:
+          <ZInput key={sel?.id ?? 'new'} value={sel ? slopeOf(sel) : newSlope} accept={(v) => v > 0} onChange={onSlope} />
+        </span>
+      )}
       {version && (
         <>
           <button type="button" disabled={!h?.undo.length} title={t.versions.undoTitle} onClick={undo}>
@@ -87,11 +104,15 @@ export function VersionBar() {
         </>
       )}
       {draft ? (
+        <>
         <span className="status">
           <strong>{t.versions.rectSize(rectSize(draft).w, rectSize(draft).h, rectSize(draft).area)}</strong>
+          {draft.z !== undefined && <> → {formatHeight(draft.z, ref)}</>}
         </span>
+        {preview && <span className="status muted">{t.versions.heightHint}</span>}
+        </>
       ) : (
-        tool && <span className="status muted">{t.versions.dragHint}</span>
+        (tool || sel) && <span className="status muted">{sel ? (sel.tool === 'wall' ? t.versions.wallHint : t.versions.edgeHint) : tool === 'level' ? t.versions.levelHint : t.versions.dragHint}</span>
       )}
       <span className="status">
         {version ? (

@@ -375,8 +375,8 @@ Requirements:
   boundary (sampled every 0.5 m) plus its nearest point, so the surface meets the hull without a step and evens out
   towards the boundary average out to the edge (user, 2026-11-08: no "uncertain" area; was flat nearest-hull height,
   flagged uncertain and drawn lighter). Grid: 0.10 m cells over the bbox of the
-  plot outline (`PZT_ZAKRES` through PZT-01's transform) grown by 2 m with sharp (mitred) corners, every edge moved out
-  parallel; corners of the grid outside that polygon are masked out (PZT-01: 1043 m² → 1320 m²) (not drawn, edited or counted; the plot boundary is the reference, user 2026-11-08, was bbox + 1 m). Without an aligned PZT-01: seed bbox + 5 m (2.5 m per side).
+  plot outline (`PZT_ZAKRES` through PZT-01's transform) grown by 5 m (user 2026-11-08, was 2 m; existing versions keep their frozen grid) with sharp (mitred) corners, every edge moved out
+  parallel; corners of the grid outside that polygon are masked out (PZT-01: 1043 m² → 1320 m² at 2 m) (not drawn, edited or counted; the plot boundary is the reference, user 2026-11-08, was bbox + 1 m). Without an aligned PZT-01: seed bbox + 5 m (2.5 m per side).
 - **Not saved (ADR 0002):** `terrain.base` is generated from the DWGs on load (no change to `dancefloor.json`). The
   environment editor (M4 on) edits a copy of the generated model; only the copy's edits are saved.
 - **Tp:** no Tp surface in M3. The Tp points stay as M2 markers, for reference in M4 (user, 2026-11-08).
@@ -430,7 +430,7 @@ Requirements:
   A save error shows in the bar. Versions are not in `dancefloor.json`.
 - **Edits** (pure `src/versions/edits.ts`): `{ id, tool, rect: { x0, y0, x1, y1 } /* plan m, on the 0.5 m lattice */,
   … }` with tools **Podnieś** (`dz` > 0, default 0.10 m), **Obniż** (`dz` > 0, applied down, default 0.10 m), and
-  **Wyrównaj** (`z` rel ±0.00, default = mean height under the rect before the edit, rounded to 1 cm). A grid corner
+  **Wyrównaj** (`z` rel ±0.00, default = the surface height where the drag starts, rounded to 1 cm and shown in the bar while dragging; was the mean under the rect, changed 2026-11-08: unpredictable, user). A grid corner
   inside the rect (edges included) is changed; a later edit wins on top of an earlier one. Replayed from scratch on
   every change (target < 30 ms).
 - **Picking:** with a tool active, drag on the terrain (ray marched over the version's height grid, `rayGrid` in `src/terrain/grid.ts`; a heightfield needs no BVH, user OK 2026-11-08); the rect
@@ -454,6 +454,58 @@ totals change. Change z to +0.40: net grows by 2.50 m³ (41 × 61 corners × 0.0
 rect by 0.10 → net +0.10 m³ (± one cell row). Undo/redo restore the totals exactly. A second version edited
 differently keeps its own totals. Reload the app → both versions and their totals are back. Delete one → its files
 are gone. Podgląd and Design unchanged; orbiting stays smooth.
+
+**M4b — Bevel + retaining wall** — done 2026-11-08 (spec approved 2026-11-08; interaction and walls reworked with the user, see below)
+
+Facts: the drawings show no slopes or retaining walls (no `skarpa` / `mur oporowy` labels or layers on the site plan,
+PAB-11 or PAB-12; PAB-11 only gives the 1.5 % fall of the path). So every slope and wall is the user's design; nothing
+is read from the DWGs. Ground next to the house is about −0.32 (Tp 355.08).
+
+Requirements:
+- **Edges are a property of an edit,** not a separate tool. Each of an edit's 4 rect edges (← → ↑ ↓ as seen in the
+  Design top view) is one of: **Uskok** (step, as in M4a), **Skarpa** (slope 1:n), **Mur** (retaining wall). One
+  ratio **1:n** per edit (n = horizontal per 1 m vertical, default 2, n > 0) for all its sloped edges. Saved in the edit
+  as optional `edges: { w, e, s, n: 'step' | 'slope' | 'wall' }` and `slope: number`; missing = all Uskok, so M4a
+  files load unchanged (still `version: 2`).
+- **Sim-builder interaction (user 2026-11-08, second version; replaces edge selects in the bar and the
+  release-then-move height phase):** with a tool armed, drag the area; release adds the edit (Wyrównaj flat at the
+  drag's start height, Podnieś / Obniż by dz) with Skarpa on all 4 edges at the bar's 1:n (default 2), selected. On a
+  selected Wyrównaj: drag inside = the whole platform up / down; drag near an edge (≤ 0.3 m) = only that edge up / down,
+  the opposite edge kept, so the platform becomes a ramp (saved as `tilt: { x, y }` = east − west and north − south
+  height difference, `z` = centre height; missing = flat). 1 cm per screen pixel, previewed live (contours on
+  release), one undo step per drag. A click (no drag) near an edge of the selected edit cycles it Skarpa → Uskok →
+  Esc cancels a drag or clears the selection. The bar's 1:n acts on the selected edit (and is the default for the
+  next). Skarpa works the same on a ramp (top = the ramp's height along the edge).
+- **Skarpa (pure, in `replay`):** the rect is the flat top (or bottom) you dragged; the slope goes **outside** it until
+  it meets the surface (daylight). For a grid corner outside the rect, p = the nearest rect-edge corner, d = distance
+  to p (m), top = h(p) after the edit. Fill side (top above the corner): h = max(h, top − d/n); cut side: h =
+  min(h, top + d/n). Each sloped edge covers the band beside it; a corner zone (beyond both edges) gets the rounded
+  slope only if both edges are Skarpa, otherwise nothing there. The slope is part of the edit: it is in the edit's
+  cut / fill, in the totals and in Różnice; a later edit still wins over it; corners outside the modelled area are
+  never changed. Replay of all edits stays < 30 ms.
+- **Mur (user 2026-11-08: a wall is something drawn by hand, not an edge mode):** a fourth tool next to Wyrównaj /
+  Podnieś / Obniż. Drag a rect on the terrain, snapped to 5 cm (so a 0.25 m wall can be drawn); saved as an edit
+  `{ tool: 'wall', rect, top }` in the version (same list, undo, autosave). Drawn as a box in the house's colour from the
+  lowest surface under it up to `top`; a new wall's top = highest surface under it + 0.50 m, then dragged up / down
+  (its top face) or typed; dragging a side of its top outline (≤ 8 px on screen) moves that side in plan (5 cm snap,
+  ≥ 5 cm). Clicking a wall in the view selects it; Backspace / Delete removes the selected edit (undoable; not while
+  the house outline tool draws). Doesn't change the terrain or cut / fill; the list shows its height above the terrain
+  (min–max) and volume (footprint × (top − mean surface)). Edge modes are Skarpa / Uskok only (a saved `wall` edge mode
+  from development reads as Uskok).
+- **Edit list:** per edit 4 edge selects (← → ↑ ↓, a precise fallback), the 1:n field (when an edge is Skarpa) and its
+  walls. Hovering an edge select outlines that edge in the view. Edge and ratio changes go through undo / redo like value changes.
+
+Out of M4b: slopes or walls along drawn lines (only rect edges); per-edge ratios; wall footings, drainage, parapets
+above the high side; stairs; materials (M4c); moving or resizing a rect.
+
+✅ In a version, Wyrównaj a 4 × 6 m rect next to the south façade to +0.30 with Skarpa 1:2, the house-side edge
+Uskok. The slope runs out about 1.24 m (0.62 × 2, ± one cell) to the −0.32 ground (check with the measure tool) and
+the edit's fill grows. Set n = 3: the slope widens to about 1.86 m, volumes update live. Switch one edge to Mur: its
+slope goes, a 0.25 m wall about 0.62 m high appears with its length and m³ in the list. Undo / redo restore each step.
+Save, reload: edges and ratio are back. An M4a version without edges loads unchanged (same totals).
+
+Decisions (user, 2026-11-08): default Skarpa 1:2 for new edits; slope outside the rect; wall fixed 0.25 m on the high
+side, no footing; a corner zone is sloped only when both its edges are Skarpa.
 
 **M5 — House massing** — done 2026-11-08 (spec sharpened 2026-11-08 on the real files, approved 2026-11-08; ADR 0005)
 

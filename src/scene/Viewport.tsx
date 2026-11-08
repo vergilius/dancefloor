@@ -15,10 +15,12 @@ import { AlignTool } from './AlignTool';
 import { LevelMarkers } from './LevelMarkers';
 import { TerrainMesh } from './TerrainMesh';
 import { HouseMesh } from './HouseMesh';
+import { WallMesh } from './WallMesh';
 import { HouseDrawReadout, HouseDrawTool } from './HouseDrawTool';
 import { MeasureReadout, MeasureTool } from './MeasureTool';
 import { VersionBar } from '../ui/VersionBar';
 import { EditTool } from './EditTool';
+import { KeyPan } from './KeyPan';
 import { ENV_LAYER, inBothViewports, splitEvents, useSplitRender, type Half } from './split';
 import type { SheetRow } from '../state/store';
 import type { PdfRender } from '../pdf/render';
@@ -156,6 +158,7 @@ function Scene({ project }: { project?: string }) {
         <directionalLight layers={ENV_LAYER} position={[30, 20, -25]} intensity={0.3} />
         <OrbitOnDoubleClick>
           <TerrainMesh />
+          <WallMesh />
           <HouseMesh />
         </OrbitOnDoubleClick>
         <axesHelper args={[2]} />
@@ -182,6 +185,7 @@ function Scene({ project }: { project?: string }) {
           infinityDolly
           minDistance={MIN_DOLLY}
         />
+        <KeyPan />
         <CameraSync view={view} ortho={ortho} project={project} />
         <FrameOnSheets sheets={drawn} ortho={ortho} auto={!saved} tick={fitTick} />
       </Canvas>

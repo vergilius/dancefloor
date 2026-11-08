@@ -11,7 +11,7 @@ export const PLOT_LAYER = 'PZT_ZAKRES';
  * 2026-11-08): the grid covers its bbox, corners beyond it are masked out. If the outline isn't one closed loop: its
  * bbox grown by this, no mask. Without an aligned plot: the seed bbox + SEED_MARGIN, no mask.
  */
-export const PLOT_MARGIN = 2;
+export const PLOT_MARGIN = 5;
 const SEED_MARGIN = 2.5;
 
 /** `plot` = the `PZT_ZAKRES` outline in plan coords, segments [x1, y1, x2, y2, …] (m). */
