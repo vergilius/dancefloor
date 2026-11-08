@@ -13,6 +13,7 @@ import { SheetTexts } from './SheetTexts';
 import { PdfObject } from './PdfObject';
 import { AlignTool } from './AlignTool';
 import { LevelMarkers } from './LevelMarkers';
+import { TerrainMesh } from './TerrainMesh';
 import { MeasureReadout, MeasureTool } from './MeasureTool';
 import { ENV_LAYER, inBothViewports, splitEvents, useSplitRender, type Half } from './split';
 import type { SheetRow } from '../state/store';
@@ -93,6 +94,8 @@ export function Viewport() {
 function Scene({ project }: { project?: string }) {
   const drawn = useDrawnSheets();
   const groups = useProject((s) => s.groups);
+  // The terrain crosses z 0, so the environment's ground grid would cut through it.
+  const showTerrain = useProject((s) => s.showTerrain);
   // Read once per folder. With a saved view the plans aren't auto-framed: the user's camera wins.
   const [saved] = useState(() => (project ? loadView(project) : undefined));
   const view = useRef<SavedView | undefined>(saved);
@@ -125,6 +128,7 @@ function Scene({ project }: { project?: string }) {
           </button>
         ))}
         <LevelsToggle />
+        <TerrainToggle />
         <MeasureToggle disabled={aligning} />
         <AlignPrompt />
       </div>
@@ -139,7 +143,8 @@ function Scene({ project }: { project?: string }) {
         <color attach="background" args={['#eef1f4']} />
         <ambientLight intensity={0.8} ref={inBothViewports} />
         <Grid args={[100, 100]} cellSize={1} sectionSize={10} infiniteGrid fadeDistance={150} />
-        <Grid layers={ENV_LAYER} args={[100, 100]} cellSize={1} sectionSize={10} infiniteGrid fadeDistance={150} />
+        {!showTerrain && <Grid layers={ENV_LAYER} args={[100, 100]} cellSize={1} sectionSize={10} infiniteGrid fadeDistance={150} />}
+        <TerrainMesh />
         <axesHelper args={[2]} />
         <PdfSheets />
         {drawn.map((d) => {
@@ -181,6 +186,16 @@ function LevelsToggle() {
   return (
     <button type="button" aria-pressed={show} title={t.levelMarkersTitle} onClick={() => setShowLevels(!show)}>
       {t.levelMarkers}
+    </button>
+  );
+}
+
+function TerrainToggle() {
+  const show = useProject((s) => s.showTerrain);
+  const setShowTerrain = useProject((s) => s.setShowTerrain);
+  return (
+    <button type="button" aria-pressed={show} title={t.terrainToggleTitle} onClick={() => setShowTerrain(!show)}>
+      {t.terrainToggle}
     </button>
   );
 }

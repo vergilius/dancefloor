@@ -10,6 +10,8 @@ export const t = {
   fitView: 'Dopasuj widok',
   levelMarkers: 'Punkty rzędnych',
   levelMarkersTitle: 'Pokaż/ukryj punkty rzędnych Tp/Ti z arkuszy (w obu widokach)',
+  terrainToggle: 'Teren',
+  terrainToggleTitle: 'Pokaż/ukryj teren istniejący i granicę działki (w widoku Otoczenie)',
   measure: {
     button: 'Pomiar',
     title: 'Zmierz odległość i różnicę wysokości między dwoma punktami (w widoku Projekt)',

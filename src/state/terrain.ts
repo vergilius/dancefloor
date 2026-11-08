@@ -10,7 +10,8 @@ export const PLOT_LAYER = 'PZT_ZAKRES';
 const PLOT_MARGIN = 1;
 const SEED_MARGIN = 2.5;
 
-export type Terrain = { seeds: Seeds; grid?: HeightGrid; extent: 'plot' | 'seeds' };
+/** `plot` = the `PZT_ZAKRES` outline in plan coords, segments [x1, y1, x2, y2, …] (m). */
+export type Terrain = { seeds: Seeds; grid?: HeightGrid; extent: 'plot' | 'seeds'; plot?: Float64Array };
 
 export function useTerrain(): Terrain {
   const drawn = useDrawnSheets();
@@ -18,20 +19,28 @@ export function useTerrain(): Terrain {
     const seeds = profileSeeds(
       drawn.flatMap((d) => (d.placement.type === 'vertical' ? [{ file: d.file, placement: d.placement, sheet: d.sheet }] : [])),
     );
-    const plot = plotBox(drawn);
-    const box = plot ? grow(plot, PLOT_MARGIN) : seedBox(seeds.points);
+    const plot = plotOutline(drawn);
+    const plotBox = plot && segmentsBox(plot, (x, y) => [x, y]);
+    const box = plotBox ? grow(plotBox, PLOT_MARGIN) : seedBox(seeds.points);
     const grid = box && heightGrid(seeds.points, box);
-    return { seeds, grid, extent: plot ? 'plot' : 'seeds' };
+    return { seeds, grid, extent: plotBox ? 'plot' : 'seeds', plot };
   }, [drawn]);
 }
 
 /** `PZT_ZAKRES` of an aligned site sheet (one with a transform), in plan coords. Isolated lines (a legend sample) are left out. */
-function plotBox(drawn: DrawnSheet[]): Box | undefined {
+function plotOutline(drawn: DrawnSheet[]): Float64Array | undefined {
   for (const d of drawn) {
     if (d.kind !== 'site' || d.placement.type !== 'horizontal' || !d.placement.transform) continue;
     const s = d.sheet.layers.find((l) => l.name === PLOT_LAYER)?.segments;
-    const box = s && segmentsBox(connectedSegments(s), (x, y) => sheetToWorld(d.placement, x, y));
-    if (box) return box;
+    const kept = s && connectedSegments(s);
+    if (!kept?.length) continue;
+    const out = new Float64Array(kept.length);
+    for (let i = 0; i < kept.length; i += 2) {
+      const [x, y] = sheetToWorld(d.placement, kept[i]!, kept[i + 1]!);
+      out[i] = x;
+      out[i + 1] = y;
+    }
+    return out;
   }
   return undefined;
 }
