@@ -8,6 +8,7 @@ export const t = {
   viewSouth: 'Z południa',
   viewWest: 'Z zachodu',
   fitView: 'Dopasuj widok',
+  viewports: { design: 'Projekt (rysunki)', env: 'Otoczenie (bryły 3D)' },
   loading: 'Wczytywanie…',
   noProject: 'Nie otwarto folderu projektu.',
   folderOpen: 'Otwórz folder projektu',

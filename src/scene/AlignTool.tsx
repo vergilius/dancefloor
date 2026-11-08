@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useThree, type ThreeEvent } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
+import { designHtmlPosition } from './split';
 import { BufferAttribute, BufferGeometry, OrthographicCamera } from 'three';
 import type { NormalizedSheet } from '../dwg/types';
 import { apply, IDENTITY, invert, type Similarity2D, type Vec2 } from '../project/align';
@@ -101,7 +102,7 @@ export function AlignTool({ drawn }: { drawn: Drawn[] }) {
         <>
           <Marker p={hover.world} color={hover.snapped ? COLORS.snapped : COLORS.free} size={hover.snapped ? 12 : 7} />
           {/* Which point this click places; snapping status unless the source has nothing to snap to (PDF). */}
-          <Html position={toScene(hover.world.x, hover.world.y, MARKER_Z)} style={{ pointerEvents: 'none' }}>
+          <Html position={toScene(hover.world.x, hover.world.y, MARKER_Z)} calculatePosition={designHtmlPosition} style={{ pointerEvents: 'none' }}>
             <div className="align-cursor" style={{ borderColor: sourceStep ? COLORS.source : COLORS.target }}>
               <strong>{t.align.labels[align.picks.length]}</strong>
               {(!sourceStep || snaps.source) && <> · {hover.snapped ? t.align.snapped : t.align.free}</>}
