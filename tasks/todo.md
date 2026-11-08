@@ -1,6 +1,7 @@
 # M3 task list
 
-Next: T1 (terrain seeds + panel line). Plan: `tasks/plan.md`. Spec: PLAN.md §5 M3, ADR 0002.
+Next: T2 (height grid + Ti check). T1 done and verified 2026-11-08: 301 seeds from 7 sheets, 6 dropped.
+Note (T1): `useDrawnSheets` is in `src/state/drawn.ts` (memoized); `useTerrainSeeds()` in `src/state/terrain.ts`. Plan: `tasks/plan.md`. Spec: PLAN.md §5 M3, ADR 0002.
 M2 task notes are in git history (`tasks/todo.md` at 48b5a42).
 
 Commands: `pnpm dev`, `pnpm check` (build + lint + guards). No automated tests (CLAUDE.md).
@@ -14,9 +15,9 @@ from each placed elevation/section, the `PZT_TEREN ISTNIEJĄCY` segments; chain 
 segments with no neighbour; densify to ≤ 1 m; map to plan (x, y, h) through the vertical placement. A terrain panel
 line: `Teren: n punktów z k arkuszy, m odcinków pominiętych` (per-sheet breakdown on hover/title).
 **Acceptance criteria:**
-- [ ] 7 sheets contribute (PAB-04..10); dropped: 1 legend segment per elevation + the PAB-08 stub (+ any isolated
-      section piece, listed)
-- [ ] The Design view is unchanged after the move
+- [x] 7 sheets contribute (PAB-04..10); dropped: 1 legend segment per elevation + the PAB-08 stub + the PAB-10
+      piece (6)
+- [x] The Design view is unchanged after the move
 **Verification:** `pnpm check`; user reads the panel line and per-sheet counts.
 **Dependencies:** none
 **Files:** `src/state/drawn.ts`, `src/scene/Viewport.tsx`, `src/terrain/seeds.ts`, `src/state/terrain.ts`, `src/ui/TerrainPanel.tsx`, `src/ui/strings.ts`

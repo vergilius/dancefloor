@@ -343,8 +343,8 @@ Facts (raw model-space LINEs on `PZT_TEREN ISTNIEJĄCY` / `PZT_TEREN PROJEKTOWAN
   of M2 sits on a profile vertex (e.g. PAB-08 `Ti= +354.54` at x −14.97, profile vertex (−14.97, −0.86)). The
   SE corner Ti 354.54 and the SW corner Ti 354.05 agree between the two elevations that show them.
 - **Noise in the elevations:** a legend pair (1.00 m horizontal `ISTNIEJĄCY` at y 3.78 and `PROJEKTOWANY` at y 3.38,
-  far right) on every elevation, and one isolated 0.40 m stub on PAB-08 (x −22.34…−21.94, y −1.92, 30 cm below the
-  profile there). Both are single segments that share no endpoint with another profile segment.
+  far right) on every elevation, one isolated 0.40 m stub on PAB-08 (x −22.34…−21.94, y −1.92, 30 cm below the
+  profile there), and one overlapping 0.64 m piece on PAB-10 (x −0.27…0.37, y −1.35, same height as its neighbours). Both are single segments that share no endpoint with another profile segment.
 - **Sections** PAB-04..06: existing-terrain profiles (4–11 LINEs) across the whole cut, including under the house
   (PAB-06 has a gap there). Small gaps of ≤ 1 cm between consecutive segments (PAB-04). Short designed-terrain
   pieces (`PROJEKTOWANY`, 5–6 LINEs) around the house.
@@ -381,7 +381,7 @@ Requirements:
 - **Best available, not exact** (user, 2026-11-08): the terrain will mostly be reshaped in the later editor, so
   M3 keeps the simplest approach that works. No conflict resolution between sources, no crossing analysis.
 
-✅ Ti check: all Ti / Tp=Ti points within 2 cm. Legend segments and the PAB-08 stub are dropped. Contours every
+✅ Ti check: all Ti / Tp=Ti points within 2 cm. Legend segments, the PAB-08 stub and the PAB-10 piece are dropped (6 in all). Contours every
 0.25 m; uncertain area visibly different; orbiting the Environment view stays smooth (60 fps).
 
 **M4 — Garden tools (core value)**
