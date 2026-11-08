@@ -2,16 +2,18 @@
 // names found in PAB-01..03 (PLAN.md §1). First matching rule wins; unmatched layers go to `other`.
 import { DOOR_SWING_LAYER } from '../dwg/layers';
 
-export const GROUP_IDS = ['layout', 'levels', 'grid', 'details', 'other'] as const;
+export const GROUP_IDS = ['layout', 'levels', 'grid', 'obstacles', 'details', 'other'] as const;
 export type GroupId = (typeof GROUP_IDS)[number];
 export type Groups = Record<GroupId, boolean>;
 
 /** Details start hidden (PLAN.md §1 noise layers are all in it). */
-export const DEFAULT_GROUPS: Groups = { layout: true, levels: true, grid: true, details: false, other: true };
+export const DEFAULT_GROUPS: Groups = { layout: true, levels: true, grid: true, obstacles: true, details: false, other: true };
 
+/** Obstacles (PLAN.md §5 M1c): utilities and the rainwater tank (`A-DETL-2`), checked before `details`. */
 const RULES: [GroupId, string[]][] = [
   ['levels', ['G-ANNO-DIMS*']],
   ['grid', ['S-GRID*']],
+  ['obstacles', ['PZT_GAZ*', 'PZT_WODA P', 'PZT_KAN*', 'PZT_PRĄD', 'A-DETL-2']],
   ['details', ['*-IDEN*', '*-ANNO*', '*-PATT*', '*-HDLN*', DOOR_SWING_LAYER]],
   ['layout', ['A-WALL*', 'I-WALL*', 'A-DOOR*', 'A-GLAZ*', 'S-COLS*', 'S-STRS*', 'A-FLOR-HRAL*', 'A-ROOF*']],
   ['details', ['G-ANNO-*', 'I-FURN*', 'P-SANR-*', 'Q-SPCQ*', 'A-DETL-*', 'A-AREA*', 'PZT_WYMIARY*', 'PZT_OPIS*']],
@@ -29,6 +31,11 @@ export function groupOf(layer: string): GroupId {
   }
   return g;
 }
+
+/** Every obstacle layer is drawn in this one warning colour, whatever the sheet's colour. */
+export const OBSTACLE_COLOR = '#ff6a00';
+export const layerColor = (layer: string, sheetColor: string) =>
+  groupOf(layer) === 'obstacles' ? OBSTACLE_COLOR : sheetColor;
 
 /** Per-sheet layer overrides; a layer not listed is visible (its group still decides). */
 export type LayerOverrides = Record<string, { visible: boolean }>;

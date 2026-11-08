@@ -23,7 +23,7 @@ export type Reference = { file: string; plan: NormalizedSheet; grid: PlanGrid };
 export type Derived = { fit: AxisFit; plane?: Plane; placement?: VerticalPlacement };
 
 /** The reference plan: the first parsed plan at z = 0 (PLAN.md §5 M1b). */
-const referenceSummary = (st: ProjectState) => {
+export const referenceSummary = (st: ProjectState) => {
   const row = st.sheets.find((r) => r.kind === 'plan' && r.placement?.type === 'horizontal' && r.placement.z === 0);
   const p = row && st.parsed[row.file];
   return p?.status === 'done' ? p.summary : undefined;
@@ -37,7 +37,7 @@ export function useReference(): Reference | undefined {
   return summary && referenceOf(summary);
 }
 
-function referenceOf(summary: ParseSummary): Reference {
+export function referenceOf(summary: ParseSummary): Reference {
   let ref = refCache.get(summary.sheet);
   if (!ref || ref.file !== summary.name) {
     ref = { file: summary.name, plan: summary.sheet, grid: planGrid(summary.sheet) };

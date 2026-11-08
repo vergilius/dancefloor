@@ -1,42 +1,45 @@
-# Implementation Plan: M1b (elevations and sections on their lines)
+# Implementation Plan: M1c (2-point alignment: site plan, PDF)
 
-Spec: PLAN.md §4 (vertical `placement`), §5 M1b (facts table, requirements, ✅). Task checklist: `tasks/todo.md`.
-M1a's plan is in git history (merged to `main` as 032c110).
+Spec: PLAN.md §4 (`transform: Similarity2D`), §5 M1c (facts, requirements, ✅). Task checklist: `tasks/todo.md`.
+M1b's plan is in git history (merged to `main` as 733cc6f).
 
 ## Overview
-Each elevation/section sheet (PAB-04..10) gets a vertical placement `{ origin, dir }` derived from the ground
-plan: the axis and sign from matching `S-GRID-IDEN` labels, the plane position from the section cut lines
-(`G-ANNO-SYMB-2`) or the outermost `A-WALL` extent. The sheet is then drawn standing on that plane. Sheets that
-can't be placed are flagged with a reason, not drawn.
+PZT-01 (kind `site`) is drawn horizontally through a `Similarity2D` sheet → plan transform, derived automatically
+from `A-WALL` on first open (expected: rotation −11.275°, scale 1, translation 0). The survey PDF (kind `pdf`) is
+rendered to a texture and aligned with a 2-point tool in the top view; the same tool can correct a site sheet.
+Utilities and the tank rectangle form an "Przeszkody" layer group in a warning colour.
 
 ## Architecture decisions
-- **Placement derivation is pure and runs on the main thread** (`src/project/vertical.ts`): input = two
-  `NormalizedSheet`s (the reference plan and the vertical sheet) plus the sheet's kind and filename, output =
-  `{ placement, info }` or `{ reason }`. No worker changes: everything needed (grid segments, label texts,
-  `G-ANNO-SYMB*` segments/texts, `A-WALL` segments) is already in `NormalizedSheet`.
-- **Reference plan** = the `plan` sheet with z = 0 (PAB-01). It and the vertical sheets must be parsed, so
-  vertical sheets auto-parse on open like plans.
-- **Grid line per label**: the nearest `S-GRID-1` line to the label on the same sheet (vertical stubs on
-  vertical sheets; on the plan, vertical lines for digits, horizontal for letters). Fit sheet x = s·p + t for
-  s = +1 and −1, keep the smaller max residual.
-- **Look direction** = (−dir.y, dir.x); viewer side = −look. Elevation plane = `A-WALL` extent furthest towards
-  the viewer side.
-- **Rendering**: sheet point (x, y) → plan point origin + x·dir at height y → `toScene`. A sibling of
-  `planPositions` in `coords.ts`; texts rotated into the plane, facing the viewer side.
-- **Persistence**: `placement` in `dancefloor.json` accepts the vertical variant; it is derived only when the
-  sheet has no saved placement. The plane position (the component of `origin` along the look direction) is
-  editable in the sheet list.
+- **Similarity maths is pure** (`src/project/align.ts`): `apply`, `invert`, `fromTwoPairs(a, a′, b, b′)`, and
+  `autoAlign(site, ref)` (rotation candidates from the dominant wall direction mod 90°, translation by 1 mm
+  endpoint voting, accept at ≥ 50 % matched reference endpoints within 2 cm). Values (rotation, scale,
+  translation, matched share) are shown in the sheet list so the browser check catches errors.
+- **Derived-unless-saved, like M1b:** `src/state/site.ts` caches the auto transform per (sheet geometry,
+  reference plan), mirrors `state/vertical.ts` (`transformFor(row, derived)`, `unsavedTransforms()` for "Zapisz").
+  The reference plan is the same one as M1b (`plan` with z = 0).
+- **Drawing:** the horizontal `SheetPlacement` in `coords.ts` gets an optional `transform`; `sheetToWorld` applies
+  it before z. Texts add the transform's rotation and scale. One code path for plans, site and PDF.
+- **Persistence:** `Sheet.transform` (§4) saved for `site` and `pdf`; `placement: { horizontal, z }` for both
+  (defaults site 0, PDF −0.02). Not editable in the UI (YAGNI).
+- **PDF:** `pdfjs-dist` (planned stack, Apache-2.0) on the main thread with its own worker (Vite `?url`), page 1
+  rendered once to a canvas (~200 dpi, clamped to `gl.capabilities.maxTextureSize`) → `CanvasTexture` on a quad.
+  Sheet coords = 1:500 placeholder (PLAN.md M1c).
+- **2-point tool:** top view only. Pointer → ray hit on the plane of the target z → world (x, y). Snap = nearest
+  segment endpoint within N screen px (radius in m from the ortho zoom). Source points snap to the aligned
+  sheet's endpoints (as currently drawn) and are stored in sheet coords via `invert`; target points snap to the
+  other visible horizontal sheets. Tool state lives in the store; Esc cancels; the result is applied live and
+  marks the project dirty.
+- **Obstacles group:** new `GroupId` `obstacles` with the utility layers and `A-DETL-2`, rule placed before
+  `details`. Drawn in one warning colour (a per-group colour override in `SheetObject`).
 
 ## Task list
-See `tasks/todo.md` (T1–T5 with checkpoints).
+See `tasks/todo.md` (T1–T7, checkpoints A and B).
 
 ## Risks and mitigations
 | Risk | Impact | Mitigation |
 |---|---|---|
-| Wrong sign/axis convention (mirrored sheet) | High: silent | Show look direction in the list; table in PLAN.md gives the expected value per sheet; top-view check of grid stubs |
-| Texts on vertical sheets mirrored or facing away | Med | Visible in the browser check from the viewer side |
-| Label → grid line association picks the wrong line (labels 0.6 m apart for 1/2, 6/7) | Med | Residual shown per sheet; > 5 mm flags the sheet |
-| Section letter on the plan also used elsewhere on `G-ANNO-SYMB` | Low | Only `A`/`B`/`C` exist there now; nearest cut segment to the letter |
-
-## Open questions
-None.
+| Rotation sign or ±90° flip (plan mirrored/rotated by mistake) | High: silent | Show rotation and matched share; expected −11.275° and 66 % in PLAN.md; top-view wall check |
+| PZT-01's legend (x ≈ 95–125 m) inflates fit-view framing | Low | Accept; fit-view button still works. Revisit only if annoying |
+| `A-DETL-2` is a generic detail layer, so the obstacles rule also catches it on other sheets | Low | It's a project-wide group by design (M1a T9); check PAB sheets in the browser, narrow the rule if it shows noise |
+| pdfjs worker setup under Vite 8, texture too large for the GPU | Med | Small isolated module; clamp to max texture size; show rendered px size in the sheet list |
+| Snapping picks the wrong endpoint (dense wall detail) | Med | Show the snapped point; values in the list; T7 checks the tool reproduces the auto values |

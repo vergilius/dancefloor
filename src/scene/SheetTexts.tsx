@@ -1,5 +1,6 @@
 import { Text } from '@react-three/drei';
 import type { NormalizedText } from '../dwg/types';
+import { layerColor } from '../project/layerGroups';
 import { sheetToWorld, toScene, type SheetPlacement } from './coords';
 import { FONT_URL } from './font';
 
@@ -25,6 +26,9 @@ const LIFT = 0.002;
  */
 export function SheetTexts({ texts, placement: p, color, visible }: Props) {
   const yaw = p.type === 'vertical' ? Math.atan2(p.dir.y, p.dir.x) : 0;
+  // Horizontal sheets with a transform: texts turn and scale with it (scale > 0, so never mirrored).
+  const turn = p.type === 'horizontal' ? (p.transform?.rotation ?? 0) : 0;
+  const scale = p.type === 'horizontal' ? (p.transform?.scale ?? 1) : 1;
   // Towards the viewer: up on plans, −look = (dir.y, −dir.x) on vertical sheets.
   const lift: [number, number, number] =
     p.type === 'vertical' ? [p.dir.y * LIFT, -p.dir.x * LIFT, 0] : [0, 0, LIFT];
@@ -40,12 +44,12 @@ export function SheetTexts({ texts, placement: p, color, visible }: Props) {
             position={toScene(x + lift[0], y + lift[1], z + lift[2])}
             // Plan: flat (text up = north), then the MTEXT rotation about the vertical axis.
             // Vertical: in-plane MTEXT rotation first (local z), then the yaw onto the plane.
-            rotation={p.type === 'vertical' ? [0, yaw, t.rotation, 'YXZ'] : [-Math.PI / 2, t.rotation, 0, 'YXZ']}
+            rotation={p.type === 'vertical' ? [0, yaw, t.rotation, 'YXZ'] : [-Math.PI / 2, t.rotation + turn, 0, 'YXZ']}
             font={FONT_URL}
-            fontSize={t.height * TEXT_SCALE}
+            fontSize={t.height * TEXT_SCALE * scale}
             anchorX={ANCHOR_X[a % 3]}
             anchorY={ANCHOR_Y[Math.floor(a / 3)]}
-            color={color}
+            color={layerColor(t.layer, color)}
           >
             {t.text}
           </Text>

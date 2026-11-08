@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import type { NormalizedSheet } from '../dwg/types';
 import { SHEET_KINDS, type SheetKind } from '../project/projectFile';
-import { useProject, type SheetRow } from '../state/store';
+import { useProject, type PdfState, type SheetRow } from '../state/store';
 import { planeValue, withPlane } from '../project/vertical';
+import { deriveSite, unsavedTransforms } from '../state/site';
 import { deriveVertical, isVertical, placementFor, unsavedPlacements, useReference, type VerticalKind } from '../state/vertical';
 import type { ParseSummary } from '../worker/protocol';
 import { GroupToggles, SheetLayers } from './LayerPanel';
@@ -20,7 +21,7 @@ export function SheetList() {
 
   const onSave = () => {
     setSaving(true);
-    void save(unsavedPlacements()).finally(() => setSaving(false));
+    void save({ placements: unsavedPlacements(), transforms: unsavedTransforms() }).finally(() => setSaving(false));
   };
   // The worker queues files one at a time and times each parse itself, so queueing doesn't skew `ms`.
   const onParseAll = () => {
@@ -69,6 +70,7 @@ export function SheetList() {
 
 function SheetItem({ sheet: s }: { sheet: SheetRow }) {
   const p = useProject((st) => st.parsed[s.file]);
+  const pdf = useProject((st) => st.pdfs[s.file]);
   const parse = useProject((st) => st.parse);
   const setKind = useProject((st) => st.setKind);
   const setZ = useProject((st) => st.setZ);
@@ -100,6 +102,9 @@ function SheetItem({ sheet: s }: { sheet: SheetRow }) {
         {s.source === 'suggested' && <span className="tag suggested">{t.suggested}</span>}
         {s.missing && <span className="error">{t.fileMissing}</span>}
       </div>
+      {s.kind === 'pdf' && pdf && <PdfLine pdf={pdf} />}
+      {s.kind === 'pdf' && pdf?.status === 'done' && <OpacitySlider file={s.file} />}
+      {s.kind === 'pdf' && pdf?.status === 'done' && <AlignLine row={s} />}
       {p?.status === 'parsing' && <div className="muted">{t.parsing}</div>}
       {p?.status === 'error' && <div className="error">{p.message}</div>}
       {p?.status === 'done' && (
@@ -107,6 +112,7 @@ function SheetItem({ sheet: s }: { sheet: SheetRow }) {
           {isVertical(s.kind) && (
             <AxisFitLine row={s} kind={s.kind} sheet={p.summary.sheet} />
           )}
+          {s.kind === 'site' && <AlignLine row={s} sheet={p.summary.sheet} />}
           <Summary s={p.summary} />
           <SheetLayers row={s} sheet={p.summary.sheet} />
         </>
@@ -175,6 +181,96 @@ function AxisFitLine({ row, kind, sheet }: { row: SheetRow; kind: VerticalKind; 
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Site sheet (with `sheet`): saved transform, else the automatic one. PDF: saved transform, else identity. */
+function AlignLine({ row, sheet }: { row: SheetRow; sheet?: NormalizedSheet }) {
+  const ref = useReference();
+  const resetTransform = useProject((st) => st.resetTransform);
+  const startAlign = useProject((st) => st.startAlign);
+  const active = useProject((st) => st.align?.file === row.file);
+  const pct = (v: number) => `${(v * 100).toFixed(0)} %`;
+  // A saved transform wins and is not re-derived (PLAN.md §5 M1c).
+  const a = row.transform || !sheet ? undefined : ref && deriveSite(sheet, ref);
+  const transform = row.transform ?? (a?.ok ? a.transform : undefined);
+  const tools = (
+    <>
+      {' '}
+      <button type="button" title={t.align.startTitle} disabled={active} onClick={() => startAlign(row.file)}>
+        {t.align.start}
+      </button>
+      {row.transform && (
+        <>
+          {' '}
+          <button type="button" title={sheet ? t.align.resetTitle : t.align.resetPdfTitle} onClick={() => resetTransform(row.file)}>
+            {t.plane.reset}
+          </button>
+        </>
+      )}
+    </>
+  );
+  if (sheet && !row.transform && !ref) return <div className="error">{t.axis.noReference}</div>;
+  if (!transform)
+    return (
+      <div>
+        {t.align.title}:{' '}
+        {a && !a.ok ? (
+          <span className="error">
+            {t.align.reasons[a.reason]}
+            {a.share !== undefined && ` (${pct(a.share)})`}
+          </span>
+        ) : (
+          <span className="muted">{t.align.identity}</span>
+        )}
+        {tools}
+      </div>
+    );
+  const { scale, rotation, translate } = transform;
+  return (
+    <div>
+      {t.align.title}: {t.align.rotation} <strong>{((rotation * 180) / Math.PI).toFixed(3)}°</strong> · {t.align.scale}{' '}
+      <strong>{scale.toFixed(3)}</strong> · {t.align.translation}{' '}
+      <strong>
+        ({translate.x.toFixed(3)}, {translate.y.toFixed(3)}) m
+      </strong>{' '}
+      <span className="muted">
+        ({a?.ok ? `${t.align.auto} · ${t.align.share} ${pct(a.share)} = ${a.matched}/${a.total} · ${ref?.file}` : t.align.saved})
+      </span>
+      {tools}
+    </div>
+  );
+}
+
+function PdfLine({ pdf }: { pdf: PdfState }) {
+  if (pdf.status === 'rendering') return <div className="muted">{t.pdf.rendering}</div>;
+  if (pdf.status === 'error') return <div className="error">{pdf.message}</div>;
+  const { canvas, pagePt, sheetM, dpi, clamped, ms } = pdf.render;
+  return (
+    <div>
+      {t.pdf.title}:{' '}
+      <strong>
+        {canvas.width} × {canvas.height} px
+      </strong>{' '}
+      · {dpi.toFixed(0)} dpi{clamped && <span className="error"> ({t.pdf.clamped})</span>} · {ms} ms{' '}
+      <span className="muted">
+        ({t.pdf.page} {pagePt.w.toFixed(0)} × {pagePt.h.toFixed(0)} pt · {t.pdf.sheet} {sheetM.w.toFixed(1)} × {sheetM.h.toFixed(1)} m)
+      </span>
+    </div>
+  );
+}
+
+function OpacitySlider({ file }: { file: string }) {
+  const opacity = useProject((st) => st.pdfOpacity[file] ?? 1);
+  const setPdfOpacity = useProject((st) => st.setPdfOpacity);
+  return (
+    <div>
+      <label>
+        {t.pdf.opacity}{' '}
+        <input type="range" min={0} max={100} step={5} value={Math.round(opacity * 100)} onChange={(e) => setPdfOpacity(file, Number(e.target.value) / 100)} />{' '}
+        {Math.round(opacity * 100)} %
+      </label>
     </div>
   );
 }

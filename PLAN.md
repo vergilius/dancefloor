@@ -49,7 +49,7 @@ All AC1021, mm, pure 2D, parse in 0.1–0.5 s each.
 | Elevation ↔ plan mapping | `S-GRID-1` (14 lines) present in elevations | Grid lines give exact x-calibration of each elevation onto its façade |
 | Floor/roof heights | sections: +3.02/+3.22/+3.29 (attic floor), +2.64/+3.59 (eaves zone), +4.50/+4.75, +6.04/+6.24, ridge +9.12, foundations −1.40/−1.70/−2.00, roof 38° | Enough to build a decent massing without IFC |
 | Site elements | PZT-01: `PZT_UTWARDZENIA` (paving), `PZT_OGRODZENIE` (fence), `PZT_ZAKRES` (investment area), utilities `PZT_GAZ*`, `PZT_WODA P`, `PZT_KAN*`, `PZT_PRĄD` | Underlay + "don't dig here" overlay for utilities |
-| ⚠ PZT-01 registration | `A-WALL` bbox in PZT (x 1.69–17.16, y −10.74–4.56 m) ≠ floor plans (x 0.34–15.12, y −12.27–3.05 m); no `S-GRID` in PZT | Likely translated (maybe rotated) — **needs 2-point alignment** to the ground-floor plan |
+| ⚠ PZT-01 registration | `A-WALL` bbox in PZT (x 1.69–17.16, y −10.74–4.56 m) ≠ floor plans (x 0.34–15.12, y −12.27–3.05 m); no `S-GRID` in PZT | **Rotated −11.275° about the origin, no shift, scale 1** (checked 2026-11-08, see M1c). Aligned automatically from `A-WALL` (2-point tool as fallback) |
 
 File names in `dwg/`: the site plan is `PROJEKT ZAGOSPODAROWANIA TERENU.dwg` ("PZT-01" in this document).
 Total: 12 DWG + 1 PDF.
@@ -220,13 +220,54 @@ Requirements:
 in the 3D view the grid stubs of each vertical sheet stand on the plan's grid lines (< 1 cm, top view);
 the ±0.00 line of each elevation lies at z = 0 (on PAB-01); placement survives save + reload.
 
-**M1c — 2-point alignment (site plan, PDF)**
-- Tool: pick 2 points on the sheet → 2 points on the reference plan → `Similarity2D` (show the
-  resulting scale; for DWG→DWG it should be 1.000).
-- Apply to PZT-01 and the survey PDF (rendered to a texture via `pdfjs-dist`). Persist in the project JSON.
-- Identify the rainwater tank (PAB-12) outline in PZT-01, and show it with utilities as an obstacle.
-- ✅ PZT-01 `A-WALL` lines lie on the ground-plan walls within 2 cm; PDF house outline visibly matches;
-  alignment survives reload.
+**M1c — 2-point alignment (site plan, PDF)** — done 2026-11-08 (spec sharpened 2026-11-08 on the real files, approved 2026-11-08)
+
+Facts (PZT-01 and PAB-01 after normalize):
+- **PZT-01 is the ground plan rotated, not shifted:** sheet → plan = rotation by **−11.27506°** about the
+  origin, translation (0, 0), scale 1. The rotated `A-WALL` bbox equals PAB-01's to the mm (x 0.034–15.124,
+  y −14.966–3.051), and the best translation vote is 0,0 mm. (So the §1 row saying "translated" was wrong.)
+  PZT-01 also has ~2× the `A-WALL` length (extra wall detail inside the footprint). That is expected and
+  doesn't affect alignment.
+- PZT-01 includes a legend at sheet x ≈ 95–125 m. Its utility line samples are drawn there too.
+- **Rainwater tank:** legend symbol `ZB` (`G-ANNO-TEXT-3`). On the plot: `ZB` at sheet (11.74, −12.06), next to an
+  `A-DETL-2` rectangle, which in plan coords is axis-aligned at x 8.785–11.785, y −15.838…−13.438
+  (3.00 × 2.40 m, as in PAB-12). It sits off the south façade, partly beyond the S plane (y −14.966).
+- Survey PDF: 1 page, A2 portrait (1191 × 1684 pt), `/Rotate 0`. Its scale is unknown until it's aligned.
+- No sheet of kind `site`/`pdf` is drawn yet, and the scene has no click picking yet.
+
+Requirements:
+- **Draw site and PDF sheets horizontally** through their `transform` (sheet → plan) at a `z`: site default 0,
+  PDF default −0.02 (just under the lines). Same layer panel and groups as plans. The PDF page is rendered once
+  to a texture with `pdfjs-dist` (target ~200 dpi, clamped to the GPU max texture size) on a quad.
+  Untransformed default = identity. PDF sheet coords assume a 1:500 map (1 pt = 25.4/72 mm paper × 500, page
+  origin bottom-left), a placeholder until aligned; the scale shown after alignment is then ≈ 1.000 if the map
+  really is 1:500.
+- **Automatic initial alignment for site sheets** (user, 2026-11-08), derived only when the sheet has no saved
+  `transform` (like the vertical placement). Pure function over the site sheet's and the reference plan's
+  (plan with z = 0) `A-WALL` segments, scale fixed at 1 (both DWG, mm):
+  1. rotation candidate θ = length-weighted dominant wall direction of each sheet (angle × 4 averaging, segments
+     ≥ 0.5 m), difference taken mod 90°; try θ + k·90°, k = 0..3;
+  2. per candidate, translation = most-voted endpoint difference (reference − rotated site, rounded to 1 mm);
+  3. keep the candidate whose share of reference endpoints with a site endpoint within 2 cm is highest.
+  Accept if that share is ≥ 50 % (PZT-01: 66 %, the rest is extra detail in PZT-01). Otherwise flag the sheet
+  with the reason and leave it at identity, so the 2-point tool is the fallback. The sheet list shows the share.
+- **2-point tool (top view):** start "Wyrównaj" on a site/PDF sheet → click A on the reference, then A′ (the same
+  point) on the sheet; the sheet shifts at once so A′ lies on A (rotation and scale kept). Then B on the reference
+  and B′ on the sheet → `Similarity2D` (scale, rotation, translation) from the two point pairs, applied
+  live (user, 2026-11-08: reference first, shift after the first pair). Used for the PDF, and to correct a site sheet by hand. Source clicks snap to the sheet's segment endpoints (DWG) or are free (PDF). Target clicks snap to
+  endpoints of the visible, already-placed horizontal sheets (plans and an aligned site plan). Snap radius in
+  screen px; the snapped point is shown. Esc cancels and restores the transform from before the tool started.
+- Sheet list shows per aligned sheet: scale (3 decimals), rotation (°, 3 decimals), translation (m), with a
+  Reset (site sheet: back to the automatic alignment; PDF: back to identity). For PZT-01 the expected values are scale 1.000, rotation −11.275°, translation ≈ 0.
+- `transform` saved in `dancefloor.json` with "Zapisz", validated on load (like the vertical placement).
+- **Obstacles overlay:** a project-wide layer group "Przeszkody" holding the utility layers (`PZT_GAZ*`,
+  `PZT_WODA P`, `PZT_KAN*`, `PZT_PRĄD`) and the tank rectangle `A-DETL-2`, drawn in one warning colour. No
+  depth/3D box in M1c (obstacles with depth are M4).
+
+✅ PZT-01 aligned automatically on first open shows scale 1.000 and rotation −11.275° (±0.01°); its `A-WALL` lines lie on
+PAB-01's walls within 2 cm (top view); the tank rectangle shows at plan x 8.8–11.8, y −15.8…−13.4 in the
+obstacle colour; the PDF's house outline visibly matches PZT-01; both alignments survive save + reload; the 2-point tool on PZT-01 (two wall
+corners) reproduces the same values within 0.01° / 1 cm.
 
 PAB-11 and PAB-12 are detail sheets: no placement, used only for the parameters recorded in §1.
 
