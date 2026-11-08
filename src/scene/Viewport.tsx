@@ -15,6 +15,7 @@ import { SheetTexts } from './SheetTexts';
 import { PdfObject } from './PdfObject';
 import { AlignTool } from './AlignTool';
 import { LevelMarkers } from './LevelMarkers';
+import { MeasureReadout, MeasureTool } from './MeasureTool';
 import { ENV_LAYER, inBothViewports, splitEvents, useSplitRender, type Half } from './split';
 import type { SheetRow } from '../state/store';
 import type { PdfRender } from '../pdf/render';
@@ -166,6 +167,7 @@ function Scene({ project }: { project?: string }) {
           </button>
         ))}
         <LevelsToggle />
+        <MeasureToggle disabled={aligning} />
         <AlignPrompt />
       </div>
       <div className="viewports" ref={container}>
@@ -193,12 +195,14 @@ function Scene({ project }: { project?: string }) {
         })}
         <LevelMarkers drawn={drawn} />
         <AlignTool drawn={drawn} />
+        <MeasureTool drawn={drawn} />
         <CameraControls makeDefault domElement={(half === 'env' ? envEl : designEl) ?? undefined} {...orthoLimits(ortho)} />
         <CameraSync view={view} ortho={ortho} project={project} />
         <FrameOnSheets sheets={drawn} ortho={ortho} auto={!saved} tick={fitTick} />
       </Canvas>
       <div className="vp-half vp-design" ref={setDesignEl} onPointerEnter={hover('design')} onPointerMove={hover('design')}>
         <span className="vp-caption">{t.viewports.design}</span>
+        <MeasureReadout />
       </div>
       <div className="vp-half vp-env" ref={setEnvEl} onPointerEnter={hover('env')} onPointerMove={hover('env')}>
         <span className="vp-caption">{t.viewports.env}</span>
@@ -219,6 +223,17 @@ function LevelsToggle() {
   return (
     <button type="button" aria-pressed={show} title={t.levelMarkersTitle} onClick={() => setShowLevels(!show)}>
       {t.levelMarkers}
+    </button>
+  );
+}
+
+function MeasureToggle({ disabled }: { disabled: boolean }) {
+  const on = useProject((s) => s.measure !== undefined);
+  const startMeasure = useProject((s) => s.startMeasure);
+  const stopMeasure = useProject((s) => s.stopMeasure);
+  return (
+    <button type="button" aria-pressed={on} disabled={disabled} title={t.measure.title} onClick={on ? stopMeasure : startMeasure}>
+      {t.measure.button}
     </button>
   );
 }

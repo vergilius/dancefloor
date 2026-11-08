@@ -3,19 +3,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { useThree, type ThreeEvent } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import { designHtmlPosition } from './split';
-import { BufferAttribute, BufferGeometry, OrthographicCamera } from 'three';
+import { OrthographicCamera } from 'three';
 import type { NormalizedSheet } from '../dwg/types';
 import { apply, IDENTITY, invert, type Similarity2D, type Vec2 } from '../project/align';
 import { layerVisible, type LayerOverrides } from '../project/layerGroups';
 import { useProject } from '../state/store';
 import { t } from '../ui/strings';
 import { toScene, type SheetPlacement } from './coords';
-import { endpoints, nearest, type Endpoints } from './snap';
-
-/** Snap radius in screen px. */
-const SNAP_PX = 12;
-/** A click that moved more than this (px) was a pan, not a pick. */
-const CLICK_PX = 4;
+import { CLICK_PX, endpoints, nearest, SNAP_PX, type Endpoints } from './snap';
+import { Dot } from './Dot';
 const PLANE_SIZE = 5000;
 const MARKER_Z = 0.05;
 const COLORS = { source: '#0969da', target: '#cf222e', snapped: '#1a7f37', free: '#6e7781' };
@@ -96,11 +92,11 @@ export function AlignTool({ drawn }: { drawn: Drawn[] }) {
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
       {placed.map((m, i) => (
-        <Marker key={i} p={m.world} color={m.color} size={10} />
+        <Dot key={i} p={[m.world.x, m.world.y, MARKER_Z]} color={m.color} size={10} />
       ))}
       {hover && (
         <>
-          <Marker p={hover.world} color={hover.snapped ? COLORS.snapped : COLORS.free} size={hover.snapped ? 12 : 7} />
+          <Dot p={[hover.world.x, hover.world.y, MARKER_Z]} color={hover.snapped ? COLORS.snapped : COLORS.free} size={hover.snapped ? 12 : 7} />
           {/* Which point this click places; snapping status unless the source has nothing to snap to (PDF). */}
           <Html position={toScene(hover.world.x, hover.world.y, MARKER_Z)} calculatePosition={designHtmlPosition} style={{ pointerEvents: 'none' }}>
             <div className="align-cursor" style={{ borderColor: sourceStep ? COLORS.source : COLORS.target }}>
@@ -122,19 +118,4 @@ function concat(parts: Float64Array[]): Float64Array {
     o += p.length;
   }
   return out;
-}
-
-/** A screen-sized dot at a world point, drawn over everything. */
-function Marker({ p, color, size }: { p: Vec2; color: string; size: number }) {
-  const geometry = useMemo(() => {
-    const g = new BufferGeometry();
-    g.setAttribute('position', new BufferAttribute(new Float32Array(toScene(p.x, p.y, MARKER_Z)), 3));
-    return g;
-  }, [p.x, p.y]);
-  useEffect(() => () => geometry.dispose(), [geometry]);
-  return (
-    <points geometry={geometry} renderOrder={10}>
-      <pointsMaterial color={color} size={size} sizeAttenuation={false} depthTest={false} />
-    </points>
-  );
 }
