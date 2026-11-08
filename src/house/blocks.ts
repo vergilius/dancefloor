@@ -105,6 +105,16 @@ function parseBlock(v: unknown, where: string): Block {
   throw new Error(`${where}.kind: unknown "${String(v.kind)}"`);
 }
 
+/** Passes the same checks as a saved block (e.g. top above bottom). */
+export function isValidBlock(b: Block): boolean {
+  try {
+    parseBlock(b, 'block');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function parseHouse(v: unknown, where = 'house'): House {
   if (!isObj(v)) throw new Error(`${where}: expected an object`);
   if (!Array.isArray(v.blocks)) throw new Error(`${where}.blocks: expected an array`);
@@ -180,6 +190,17 @@ export function mainBodyFromRoof(sheet: NormalizedSheet, z: number, name: string
     pitchLabels: labels,
     outlineFound: o !== undefined,
   };
+}
+
+/** Plan outline (corners in order). */
+export function blockOutline(b: Block): Vec2[] {
+  if (b.kind === 'flat') return b.polygon;
+  return [
+    { x: b.x0, y: b.y0 },
+    { x: b.x1, y: b.y0 },
+    { x: b.x1, y: b.y1 },
+    { x: b.x0, y: b.y1 },
+  ];
 }
 
 // ---------- block → triangles ----------

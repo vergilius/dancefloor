@@ -1,6 +1,6 @@
 # M5 task list
 
-Next: Task 2 (draw and edit flat blocks: garage/annex, terrace roof, posts). T1 verified by the user 2026-11-08.
+Next: T2 implemented, awaiting the user's browser check (then tick T2 + checkpoint A, start T3).
 T1 note: Design also shows the block edges (not solids), so they can be compared with the elevation underlays.
 Plan: `tasks/plan.md`. Spec: PLAN.md §5 M5, ADR 0005. M4a task notes are in git history (`tasks/todo.md` at e859430).
 

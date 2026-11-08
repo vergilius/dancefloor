@@ -15,6 +15,7 @@ import { AlignTool } from './AlignTool';
 import { LevelMarkers } from './LevelMarkers';
 import { TerrainMesh } from './TerrainMesh';
 import { HouseMesh } from './HouseMesh';
+import { HouseDrawReadout, HouseDrawTool } from './HouseDrawTool';
 import { MeasureReadout, MeasureTool } from './MeasureTool';
 import { VersionBar } from '../ui/VersionBar';
 import { EditTool } from './EditTool';
@@ -166,6 +167,7 @@ function Scene({ project }: { project?: string }) {
         <LevelMarkers drawn={drawn} />
         <AlignTool drawn={drawn} />
         <MeasureTool drawn={drawn} />
+        <HouseDrawTool drawn={drawn} />
         <EditTool />
         <CameraControls makeDefault domElement={(half === 'env' ? envEl : designEl) ?? undefined} {...orthoLimits(ortho)} />
         <CameraSync view={view} ortho={ortho} project={project} />
@@ -174,6 +176,7 @@ function Scene({ project }: { project?: string }) {
       <div className="vp-half vp-design" ref={setDesignEl} onPointerEnter={hover('design')} onPointerMove={hover('design')}>
         <span className="vp-caption">{t.viewports.design}</span>
         <MeasureReadout />
+        <HouseDrawReadout />
       </div>
       <div className="vp-half vp-env" ref={setEnvEl} onPointerEnter={hover('env')} onPointerMove={hover('env')}>
         <span className="vp-caption">{t.viewports.env}</span>
