@@ -1,6 +1,7 @@
 # M5 task list
 
-Next: T1 implemented, awaiting the user's browser check (then tick T1, start T2).
+Next: Task 2 (draw and edit flat blocks: garage/annex, terrace roof, posts). T1 verified by the user 2026-11-08.
+T1 note: Design also shows the block edges (not solids), so they can be compared with the elevation underlays.
 Plan: `tasks/plan.md`. Spec: PLAN.md §5 M5, ADR 0005. M4a task notes are in git history (`tasks/todo.md` at e859430).
 
 Commands: `pnpm dev`, `pnpm check` (build + lint + guards). No automated tests (CLAUDE.md).
@@ -15,9 +16,9 @@ from the `NN°` label, fallback 38 flagged), and block → triangles. `dancefloo
 holds it (dirty + Zapisz). `src/scene/HouseMesh.tsx` draws the solids in Environment, toggle "Dom" next to "Teren".
 `src/ui/HousePanel.tsx`: button "Z rzutu dachu" and one line per block (name, size, heights rel + abs, wall face, pitch).
 **Acceptance criteria:**
-- [ ] "Bryła główna" 14.80 × 10.30 m, ridge +9.12 (364.52), pitch 38°, wall face +5.10, overhang 0.16 m
-- [ ] Its outline matches PAB-10 and PAB-08 underlays (< 1 cm by measuring); Zapisz + reload brings it back
-- [ ] "Dom" toggles the solids; Design, Podgląd and versions unchanged
+- [x] "Bryła główna" 14.80 × 10.30 m, ridge +9.12 (364.52), pitch 38°, wall face +5.10, overhang 0.16 m
+- [x] Its outline matches PAB-10 and PAB-08 underlays (< 1 cm by measuring); Zapisz + reload brings it back
+- [x] "Dom" toggles the solids; Design, Podgląd and versions unchanged
 **Verification:** `pnpm check`; user builds the main body, compares with the elevations, saves, reloads.
 **Dependencies:** none
 **Files:** `src/house/blocks.ts`, `src/project/projectFile.ts`, `src/state/store.ts`, `src/scene/HouseMesh.tsx`, `src/scene/Viewport.tsx`, `src/ui/HousePanel.tsx`, `src/ui/strings.ts`
