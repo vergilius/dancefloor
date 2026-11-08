@@ -455,7 +455,7 @@ rect by 0.10 → net +0.10 m³ (± one cell row). Undo/redo restore the totals e
 differently keeps its own totals. Reload the app → both versions and their totals are back. Delete one → its files
 are gone. Podgląd and Design unchanged; orbiting stays smooth.
 
-**M4b — Bevel + retaining wall** — spec approved 2026-11-08 (open questions settled as proposed)
+**M4b — Bevel + retaining wall** — done 2026-11-08 (spec approved 2026-11-08; interaction and walls reworked with the user, see below)
 
 Facts: the drawings show no slopes or retaining walls (no `skarpa` / `mur oporowy` labels or layers on the site plan,
 PAB-11 or PAB-12; PAB-11 only gives the 1.5 % fall of the path). So every slope and wall is the user's design; nothing

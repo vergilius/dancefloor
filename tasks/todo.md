@@ -1,6 +1,6 @@
-# M4b task list
+# M4b task list (done 2026-11-08)
 
-Next: Task 3 (Mur as drawn rectangles) implemented, waiting for the browser check (Checkpoint B = M4b ✅); then PLAN.md / CLAUDE.md status, merge. Spec PLAN.md §5 M4b; plan `tasks/plan.md`.
+Next: M4b done and merged (user 2026-11-08: "all good"). Next milestone M4c (PLAN.md §5): sharpen the spec with `spec-driven-development`, then a new task list. Later: left sidebar UI/UX rework.
 Later (user 2026-11-08): the left sidebar is poor UI/UX (the version panel sits below the long sheet list); address after M4b.
 Plot margin now 5 m (user 2026-11-08): only Podgląd and new versions; existing versions keep their frozen grid.
 Bundle: index 1495 kB of the 1500 kB budget after T2; keep T3 small.
@@ -49,13 +49,13 @@ Skarpa → Uskok → Mur. Live preview via `preview` in the store (replaces the 
 under it to `top` (default highest + 0.50 m) in the house colour (`src/scene/WallMesh.tsx`, pure `src/versions/walls.ts`);
 drag it up / down or type top; list shows height above terrain and m³. No terrain change.
 **Acceptance criteria:**
-- [ ] Draw a 0.25 × 6 m wall along the terrace edge: house-coloured box, list shows 0.25 × 6.00 m, height and m³
-- [ ] Drag it up / down (one undo step), type an exact top; terrain, cut / fill and Design unchanged; reload keeps it
-- [ ] (user 2026-11-08) click a wall to select it; pull a side to resize it (5 cm); Backspace deletes the selected edit
+- [x] Draw a 0.25 × 6 m wall along the terrace edge: house-coloured box, list shows 0.25 × 6.00 m, height and m³
+- [x] Drag it up / down (one undo step), type an exact top; terrain, cut / fill and Design unchanged; reload keeps it
+- [x] (user 2026-11-08) click a wall to select it; pull a side to resize it (5 cm); Backspace deletes the selected edit
 **Verification:** `pnpm check`; user browser check.
 **Dependencies:** Task 2
 **Files:** `src/versions/edits.ts`, `src/versions/walls.ts`, `src/scene/WallMesh.tsx`, `src/scene/EditTool.tsx`, `src/ui/VersionPanel.tsx`, `src/ui/VersionBar.tsx`, `src/ui/strings.ts`
 **Scope:** M
 
 ### Checkpoint B: M4b done
-- [ ] Full M4b ✅ in the browser; PLAN.md status "done", CLAUDE.md status line; commit, merge to main, safe to /clear
+- [x] Full M4b ✅ in the browser; PLAN.md status "done", CLAUDE.md status line; commit, merge to main, safe to /clear
