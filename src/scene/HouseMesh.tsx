@@ -117,12 +117,12 @@ function BlockSolid({ block, hollow, roofHoles, clean }: { block: Block; hollow:
   useEffect(() => () => part?.dispose(), [part]);
   useEffect(() => () => partEdges?.dispose(), [partEdges]);
   const thin = block.kind === 'flat' && polygonArea(block.polygon) < THIN_AREA;
-  // Clean view: a hollow main body is its roof only (dark); a solid one is plaster.
-  const color = clean
-    ? block.kind === 'gable'
-      ? part ? CLEAN_COLORS.roof : CLEAN_COLORS.plaster
-      : thin ? CLEAN_COLORS.thin : CLEAN_COLORS.flat
-    : block.kind === 'gable' ? COLORS.gable : thin ? COLORS.thin : COLORS.flat;
+  // A hollow main body is its roof only: dark in both views. A solid one is plaster (clean) / its shade.
+  const color = block.kind === 'gable' && part
+    ? CLEAN_COLORS.roof
+    : clean
+      ? block.kind === 'gable' ? CLEAN_COLORS.plaster : thin ? CLEAN_COLORS.thin : CLEAN_COLORS.flat
+      : block.kind === 'gable' ? COLORS.gable : thin ? COLORS.thin : COLORS.flat;
   // Flat blocks often share a face with the main body's wall: push them back so the wall wins. The main body (its
   // roof) stays at its depth: pushed back, the wall tops just under it showed through at grazing angles.
   const offset = block.kind === 'flat' ? 2 : 0;
