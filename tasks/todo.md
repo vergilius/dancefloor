@@ -1,6 +1,8 @@
 # M2 task list
 
-Next: plan written 2026-11-08 (tasks/plan.md), incl. the design/environment split (ADR 0001); waiting for the user's go. Then T1.
+Next: T2 (reference header + height formatter). T1 done and verified 2026-11-08.
+Note (T1): the worker returns both candidate points per label (`leader`, `byHeight`); `levelPoint(l, kind)` in
+`src/dwg/labels.ts` picks by sheet kind on the main thread, so a kind change needs no re-parse.
 M1c task notes are in git history (`tasks/todo.md` at 655ecaa).
 
 Commands: `pnpm dev`, `pnpm check` (build + lint + guards). No automated tests (CLAUDE.md).
@@ -14,8 +16,8 @@ absolute labels (kind `Tp` | `Ti` | `TpTi` | `bare`, value, point or none) with 
 leader; vertical: height-matched circle using the sheet's own reference). Called from the worker next to
 `normalize`, returned in `ParseSummary`. The sheet list shows `Rzędne: n/m z punktem` per sheet.
 **Acceptance criteria:**
-- [ ] Counts: PZT-01 7/7, PAB-07 2/2, PAB-08 7/8, PAB-09 7/7, PAB-10 7/7; other sheets show none
-- [ ] Decimal comma and dot both parse (PZT-01 `Tp= 355,08`)
+- [x] Counts: PZT-01 7/7, PAB-07 2/2, PAB-08 7/8, PAB-09 7/7, PAB-10 7/7; other sheets show none
+- [x] Decimal comma and dot both parse (PZT-01 `Tp= 355,08`)
 **Verification:** `pnpm check`; user opens the folder and reads the counts.
 **Dependencies:** none
 **Files:** `src/dwg/labels.ts`, `src/dwg/types.ts`, `src/worker/protocol.ts`, `src/worker/dwg.worker.ts`, `src/ui/SheetList.tsx`, `src/ui/strings.ts`
