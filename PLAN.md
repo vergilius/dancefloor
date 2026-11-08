@@ -271,18 +271,17 @@ corners) reproduces the same values within 0.01° / 1 cm.
 
 PAB-11 and PAB-12 are detail sheets: no placement, used only for the parameters recorded in §1.
 
-**M2 — Levels & references** (spec sharpened 2026-11-08 on the real files, awaiting approval)
+**M2 — Levels & references** (spec sharpened 2026-11-08 on the real files, approved 2026-11-08: keep it
+minimal, the labels won't be used much)
 
 Facts (raw entities and normalized texts of all 12 DWGs, model space only):
 - **Reference:** MTEXT `0,00= +355.40 m npm` on `G-ANNO-DIMS` in PAB-07, 08, 09, 10 (4 of 4 elevations, all
   355.40). Nowhere else.
-- **Relative levels** `^[+\-±]\d+[.,]\d{2}$` (e.g. `+0.00`, `-0.32`, `+9.12`) are on `G-ANNO-DIMS-1` **and**
-  `G-ANNO-DIMS` (sections have most of theirs on `G-ANNO-DIMS`): PAB-01 8, 02 2, 03 5, 04 23, 05 10, 06 11, 07 7,
-  08 10, 09 10, 10 4 = 90. PAB-11/12 have none.
+- Relative levels (`+0.00`, `-0.32`, `+9.12`, 90 in all, on `G-ANNO-DIMS-1` and `G-ANNO-DIMS`) are readable
+  on the drawn sheets already. M2 doesn't extract them (user, 2026-11-08: labels won't be used much).
 - **Absolute labels** (3-digit metres, all on `G-ANNO-DIMS` in elevations, `G-ANNO-TEXT-4` in PZT-01) come in
   four forms: `Tp= 355,08` (PZT-01, comma), `Tp= +355.08`, `Ti= +354.54`, `Tp=Ti= +352.65 m npm`, and **bare**
-  `+355.08` with no Tp/Ti prefix. The bare ones also match the relative regex if not excluded (`+355.08` would
-  become rel 355.08). Counts: PZT-01 7 Tp; elevations 16 prefixed (PAB-07 0, 08 5, 09 4, 10 7) + 8 bare
+  `+355.08` with no Tp/Ti prefix. Counts: PZT-01 7 Tp; elevations 16 prefixed (PAB-07 0, 08 5, 09 4, 10 7) + 8 bare
   (PAB-07 2, 08 3, 09 3).
 - **The measured point is not the text.** Each absolute label has a leader to a small CIRCLE whose centre is
   the point:
@@ -295,7 +294,7 @@ Facts (raw entities and normalized texts of all 12 DWGs, model space only):
     from the text). Unresolved: bare `+356.74` on PAB-08 (no circle at y 1.34).
   - Elevation points are projections: plan position = the façade plane + sheet x along `dir` (M1b placement).
     The true depth in front of or behind the façade is unknown. Several lie far beyond the house (e.g. PAB-08
-    `Tp=Ti= +352.65` at sheet x −33.9 = the plot boundary). This is an M3 concern, but the list must show it.
+    `Tp=Ti= +352.65` at sheet x −33.9 = the plot boundary). This is an M3 concern.
 - Plan level labels (PAB-01) sit next to INSERT markers `Rzędne punktów - Rzędna punktu…`. M2 doesn't need
   their positions.
 - Normalized sheets lose circle centres and the LINE/ARC/LWPOLYLINE identity, so label extraction has to run
@@ -303,46 +302,33 @@ Facts (raw entities and normalized texts of all 12 DWGs, model space only):
 
 Requirements:
 - **Extraction in the worker** (pure `src/dwg/labels.ts`, no libredwg import, called from the worker next to
-  `normalize`). Output per sheet in sheet coords (m): `reference[]` (value, text anchor), `relative[]` (value,
-  text anchor, layer), `absolute[]` (kind `Tp` | `Ti` | `TpTi` | `bare`, value, text anchor, point or a reason).
-  Strip MTEXT first; accept decimal comma and dot. A text is absolute if it has 3 integer digits (or a Tp/Ti
-  prefix) and relative otherwise, so bare absolutes never count as relative.
-- **Reference** = the value all reference labels agree on. Shown with its sources (`4/4 arkuszy`). None found,
-  or labels disagree → flagged, and absolute heights are not shown. No manual override in M2 (all 4 agree;
-  build it when a real project needs it).
-- **Point association:** PZT-style (ARC leader from the label's rectangle to a circle) on site sheets;
-  height-matched circle (rule above) on elevation/section sheets. No match → the label is listed with a reason
-  and has no point. Never fall back to the text anchor.
-- **Plan coordinates** come through the existing placement: site sheets through their `transform` (M1c),
-  vertical sheets through `origin + x·dir` (M1b). Labels on a sheet without a placement or transform (flagged
-  or detail) are listed without plan coordinates.
-- **Labels panel "Rzędne"** (new, next to the sheet list): the reference; then the absolute labels grouped by
-  sheet, with kind, value as rel and abs, plan (x, y) in m, distance text → point, and the reason for any
-  unresolved one. Counts per sheet (`7/7`, `5/5`, `3/4 (1 bez punktu)`). Relative levels: counts per sheet
-  plus the distinct values (rel + abs), no positions.
-- **3D markers** for resolved absolute points: a small dot at (plan x, y, rel height) with a short label (`Tp
-  −0.32 / 355.08`), coloured by kind (Tp / Ti / Tp=Ti / bare). One toggle in the panel (default on, view
-  setting, not saved).
-- **Rel + abs everywhere we show a height:** one formatter `+3.29 (358.69 m n.p.m.)` used by the sheet list
-  (plan z), the labels panel, the 3D markers and the measure readout. The drawn sheet texts stay as drawn.
+  `normalize`, on raw model-space entities). Output per sheet in sheet coords (m): the reference values found, and
+  the absolute labels (kind `Tp` | `Ti` | `TpTi` | `bare`, value, point or none). Strip MTEXT first; decimal
+  comma and dot.
+- **Point association:** site sheets: the ARC leader from the label's rectangle to a circle. Elevation/section
+  sheets: the height-matched circle (rule above). No match → no point (counted, not drawn). Never fall back to
+  the text anchor. Bare labels are kept as `bare`; M3 decides how to use them.
+- **Reference** = the value all reference labels agree on, shown once in the sheet list header
+  (`±0.00 = 355.40 m n.p.m. (4 arkusze)`). None found, or they disagree → flagged there, and heights are shown
+  relative only. No manual override.
+- **Plan coordinates** through the existing placement: site sheets through their `transform` (M1c), vertical
+  sheets through `origin + x·dir` (M1b). Sheets without a placement or transform show no markers.
+- **Sheet list:** per sheet with absolute labels, `Rzędne: 7/8 z punktem`.
+- **3D markers** for the resolved points: a small dot at (plan x, y, rel height) with a short label
+  (`Tp 355.08 (−0.32)`). One toggle (default on, view setting, not saved). The markers are the browser check.
+- **Rel + abs wherever we show a height:** one formatter, e.g. `+3.29 (358.69 m n.p.m.)`, used by the sheet list
+  (plan z), the markers and the measure readout. The drawn sheet texts stay as drawn.
 - **Measure tool "Pomiar"** (any view): click A, then B. Each click hits the plane of a drawn sheet under the
-  cursor (horizontal: z; vertical: its plane) and snaps to that sheet's visible segment endpoints and to the 3D
-  markers (screen-px radius, as in M1c). A point's height = its 3D z (horizontal sheet: the sheet's z;
-  vertical sheet: sheet y; marker: its height). Readout: 3D distance, horizontal distance, Δh (m, 3 decimals),
-  and both heights as rel + abs. A line A–B stays visible until Esc or a new measurement. Not saved.
-- No change to `dancefloor.json` (all of M2 is derived or a view setting).
+  cursor (horizontal: its z; vertical: its plane) and snaps to that sheet's visible segment endpoints and to the
+  markers (screen-px radius, as in M1c). Readout: 3D distance, horizontal distance, Δh (m, 3 decimals), and both
+  heights as rel + abs. The A–B line stays visible until Esc or the next measurement. Not saved.
+- No change to `dancefloor.json`.
 
-✅ The reference shows 355.40 from 4/4 sheets. The panel lists PZT-01 7/7 Tp, PAB-08 7/8 (the `+356.74`
-without a point), PAB-07 2/2, PAB-09 7/7, PAB-10 7/7, each with plan (x, y). PZT-01 `Tp= 355,08` whose circle is at
-sheet (18.565, −11.038) shows plan (16.05, −14.46) (sheet point rotated by −11.275°). In 3D, the
-elevation markers sit on the sheet circles (< 1 cm) and the PZT markers on PZT's circles. No bare value is
-counted as a relative level. Measure: the tank rectangle on PZT-01 is 3.00 × 2.40 m (± 1 cm), PAB-01's
-`A-WALL` x-extent is 15.090 m (± 1 cm), and on PAB-08 Δh from ±0.00 to the ridge is 9.12 m (± 1 cm).
-
-Open questions:
-1. Bare absolute labels (8, mostly +355.08 at the paving/terrace edge): are they designed terrain (treat as
-   `Tp`) or something else (wall tops, steps)? M2 lists them as `bare`; M3 decides how to use them.
-2. Measure in any view (spec above), or top view only (simpler, but no Δh on elevations)?
+✅ The sheet list header shows 355.40 from 4 sheets. Counts: PZT-01 7/7, PAB-07 2/2, PAB-08 7/8, PAB-09 7/7,
+PAB-10 7/7. In 3D, the elevation markers sit on their sheet circles (< 1 cm), and the PZT-01 markers sit on
+PZT's circles (e.g. the `Tp= 355,08` circle at sheet (18.565, −11.038) is at plan (16.05, −14.46)). Measure: the
+tank rectangle on PZT-01 is 3.00 × 2.40 m (± 1 cm), PAB-01's `A-WALL` x-extent is 15.090 m (± 1 cm), and on
+PAB-08 Δh from ±0.00 to the ridge is 9.12 m (± 1 cm).
 
 **M3 — Terrain grid**
 - Seed points: PZT `Tp` points (plan coords) + elevation profiles `PZT_TEREN ISTNIEJĄCY`
