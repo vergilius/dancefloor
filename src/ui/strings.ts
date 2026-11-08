@@ -217,6 +217,8 @@ export const t = {
     heightHint: 'w górę / w dół = wysokość · puść = zatwierdź · Esc anuluje',
     edgeHint: 'zaznaczona: chwyć środek = wysokość, krawędź = pochylenie · klik na krawędź: Skarpa → Uskok → Mur · Esc odznacza',
     rampLabel: 'krawędzie',
+    wall: (side: string, length: number, hMin: number, hMax: number, volume: number) =>
+      `Mur ${side}: dł. ${length.toFixed(2)} m · wys. ${hMin.toFixed(2)}${hMax - hMin >= 0.005 ? `–${hMax.toFixed(2)}` : ''} m · gr. 0,25 m · ${volume.toFixed(2)} m³`,
     slopeTitle: 'Nachylenie skarpy 1:n (n m w poziomie na 1 m w pionie), dla wszystkich krawędzi „Skarpa” tej zmiany',
     noEdits: 'Brak zmian. Wybierz narzędzie w pasku Otoczenia i przeciągnij po terenie.',
     broken: (n: number) => `${n} ${plural(n, 'nieczytelna wersja', 'nieczytelne wersje', 'nieczytelnych wersji')} (pliki zostawione)`,

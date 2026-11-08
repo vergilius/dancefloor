@@ -6,6 +6,7 @@ import { useRefValue } from '../state/levels';
 import { useActiveVersion, useVersions, versionSurface } from '../state/versions';
 import { edgeHeights, edgesOf, editValue, rectSize, SIDES, slopeOf, totals } from '../versions/edits';
 import { EdgeControls } from './EdgeControls';
+import { walls } from '../versions/walls';
 import { ZInput } from './SheetList';
 import { t } from './strings';
 
@@ -15,6 +16,7 @@ export function VersionPanel() {
   const ref = useRefValue();
   const surface = useMemo(() => version && versionSurface(version), [version]);
   const sum = useMemo(() => version && surface && totals(version.grid, surface.grid.base), [version, surface]);
+  const wallList = useMemo(() => (version && surface ? walls(surface.grid, version.edits) : []), [version, surface]);
   if (!version || !surface || !sum) return null;
   return (
     <>
@@ -68,6 +70,14 @@ export function VersionPanel() {
                   <EdgeControls id={`${e.id}/list`} edges={edgesOf(e)} slope={slopeOf(e)} onChange={(shape) => setEditShape(e.id, shape)} />
                   <br />
                   <span className="muted">{t.versions.editVolume(vol.cut, vol.fill)}</span>
+                  {wallList
+                    .filter((w) => w.edit === e.id)
+                    .map((w) => (
+                      <span key={w.side} className="muted">
+                        <br />
+                        {t.versions.wall(t.versions.sides[w.side], w.length, w.hMin, w.hMax, w.volume)}
+                      </span>
+                    ))}
                 </li>
               );
             })}

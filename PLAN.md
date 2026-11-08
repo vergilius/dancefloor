@@ -483,10 +483,13 @@ Requirements:
   slope only if both edges are Skarpa, otherwise nothing there. The slope is part of the edit: it is in the edit's
   cut / fill, in the totals and in Różnice; a later edit still wins over it; corners outside the modelled area are
   never changed. Replay of all edits stays < 30 ms.
-- **Mur:** the terrain keeps the step (as Uskok). A wall solid is drawn along the edge in Environment, standing on the
-  **high side** with its face on the edge line, thickness 0.25 m, top = the high side's surface along the edge, bottom
-  = the low side's surface (visible part only, no footing). The panel shows per wall its length, height min–max and
-  volume (m³ = length × 0.25 × mean height). Walls are not in cut / fill.
+- **Mur:** the terrain keeps the step (as Uskok). A wall solid is drawn along the edge in Environment in its own colour
+  (slate grey, user 2026-11-08), standing on the **high side** (the side higher on average along the edge), thickness
+  0.25 m, its face on the low side's grid-corner line (one cell outside the rect for a raised platform, on the edge
+  for a pit), so the terrain's one-cell step strip lies inside the wall. Top = the high side's surface along the edge
+  (+ 2 cm drawn only, against z-fighting), bottom = the low side's surface (visible part only, no footing). The panel
+  shows per wall its length, height min–max and volume (m³ = length × 0.25 × mean height). Walls are not in cut /
+  fill; they follow a lift / tilt drag live.
 - **Edit list:** per edit 4 edge selects (← → ↑ ↓, a precise fallback), the 1:n field (when an edge is Skarpa) and its
   walls. Hovering an edge select outlines that edge in the view. Edge and ratio changes go through undo / redo like value changes.
 

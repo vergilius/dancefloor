@@ -1,10 +1,10 @@
 # M4b task list
 
-Next: Task 3 (Mur). Checkpoint A passed (user 2026-11-08: "fine for now"; T1, T2 and the Wyrównaj start-height change accepted). Also added: WASD + Q/E camera keys (`src/scene/KeyPan.tsx`), plot margin 5 m. Spec PLAN.md §5 M4b; plan `tasks/plan.md`.
+Next: Task 3 (Mur) implemented, waiting for the browser check (Checkpoint B = M4b ✅); then PLAN.md / CLAUDE.md status, merge. Spec PLAN.md §5 M4b; plan `tasks/plan.md`.
 Later (user 2026-11-08): the left sidebar is poor UI/UX (the version panel sits below the long sheet list); address after M4b.
 Plot margin now 5 m (user 2026-11-08): only Podgląd and new versions; existing versions keep their frozen grid.
 Bundle: index 1495 kB of the 1500 kB budget after T2; keep T3 small.
-Branch: m4b-spec (includes level-from-start-point). T3 note: the bundle is at 1495 / 1500 kB; keep the wall mesh code small, ask before raising the budget.
+Branch: m4b-spec (includes level-from-start-point). T3 note: scratchpad check (flat −0.32): +0.30 terrace, Mur east → 6.00 m, 0.62 m, 0.93 m³, wall x 3.85…4.10 (platform side); pit −1.00 → wall outside (4.00…4.25), 0.68 m. Bundle 1497 / 1500 kB after T3; keep the wall mesh code small, ask before raising the budget.
 Drawings have no slopes or walls (checked PZT, PAB-11, PAB-12): all M4b geometry is the user's design.
 T1 note: scratchpad check on a flat −0.32 grid: 4 × 6 m to +0.30, 1:2 → slope 1.20 m wide (last corner above ground; 1.24 exact), 1:3 → 1.80 m; no edges = M4a fill to 4 decimals; 10 sloped edits (Δ 1.5 m, n = 3) replay in ~14 ms warm (36 ms first run).
 Real-file checks without the browser: Node 24 runs `src/` TS directly with a resolver hook adding `.ts` to extensionless imports; load a DWG via `@mlightcad/libredwg-web` + `normalize()` in a scratchpad script (never in the repo, never commit `dwg/`).
