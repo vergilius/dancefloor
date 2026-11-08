@@ -1,44 +1,34 @@
-# Implementation Plan: M5 (house massing)
+# Implementation Plan: M4b (bevel + retaining wall)
 
-Spec: PLAN.md §5 M5 (approved 2026-11-08), ADR 0005. Task checklist: `tasks/todo.md`.
-M4a's plan is in git history (merged to `main` as e859430).
+Spec: PLAN.md §5 M4b (approved 2026-11-08). Task checklist: `tasks/todo.md`.
+M5's plan is in git history (merged to `main` as 425d2a9).
 
 ## Overview
-The house is an ordered list of blocks saved in `dancefloor.json` (`house: { blocks, hiddenOpenings }`): one `gable`
-main body built from the roof plan (PAB-03) with a button, plus `flat` polygon blocks drawn in Design with endpoint
-snapping (annex, terrace roof, posts). Environment shows them as grey solids. Openings come from the placed
-elevations' glazing/door pieces, are placed on the first block face behind each elevation plane, and can be hidden.
+Each edit's 4 rect edges get a mode: Uskok (step, as M4a), Skarpa (slope 1:n outside the rect, daylighting to the
+surface) or Mur (0.25 m wall on the high side, drawn as a solid, terrain keeps the step). One ratio per edit.
 
 ## Architecture decisions
-- **Pure maths in `src/house/`:** `blocks.ts` (types, strict parse, "Z rzutu dachu" from a normalized sheet, and
-  block → triangle positions), `openings.ts` (elevation pieces → rects → 3D quads; ray vs block triangles). No React,
-  no three objects, no I/O. Openings are placed against the same triangles the mesh draws, in pure code, so placement
-  doesn't depend on the scene graph being built (no R3F timing, no BVH: a few hundred triangles).
-- **House state lives in `src/state/store.ts`** next to `sheets` and `groups`: it is part of `dancefloor.json`, so it
-  uses the existing `dirty` flag and "Zapisz" (no autosave, unlike edit versions). `projectFile.ts` gains the optional
-  `house` field; `version` stays 1.
-- **Gable geometry:** walls = box from `bottom` to the wall-face height; gable triangles on the short ends; two roof
-  quads from ridge to eave, extended by `overhang` on the long sides (eave height = wall face − overhang × tan pitch).
-  Roof drawn double-sided. One `BufferGeometry` for all blocks, flat normals, rebuilt when blocks change.
-- **Drawing tool** is a sibling of `MeasureTool` in the Design half (reuses `snap.ts` pick logic). Footprint
-  outlines in Design are lines on `DESIGN_LAYER` at z = 0.
-- **Level picker:** heights are typed; a small datalist offers the level values from the M2 labels (no new parsing).
-- **Pitch parse:** `NN°` from the roof sheet's normalized texts (MTEXT already stripped).
-
-## M5b (ADR 0006, approved 2026-11-08)
-The house becomes hollow: walls are the plans' wall lines extruded per storey (`src/house/walls.ts`, pure), slabs
-from the sections, the T3 openings get sill/head fills. Main body and annex blocks stay as data (roof, opening
-placement). Order: T3 → T5 → T6 → T4.
+- Edges live on the edit (`edges`, `slope`, both optional), so the file stays `version: 2` and M4a files load as all
+  Uskok. No new tool, no new store slice for geometry.
+- The slope is computed inside `replay` (pure, `src/versions/edits.ts`), so the edit's cut / fill, totals and Różnice
+  include it for free. Per outside corner: nearest rect-edge corner p, d = |k − p|, fill: max(h, top − d/n), cut:
+  min(h, top + d/n). The outside band is bounded by n × (largest |top − surface| along the edges) + 1 cell, clipped to
+  the grid, to stay < 30 ms.
+- Walls are derived, never stored: pure `src/versions/walls.ts` reads the version surface along a Mur edge (high side
+  top, low side bottom) → segments for the mesh + length / height / m³ for the panel.
+- Edge changes go through the existing `command()` undo stack (one step per change).
 
 ## Task list
-See `tasks/todo.md`: T1 main body from the roof plan (model, save, mesh, toggle, panel line), T2 draw/edit flat
-blocks, checkpoint A, T3 openings from elevations, T4 hide/show openings + docs, checkpoint B (merge).
+- T1 Skarpa per edge (edit data + replay + edit-list controls) — M
+- T2 Edge mode for new edits in the bar (default Skarpa 1:2) + edge hover outline — S/M
+- Checkpoint A: slopes end to end (browser check)
+- T3 Mur: wall geometry, mesh in Environment, wall lines in the list — M
+- Checkpoint B: M4b ✅ (browser check), PLAN.md / CLAUDE.md status, merge
 
 ## Risks and mitigations
 | Risk | Impact | Mitigation |
 |---|---|---|
-| Gable maths off (axis, overhang, eave height) | Med | Panel shows wall-face height and pitch; ✅ compares against PAB-10/PAB-08 underlays (< 1 cm) |
-| Drawing tool clashes with measure/align pointer handling | Med | One active Design tool at a time (starting one ends the others), same pattern as align vs measure |
-| Openings land on the wrong face (annex in front of main body, terrace roof slab) | Med | Ray through the rect centre, first hit; counts "not placed" per elevation; hide list for leftovers |
-| Merged/false openings (PAB-08 gable + roof windows) | Low | Known from the facts; hidden by the user, the hidden list is saved |
-| Saving `house` breaks old project files | Low | Field optional, parsed strictly only when present |
+| Replay too slow with wide slopes (n = 3, Δ 2 m → 6 m band) | Med | bounded band per edit; time it in the bar's status if > 30 ms |
+| Corner zones with mixed signs (top above ground on one side, below on the other) look odd | Low | per-corner fill/cut rule is local; visible in Różnice, judged in the browser check |
+| Wall face vs the one-cell step strip outside the edge (z-fighting / sliver) | Low | wall on the high side, face exactly on the edge line; the strip lies outside it |
+| Float32 heights vs exact volume figures | Low | same `Math.fround` path as M4a |

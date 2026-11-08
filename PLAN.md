@@ -455,7 +455,7 @@ rect by 0.10 → net +0.10 m³ (± one cell row). Undo/redo restore the totals e
 differently keeps its own totals. Reload the app → both versions and their totals are back. Delete one → its files
 are gone. Podgląd and Design unchanged; orbiting stays smooth.
 
-**M4b — Bevel + retaining wall** — spec draft 2026-11-08 (not approved yet)
+**M4b — Bevel + retaining wall** — spec approved 2026-11-08 (open questions settled as proposed)
 
 Facts: the drawings show no slopes or retaining walls (no `skarpa` / `mur oporowy` labels or layers on the site plan,
 PAB-11 or PAB-12; PAB-11 only gives the 1.5 % fall of the path). So every slope and wall is the user's design; nothing
@@ -492,12 +492,8 @@ the edit's fill grows. Set n = 3: the slope widens to about 1.86 m, volumes upda
 slope goes, a 0.25 m wall about 0.62 m high appears with its length and m³ in the list. Undo / redo restore each step.
 Save, reload: edges and ratio are back. An M4a version without edges loads unchanged (same totals).
 
-Open questions:
-1. Default edge mode for new edits: Skarpa 1:2 (proposed) or Uskok (as M4a)?
-2. Slope outside the dragged rect (proposed: the rect stays the flat area you drew) or inside it (the footprint stays,
-   the flat top shrinks)?
-3. Wall: on the high side, 0.25 m, no footing (proposed)? Or a thickness field per edit?
-4. Corner with one Skarpa and one Uskok/Mur edge: nothing beyond the corner (proposed), or let the slope wrap around?
+Decisions (user, 2026-11-08): default Skarpa 1:2 for new edits; slope outside the rect; wall fixed 0.25 m on the high
+side, no footing; a corner zone is sloped only when both its edges are Skarpa.
 
 **M5 — House massing** — done 2026-11-08 (spec sharpened 2026-11-08 on the real files, approved 2026-11-08; ADR 0005)
 
