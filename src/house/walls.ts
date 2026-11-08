@@ -22,6 +22,8 @@ const PAIR_MIN = 0.05;
  * coplanar faces z-fight (flicker), and their top edges drew lines on the roof.
  */
 const TUCK = 0.02;
+/** The outer shell ends this far (m) under the roof planes, not on them (its top edge z-fought with the roof). */
+const EAVE_TUCK = 0.01;
 const PAIR_MAX = 0.35;
 const PAIR_OVERLAP = 0.1;
 /** A façade opening cuts the shell edge whose outer face lies this close (m) to where it was placed. */
@@ -239,6 +241,7 @@ export function hollowWalls(storeys: Storey[], blocks: Block[], openings: Openin
   };
 
   if (main && roof) {
+    const underRoof = (p: Vec2) => roof(p) - EAVE_TUCK;
     const rect = [
       { x: main.x0, y: main.y0 },
       { x: main.x1, y: main.y0 },
@@ -251,8 +254,8 @@ export function hollowWalls(storeys: Storey[], blocks: Block[], openings: Openin
       const T = Math.max(...recesses.map((q) => q.top));
       const [lower] = rectMinus(main, recesses);
       if (lower) shell(lower, main.bottom, () => T);
-      shell(rect, T, roof, undefined, true);
-    } else shell(rect, main.bottom, roof, undefined, true);
+      shell(rect, T, underRoof, undefined, true);
+    } else shell(rect, main.bottom, underRoof, undefined, true);
   }
   // The annex: its own shell, without the edges standing on the main body's wall.
   const onMain = (a: Vec2, b: Vec2) =>

@@ -123,12 +123,13 @@ function BlockSolid({ block, hollow, roofHoles, clean }: { block: Block; hollow:
       ? part ? CLEAN_COLORS.roof : CLEAN_COLORS.plaster
       : thin ? CLEAN_COLORS.thin : CLEAN_COLORS.flat
     : block.kind === 'gable' ? COLORS.gable : thin ? COLORS.thin : COLORS.flat;
-  // Flat blocks often share a face with the main body's wall: push them back further so the wall wins.
-  const offset = block.kind === 'flat' ? 2 : 1;
+  // Flat blocks often share a face with the main body's wall: push them back so the wall wins. The main body (its
+  // roof) stays at its depth: pushed back, the wall tops just under it showed through at grazing angles.
+  const offset = block.kind === 'flat' ? 2 : 0;
   return (
     <>
       <mesh layers={ENV_LAYER} geometry={part ?? full} castShadow receiveShadow>
-        <meshLambertMaterial color={color} flatShading side={DoubleSide} polygonOffset polygonOffsetFactor={offset} polygonOffsetUnits={offset} />
+        <meshLambertMaterial color={color} flatShading side={DoubleSide} polygonOffset={offset > 0} polygonOffsetFactor={offset} polygonOffsetUnits={offset} />
       </mesh>
       {!clean && (
         <lineSegments layers={ENV_LAYER} geometry={partEdges ?? fullEdges}>
