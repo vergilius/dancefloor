@@ -16,6 +16,8 @@ export type Terrain = { seeds: Seeds; grid?: HeightGrid; extent: 'plot' | 'seeds
 export function useTerrain(): Terrain {
   const drawn = useDrawnSheets();
   return useMemo(() => {
+    const hit = cache.get(drawn);
+    if (hit) return hit;
     const seeds = profileSeeds(
       drawn.flatMap((d) => (d.placement.type === 'vertical' ? [{ file: d.file, placement: d.placement, sheet: d.sheet }] : [])),
     );
@@ -23,9 +25,14 @@ export function useTerrain(): Terrain {
     const plotBox = plot && segmentsBox(plot, (x, y) => [x, y]);
     const box = plotBox ? grow(plotBox, PLOT_MARGIN) : seedBox(seeds.points);
     const grid = box && heightGrid(seeds.points, box);
-    return { seeds, grid, extent: plotBox ? 'plot' : 'seeds', plot };
+    const out: Terrain = { seeds, grid, extent: plotBox ? 'plot' : 'seeds', plot };
+    cache.set(drawn, out);
+    return out;
   }, [drawn]);
 }
+
+/** Keyed on the shared drawn-sheets array, so every caller (mesh, panel, version bar) gets the same grid, built once. */
+const cache = new WeakMap<DrawnSheet[], Terrain>();
 
 /** `PZT_ZAKRES` of an aligned site sheet (one with a transform), in plan coords. Isolated lines (a legend sample) are left out. */
 function plotOutline(drawn: DrawnSheet[]): Float64Array | undefined {

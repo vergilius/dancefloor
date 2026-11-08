@@ -5,7 +5,7 @@ import type { LayerOverrides } from '../project/layerGroups';
 import type { SheetKind } from '../project/projectFile';
 import type { SheetPlacement } from '../scene/coords';
 import { deriveSite } from './site';
-import { useProject } from './store';
+import { useProject, type ProjectState } from './store';
 import { deriveVertical, isVertical, placementFor, useReference } from './vertical';
 
 // One colour per stacked plan, in sheet order, so the levels are easy to tell apart. Vertical sheets get their own set.
@@ -24,29 +24,40 @@ export function useDrawnSheets(): DrawnSheet[] {
   const sheets = useProject((s) => s.sheets);
   const parsed = useProject((s) => s.parsed);
   const ref = useReference();
-  return useMemo(() => {
-    let plans = 0;
-    let verticals = 0;
-    let sites = 0;
-    return sheets.flatMap((s): DrawnSheet[] => {
-      const p = parsed[s.file];
-      if (p?.status !== 'done') return [];
-      const base = { file: s.file, kind: s.kind, sheet: p.summary.sheet, layers: s.layers };
-      if (s.kind === 'plan' && s.placement?.type === 'horizontal')
-        return [{ ...base, placement: s.placement, color: PLAN_COLORS[plans++ % PLAN_COLORS.length]! }];
-      if (isVertical(s.kind) && ref) {
-        const placement = placementFor(s, deriveVertical(s.file, s.kind, p.summary.sheet, ref));
-        if (placement) return [{ ...base, placement, color: VERTICAL_COLORS[verticals++ % VERTICAL_COLORS.length]! }];
-      }
-      if (s.kind === 'site') {
-        // A saved transform wins; otherwise the automatic one.
-        const a = !s.transform && ref ? deriveSite(p.summary.sheet, ref) : undefined;
-        const transform = s.transform ?? (a?.ok ? a.transform : undefined);
-        const z = s.placement?.type === 'horizontal' ? s.placement.z : 0;
-        const placement = { type: 'horizontal' as const, z, ...(transform && { transform }) };
-        return [{ ...base, placement, color: SITE_COLORS[sites++ % SITE_COLORS.length]! }];
-      }
-      return [];
-    });
-  }, [sheets, parsed, ref]);
+  return useMemo(() => sharedDrawn(sheets, parsed, ref), [sheets, parsed, ref]);
+}
+
+type Inputs = { sheets: ProjectState['sheets']; parsed: ProjectState['parsed']; ref: ReturnType<typeof useReference> };
+let last: (Inputs & { out: DrawnSheet[] }) | undefined;
+
+/** One result for all components, so hooks keyed on it (the terrain grid) compute once. */
+function sharedDrawn(sheets: Inputs['sheets'], parsed: Inputs['parsed'], ref: Inputs['ref']): DrawnSheet[] {
+  if (last?.sheets !== sheets || last.parsed !== parsed || last.ref !== ref) last = { sheets, parsed, ref, out: drawnSheets(sheets, parsed, ref) };
+  return last.out;
+}
+
+function drawnSheets(sheets: Inputs['sheets'], parsed: Inputs['parsed'], ref: Inputs['ref']): DrawnSheet[] {
+  let plans = 0;
+  let verticals = 0;
+  let sites = 0;
+  return sheets.flatMap((s): DrawnSheet[] => {
+    const p = parsed[s.file];
+    if (p?.status !== 'done') return [];
+    const base = { file: s.file, kind: s.kind, sheet: p.summary.sheet, layers: s.layers };
+    if (s.kind === 'plan' && s.placement?.type === 'horizontal')
+      return [{ ...base, placement: s.placement, color: PLAN_COLORS[plans++ % PLAN_COLORS.length]! }];
+    if (isVertical(s.kind) && ref) {
+      const placement = placementFor(s, deriveVertical(s.file, s.kind, p.summary.sheet, ref));
+      if (placement) return [{ ...base, placement, color: VERTICAL_COLORS[verticals++ % VERTICAL_COLORS.length]! }];
+    }
+    if (s.kind === 'site') {
+      // A saved transform wins; otherwise the automatic one.
+      const a = !s.transform && ref ? deriveSite(p.summary.sheet, ref) : undefined;
+      const transform = s.transform ?? (a?.ok ? a.transform : undefined);
+      const z = s.placement?.type === 'horizontal' ? s.placement.z : 0;
+      const placement = { type: 'horizontal' as const, z, ...(transform && { transform }) };
+      return [{ ...base, placement, color: SITE_COLORS[sites++ % SITE_COLORS.length]! }];
+    }
+    return [];
+  });
 }

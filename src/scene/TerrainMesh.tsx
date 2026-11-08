@@ -6,7 +6,7 @@ import { Line } from '@react-three/drei';
 import { useMemo } from 'react';
 import { BufferAttribute, BufferGeometry, Color, DoubleSide } from 'three';
 import { useProject } from '../state/store';
-import { useTerrain } from '../state/terrain';
+import { useEnvSurface } from '../state/versions';
 import { contours, type Contour } from '../terrain/contours';
 import { sampleGrid, type HeightGrid } from '../terrain/grid';
 import { ENV_LAYER } from './split';
@@ -28,7 +28,8 @@ const MAJOR_WIDTH = 2; // px
 
 export function TerrainMesh() {
   const show = useProject((s) => s.showTerrain);
-  const { grid, plot } = useTerrain();
+  // Podgląd: the generated terrain; in an edit version: its own surface (M4a).
+  const { grid, plot } = useEnvSurface();
   const geo = useMemo(() => grid && terrainGeometry(grid), [grid]);
   const outline = useMemo(() => grid && plot && drapedOutline(grid, plot), [grid, plot]);
   const lines = useMemo(() => grid && contourLines(contours(grid)), [grid]);

@@ -15,6 +15,7 @@ import { AlignTool } from './AlignTool';
 import { LevelMarkers } from './LevelMarkers';
 import { TerrainMesh } from './TerrainMesh';
 import { MeasureReadout, MeasureTool } from './MeasureTool';
+import { VersionBar } from '../ui/VersionBar';
 import { ENV_LAYER, inBothViewports, splitEvents, useSplitRender, type Half } from './split';
 import type { SheetRow } from '../state/store';
 import type { PdfRender } from '../pdf/render';
@@ -132,6 +133,7 @@ function Scene({ project }: { project?: string }) {
         <MeasureToggle disabled={aligning} />
         <AlignPrompt />
       </div>
+      {project && <VersionBar />}
       <div className="viewports" ref={container}>
       <Canvas eventSource={container as RefObject<HTMLElement>} events={splitEvents}>
         {top ? (

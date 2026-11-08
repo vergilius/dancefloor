@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ensurePermission, isFolderAccessSupported, loadRememberedFolder, pickFolder } from '../project/folder';
 import { useProject } from '../state/store';
+import { useVersions } from '../state/versions';
 import { SheetList } from './SheetList';
 import { t } from './strings';
 import { TerrainPanel } from './TerrainPanel';
@@ -18,6 +19,7 @@ export function FolderPanel() {
 
   const open = async (dir: FileSystemDirectoryHandle) => {
     await useProject.getState().open(dir);
+    void useVersions.getState().load(dir);
     setState({ status: 'ready', dir });
   };
 

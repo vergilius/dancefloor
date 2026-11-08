@@ -1,6 +1,6 @@
 # M4a task list
 
-Next: T1 (versions: create, list, rename, delete, files, show the frozen terrain).
+Next: T1 implemented (commit "M4a T1"), waiting for the user's browser check; then T2.
 Plan: `tasks/plan.md`. Spec: PLAN.md §5 M4a, ADR 0003. M3 task notes are in git history (`tasks/todo.md` at c477be0).
 
 Commands: `pnpm dev`, `pnpm check` (build + lint + guards). No automated tests (CLAUDE.md).

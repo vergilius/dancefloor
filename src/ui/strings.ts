@@ -158,6 +158,23 @@ export const t = {
     tiMax: (cm: number) => `max |Δ| = ${cm.toFixed(1)} cm`,
     tiRow: (grid: string, deltaCm: string) => `siatka ${grid}, Δ ${deltaCm} cm`,
   },
+  versions: {
+    label: 'Teren w Otoczeniu',
+    preview: 'Podgląd (z rysunków)',
+    create: 'Nowa wersja',
+    createTitle: 'Zamroź obecny teren z rysunków jako nową wersję do edycji (pliki w dancefloor-versions/)',
+    noTerrain: 'Brak terenu z rysunków: nie ma czego zamrozić',
+    rename: 'Zmień nazwę',
+    renamePrompt: 'Nowa nazwa wersji:',
+    remove: 'Usuń',
+    removeConfirm: (name: string) => `Usunąć wersję „${name}”? Jej pliki znikną z folderu dancefloor-versions/.`,
+    previewNote: 'tylko podgląd, bez edycji',
+    status: (cols: number, rows: number, edits: number) =>
+      `siatka ${cols} × ${rows} · ${edits} ${plural(edits, 'zmiana', 'zmiany', 'zmian')}`,
+    saved: 'zapisano',
+    saveError: 'Błąd zapisu wersji',
+    broken: (n: number) => `${n} ${plural(n, 'nieczytelna wersja', 'nieczytelne wersje', 'nieczytelnych wersji')} (pliki zostawione)`,
+  },
   fileCount: (n: number) => `${n} ${n === 1 ? 'plik' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'pliki' : 'plików'}`,
 } as const;
 
