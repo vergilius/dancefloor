@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import {
   DEFAULT_BOTTOM,
+  DEFAULT_TOP,
   hasRoofLayer,
   isValidBlock,
   mainBodyFromRoof,
@@ -21,8 +22,6 @@ import { t } from './strings';
 
 const sheetName = (file: string) => file.replace(/\.dwg$/i, '').split(' - ')[0]!;
 const LEVELS_LIST = 'house-levels';
-/** Same as a drawn block: to be set from the list. */
-const NEW_TOP = 3;
 /** A relative height label on an elevation/section: `+3.59`, `−0.32`, `-1,40` (absolute values are left out). */
 const REL_LABEL = /^[+−-]\s*(\d{1,2}[.,]\d{2,3})$/;
 
@@ -59,7 +58,7 @@ export function HousePanel() {
     // Heights read from a sheet (columns) win over kept ones.
     const put = (name: string, polygon: Vec2[], heights?: { bottom: number; top: number }) => {
       const old = useProject.getState().house.blocks.find((b) => b.name === name);
-      const kept = old?.kind === 'flat' ? { bottom: old.bottom, top: old.top } : { bottom: DEFAULT_BOTTOM, top: NEW_TOP };
+      const kept = old?.kind === 'flat' ? { bottom: old.bottom, top: old.top } : { bottom: DEFAULT_BOTTOM, top: DEFAULT_TOP };
       putBlock({ kind: 'flat', name, polygon, ...(heights ?? kept) });
     };
     for (const a of r.annexes) put(t.house.annexName[a.side], a.polygon);
@@ -225,6 +224,7 @@ function BlockEntry({ index, block: b, refValue }: { index: number; block: Block
           {t.house.area(polygonArea(b.polygon))} · {t.house.corners(b.polygon.length)}
           {height(t.house.top, b.top, (top) => ({ ...b, top }))}
           {height(t.house.bottom, b.bottom, (bottom) => ({ ...b, bottom }))}
+          {b.bottom === DEFAULT_BOTTOM && b.top === DEFAULT_TOP && <div className="error">{t.house.defaultHeights}</div>}
         </>
       )}
       {error && <div className="error">{error}</div>}

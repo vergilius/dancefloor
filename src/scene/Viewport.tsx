@@ -147,10 +147,12 @@ function Scene({ project }: { project?: string }) {
         )}
         <SplitRender />
         <color attach="background" args={['#eef1f4']} />
-        <ambientLight intensity={0.8} ref={inBothViewports} />
+        <ambientLight intensity={0.6} ref={inBothViewports} />
         <Grid args={[100, 100]} cellSize={1} sectionSize={10} infiniteGrid fadeDistance={150} />
         {!showTerrain && <Grid layers={ENV_LAYER} args={[100, 100]} cellSize={1} sectionSize={10} infiniteGrid fadeDistance={150} />}
-        <directionalLight layers={ENV_LAYER} position={[-25, 40, 30]} intensity={0.9} />
+        <directionalLight layers={ENV_LAYER} position={[-25, 40, 30]} intensity={1} />
+        {/* Weak fill from the north-east, so the faces turned away from the sun still read apart. */}
+        <directionalLight layers={ENV_LAYER} position={[30, 20, -25]} intensity={0.3} />
         <TerrainMesh />
         <HouseMesh />
         <axesHelper args={[2]} />

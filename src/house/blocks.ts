@@ -30,6 +30,8 @@ export const EMPTY_HOUSE: House = { blocks: [], hiddenOpenings: [] };
 
 /** Top of the shallowest foundation: walls reach into the sloped terrain without a gap. */
 export const DEFAULT_BOTTOM = -1.4;
+/** Top of a new flat block until it is set (drawn or from the plan). */
+export const DEFAULT_TOP = 3;
 /** Used when the roof sheet has no single `NN°` label (flagged in the panel). */
 export const FALLBACK_PITCH = 38;
 

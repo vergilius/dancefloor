@@ -1,6 +1,6 @@
 // App state: the open project folder, its sheets (saved or suggested) and per-file parse results.
 import { create } from 'zustand';
-import { DEFAULT_BOTTOM, EMPTY_HOUSE, type Block, type House } from '../house/blocks';
+import { DEFAULT_BOTTOM, DEFAULT_TOP, EMPTY_HOUSE, type Block, type House } from '../house/blocks';
 import { listSourceFiles, type SourceFile } from '../project/folder';
 import { apply, fromTwoPairs, type Similarity2D, type Vec2 } from '../project/align';
 import { DEFAULT_GROUPS, type GroupId, type Groups } from '../project/layerGroups';
@@ -100,9 +100,6 @@ export type ProjectState = {
   finishHouseDraw(): void;
   cancelHouseDraw(): void;
 };
-
-/** New flat blocks: "Blok n", top +3.00 (to be changed), bottom as the other blocks. */
-const NEW_BLOCK_TOP = 3;
 
 function nextBlockName(blocks: Block[]): string {
   let n = 1;
@@ -396,7 +393,7 @@ export const useProject = create<ProjectState>()((set, get) => ({
     const block: Block =
       old?.kind === 'flat'
         ? { ...old, polygon }
-        : { kind: 'flat', name: nextBlockName(house.blocks), polygon, bottom: DEFAULT_BOTTOM, top: NEW_BLOCK_TOP };
+        : { kind: 'flat', name: nextBlockName(house.blocks), polygon, bottom: DEFAULT_BOTTOM, top: DEFAULT_TOP };
     const blocks = old ? house.blocks.map((b, k) => (k === houseDraw.redraw ? block : b)) : [...house.blocks, block];
     set({ dirty: true, houseDraw: undefined, house: { ...house, blocks } });
   },

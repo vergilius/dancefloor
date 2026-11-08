@@ -253,6 +253,7 @@ export const t = {
     remove: 'Usuń',
     removeConfirm: (name: string) => `Usunąć blok „${name}”?`,
     heightTitle: 'Wysokość względna (m, ±0.00); lista podpowiada rzędne z rysunków',
+    defaultHeights: 'wysokości domyślne (−1.40…+3.00): ustaw je, inaczej blok wypełnia wszystko od gruntu do +3.00',
     heightInvalid: 'Nieprawidłowa wysokość (góra musi być nad spodem)',
     cancelDraw: 'Anuluj rysowanie',
   },
