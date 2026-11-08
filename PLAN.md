@@ -388,15 +388,71 @@ Requirements:
 ✅ Ti check: all Ti / Tp=Ti points within 2 cm, except the PAB-09 353.48 drawing conflict (see facts). Legend segments, the PAB-08 stub and the PAB-10 piece are dropped (6 in all). Contours every
 0.25 m; uncertain area visibly different; orbiting the Environment view stays smooth (60 fps).
 
-**M4 — Garden tools (core value)**
-- Platform: draw polygon snapped to underlay vertices/edges, set Z numerically. Paving platforms have a
-  build-up depth (default T1 = 0.51 m, PAB-11) for excavation volume, and a cross-fall (default 1.5 %).
-- Obstacles: utilities and the rainwater tank (PAB-12, 10 m³, depth ~1.7 m + 0.2 m bed) warn when a cut
-  reaches them. Keep truck access from the fence line to the tank.
-- Slope: from platform edge down/up to terrain with ratio 1:n; retaining wall alternative.
-- Undo/redo, edit vertices, delete.
-- Cut/fill readout (m³) per feature and total; height-difference colour map (designed − existing).
-- ✅ Terrace at +0.30 next to the house with a 1:2 slope to −0.32; volumes update live.
+**M4 — Garden tools (core value)**, three sub-milestones (capability map approved 2026-11-08):
+
+| Sub-milestone | Contents | Depends on |
+|---|---|---|
+| **M4a** Platforms + editor core | features over the generated terrain, flat platforms, edit/undo/save, cut/fill, Δh map | M3 |
+| **M4b** Slopes, walls, cross-fall | slope 1:n from a platform edge to the terrain, retaining wall alternative, paving cross-fall 1.5 % | M4a |
+| **M4c** Obstacles | utilities + tank (1.7 m + 0.2 m bed) with depth, warning when a cut reaches them, truck access fence → tank | M4a |
+
+Build order M4a → M4b → M4c. The original M4 ✅ (terrace at +0.30 next to the house with a 1:2 slope to −0.32,
+volumes update live) closes with M4b.
+
+**M4a — Platforms + editor core** (spec draft 2026-11-08, awaiting approval)
+
+Decisions (ADR 0003):
+- **Saved = features, replayed** over the `base` regenerated on every load. No grid snapshot in `dancefloor.json`.
+  "Designed surface" = `base` with the features applied in list order; a later feature wins where it overlaps.
+- **Editing lives in the Environment viewport only** (user, 2026-11-08). Design stays unchanged (sheets, align,
+  measure). The shared camera means the top view of both halves line up, so the drawing on the left is the reference.
+- Platforms are **flat** at Z in M4a; cross-fall comes with M4b (it needs a fall direction).
+
+Requirements:
+- **Feature model** (`src/project/projectFile.ts`, `version` stays 1, new optional `features`):
+  `{ id: string; kind: 'platform'; name: string; polygon: Vec2[] /* plan m, ≥ 3, simple */; z: number /* m rel ±0.00 */;
+  material: 'grass' | 'paving' | 'gravel'; buildUp?: number /* m, paving only, default 0.51 (T1, PAB-11) */ }`.
+  Parsed strictly like the sheets; edits mark the project dirty and go out with the normal save.
+- **Apply (pure `src/terrain/features.ts`):** a grid corner inside a platform polygon (even-odd, corner on the edge
+  counts as inside) gets `z`. Output: the designed heights (new array, `base` untouched) and, per corner, the index of
+  the feature that set it (−1 = existing). Recomputed from scratch on every change (≈ 134k corners; target < 30 ms).
+- **Volumes (same module):** each corner stands for one cell area (0.10 × 0.10 m). Per feature, over the corners it
+  wins: **cut** = Σ max(0, existing − ref) × a, **fill** = Σ max(0, ref − existing) × a, area = n × a, where ref = z,
+  or z − buildUp for paving (earthwork measured at the sub-grade; the build-up volume area × buildUp is a separate
+  line, "podbudowa"). Total = sum over features (= designed − existing, no double counting). Share of the feature's
+  corners on uncertain terrain shown next to its volumes.
+- **Tools (Environment view bar, Polish labels):** "Edycja" on/off. While on:
+  - **Platforma:** click points on the terrain (ray against the terrain mesh, BVH via `three-mesh-bvh`); a rubber-band
+    line follows the cursor; click the first point or Enter closes, Backspace drops the last point, Esc cancels.
+    Self-intersecting polygons can't be closed (message). Default z = mean existing height under the polygon, rounded
+    to 1 cm; default material grass.
+  - **Snapping** (see open question): vertices of other platforms, then drawing endpoints (visible plan + PZT-01
+    layers, as the measure tool), within 10 px; snapped point marked with a dot. Shift disables snapping.
+  - **Select** a platform by clicking it: its vertex handles show; drag a vertex (live update), click an edge
+    midpoint handle to insert a vertex, Delete with a vertex selected removes it (≥ 3 kept), Delete with none
+    selected removes the platform.
+  - **Undo/redo:** Ctrl+Z / Ctrl+Shift+Z (and buttons) over add, delete, vertex edit and property change (zustand
+    command stack, one drag = one step). Not saved; cleared on folder load.
+- **Feature panel** (right side, like the terrain panel): list of platforms (name, material, z rel + abs, area,
+  cut / fill / podbudowa m³, uncertain share), select from the list, edit name / z (numeric, rel; abs shown) /
+  material / build-up. Totals line: Σ cut, Σ fill, net (fill − cut), all in m³ to 0.01.
+- **Environment view:** the mesh shows the designed surface; contours follow it (may update on drag end).
+  Platform outlines drawn on top (selected one highlighted). Toggle **"Różnice"**: colours by Δh = designed − existing,
+  red = cut, blue = fill, white = 0, saturated at ±1.0 m, small legend. Off = the height tint of M3.
+
+Out of M4a: slopes, walls, cross-fall (M4b); obstacles and warnings (M4c); moving/rotating whole platforms; holes in
+polygons; materials beyond the three; Tp surface.
+
+✅ Draw a paving platform of about 4 × 6 m next to the house at +0.30 (snapped to wall endpoints of PAB-01): the
+panel shows area ≈ 24 m², cut/fill and podbudowa (≈ 24 × 0.51 ≈ 12.2 m³), and the Δh map is red/blue where expected.
+Changing z by +0.10 changes fill − cut by ≈ +2.4 m³ (area × 0.10, a visible check of the volume maths). Drag a
+vertex → volumes update live; undo/redo restore exactly; save + reload restores the platform and the same totals.
+Design view unchanged; orbiting stays smooth.
+
+Open question:
+- **Snapping in Environment:** the drawing isn't shown there. Proposed: snap to drawing endpoints anyway (dot shown in
+  Environment; the Design half shows the same spot because the camera is shared), plus other platforms' vertices.
+  Alternative: snap only to platform vertices and the plot outline, no drawing snaps.
 
 **M5 — House massing**
 - Semi-auto: select closed loop from `A-WALL` lines (loose LINEs → join endpoints within 1 mm
