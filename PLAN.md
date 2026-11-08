@@ -340,7 +340,10 @@ PAB-08 Δh from ±0.00 to the ridge is 9.12 m (± 1 cm).
 Facts (raw model-space LINEs on `PZT_TEREN ISTNIEJĄCY` / `PZT_TEREN PROJEKTOWANY`, sheet coords in m):
 - **Elevations** PAB-07..10: one existing-terrain profile each (8–12 LINEs, sheet x along the façade, y = height
   rel ±0.00), spanning roughly the plot (e.g. PAB-08 x −34.4…7.6, heights −2.80…+0.39). Every Ti / Tp=Ti label
-  of M2 sits on a profile vertex (e.g. PAB-08 `Ti= +354.54` at x −14.97, profile vertex (−14.97, −0.86)). The
+  of M2 but one sits on a profile vertex (e.g. PAB-08 `Ti= +354.54` at x −14.97, profile vertex (−14.97, −0.86)).
+  **Exception:** PAB-09 `Tp=Ti= +353.48` has its circle at x 21.47 (exactly 6.5 m S of the south façade plane), 0.81 m
+  from the profile vertex of that height (22.28, −1.92); the profile gives −1.855 there (6.5 cm off). A drawing
+  conflict, left as is (user, 2026-11-08: profiles only, normalization later). The
   SE corner Ti 354.54 and the SW corner Ti 354.05 agree between the two elevations that show them.
 - **Noise in the elevations:** a legend pair (1.00 m horizontal `ISTNIEJĄCY` at y 3.78 and `PROJEKTOWANY` at y 3.38,
   far right) on every elevation, one isolated 0.40 m stub on PAB-08 (x −22.34…−21.94, y −1.92, 30 cm below the
@@ -355,7 +358,8 @@ Facts (raw model-space LINEs on `PZT_TEREN ISTNIEJĄCY` / `PZT_TEREN PROJEKTOWAN
 - **PZT-01** `PZT_TEREN ISTNIEJĄCY` = 60 short slope-hatch ticks (an existing embankment along the SE and W edges),
   no heights. Not used.
 - **Plot:** `PZT_ZAKRES` on PZT-01 is a closed 6-corner outline, **1043 m²**, plan bbox x −7.7…21.6, y −34.6…5.9
-  (after the M1c rotation). At 0.10 m cells the grid is ~310 × 430 ≈ 133k cells.
+  (after the M1c rotation). At 0.10 m cells the grid is 314 × 426 ≈ 134k cells. The layer also has one isolated
+  8.6 m LINE far off (legend sample), ignored like the profile legends (only segments with a neighbour count).
 
 Requirements:
 - **Seeds (pure `src/terrain/seeds.ts`, main thread, from the normalized `PZT_TEREN ISTNIEJĄCY` layer of every
@@ -366,7 +370,7 @@ Requirements:
 - **Existing terrain = `terrain.base`** (pure `src/terrain/grid.ts`): delaunator over all seeds (duplicates within
   1 cm merged), linear interpolation inside the hull. Outside the hull: the height of the nearest point on the hull
   boundary (continuous, flat outward), and the cell is flagged **uncertain**. Grid: 0.10 m cells over the plot bbox
-  + 2 m margin (`PZT_ZAKRES` through PZT-01's transform). Without an aligned PZT-01: seed bbox + 5 m.
+  + 2 m (1 m per side; `PZT_ZAKRES` through PZT-01's transform). Without an aligned PZT-01: seed bbox + 5 m (2.5 m per side).
 - **Not saved (ADR 0002):** `terrain.base` is generated from the DWGs on load (no change to `dancefloor.json`). The
   environment editor (M4 on) edits a copy of the generated model; only the copy's edits are saved.
 - **Tp:** no Tp surface in M3. The Tp points stay as M2 markers, for reference in M4 (user, 2026-11-08).
@@ -381,7 +385,7 @@ Requirements:
 - **Best available, not exact** (user, 2026-11-08): the terrain will mostly be reshaped in the later editor, so
   M3 keeps the simplest approach that works. No conflict resolution between sources, no crossing analysis.
 
-✅ Ti check: all Ti / Tp=Ti points within 2 cm. Legend segments, the PAB-08 stub and the PAB-10 piece are dropped (6 in all). Contours every
+✅ Ti check: all Ti / Tp=Ti points within 2 cm, except the PAB-09 353.48 drawing conflict (see facts). Legend segments, the PAB-08 stub and the PAB-10 piece are dropped (6 in all). Contours every
 0.25 m; uncertain area visibly different; orbiting the Environment view stays smooth (60 fps).
 
 **M4 — Garden tools (core value)**

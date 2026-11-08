@@ -1,6 +1,8 @@
 # M3 task list
 
-Next: T2 (height grid + Ti check). T1 done and verified 2026-11-08: 301 seeds from 7 sheets, 6 dropped.
+Next: T3 (terrain mesh in Environment). T2 done 2026-11-08: grid 314 × 426 (`PZT_ZAKRES` had a stray legend LINE,
+now ignored), Ti max |Δ| ≤ 1.1 cm except PAB-09 353.48 (+6.9 cm, drawing conflict, PLAN.md §5 M3 facts).
+`useTerrain()` (seeds + grid) replaced `useTerrainSeeds()`; `connectedSegments()` in `src/terrain/seeds.ts`.
 Note (T1): `useDrawnSheets` is in `src/state/drawn.ts` (memoized); `useTerrainSeeds()` in `src/state/terrain.ts`. Plan: `tasks/plan.md`. Spec: PLAN.md §5 M3, ADR 0002.
 M2 task notes are in git history (`tasks/todo.md` at 48b5a42).
 
@@ -30,15 +32,15 @@ Extent = `PZT_ZAKRES` bbox (through PZT-01's transform) + 2 m, else seed bbox + 
 Panel: grid size, cell count, extent source, height range (rel + abs), uncertain share; Ti list: each Ti / Tp=Ti
 marker's label value vs the grid height at its point, Δ, and max |Δ|.
 **Acceptance criteria:**
-- [ ] Grid ≈ 310 × 430 from `PZT_ZAKRES`; height range within the profile range (≈ −2.80…+0.63)
-- [ ] Ti check: max |Δ| ≤ 2 cm
+- [x] Grid ≈ 310 × 430 from `PZT_ZAKRES` (314 × 426); height range within the profile range (≈ −2.80…+0.63)
+- [x] Ti check: max |Δ| ≤ 2 cm (11 of 12; PAB-09 353.48 is a drawing conflict, user accepted)
 **Verification:** `pnpm check`; user reads the panel values.
 **Dependencies:** T1
 **Files:** `package.json`, `src/terrain/grid.ts`, `src/state/terrain.ts`, `src/ui/TerrainPanel.tsx`, `src/ui/strings.ts`
 **Scope:** M
 
 ### Checkpoint A (after T1–T2)
-- [ ] `pnpm check` green; counts and Ti check match the spec (user check)
+- [x] `pnpm check` green; counts and Ti check match the spec (user check)
 
 ### Task 3: Terrain mesh in the Environment viewport
 **Description:** `src/scene/TerrainMesh.tsx`: one indexed mesh from the grid corners (environment layer only),
