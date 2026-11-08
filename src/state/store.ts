@@ -144,7 +144,7 @@ export const useProject = create<ProjectState>()((set, get) => ({
   showLevels: true,
   showTerrain: true,
   showHouse: true,
-  showOpenings: true,
+  showOpenings: false,
   groups: DEFAULT_GROUPS,
   house: EMPTY_HOUSE,
 
