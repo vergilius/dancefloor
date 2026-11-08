@@ -30,7 +30,13 @@ export type FlatBlock = { kind: 'flat'; name: string; polygon: Vec2[]; holes?: V
 
 export type Block = GableBlock | FlatBlock;
 
-export type House = { blocks: Block[]; hiddenOpenings: string[] };
+/**
+ * `lift` (m, ADR 0007): how much higher the house was built than drawn. The as-built ±0.00 = the drawings' ±0.00 +
+ * lift; the house stays at its drawn heights, the terrain (absolute) reads `lift` lower. Missing = 0.
+ */
+export type House = { blocks: Block[]; hiddenOpenings: string[]; lift?: number };
+/** |lift| above this (m) is refused as a typo. */
+export const MAX_LIFT = 2;
 
 export const EMPTY_HOUSE: House = { blocks: [], hiddenOpenings: [] };
 
@@ -149,7 +155,9 @@ export function parseHouse(v: unknown, where = 'house'): House {
   const blocks = v.blocks.map((b, i) => parseBlock(b, `${where}.blocks[${i}]`));
   const hidden = v.hiddenOpenings ?? [];
   if (!Array.isArray(hidden) || hidden.some((h) => typeof h !== 'string')) throw new Error(`${where}.hiddenOpenings: expected strings`);
-  return { blocks, hiddenOpenings: hidden as string[] };
+  const lift = v.lift ?? 0;
+  if (typeof lift !== 'number' || !Number.isFinite(lift) || Math.abs(lift) > MAX_LIFT) throw new Error(`${where}.lift: expected a number within ±${MAX_LIFT}`);
+  return { blocks, hiddenOpenings: hidden as string[], ...(lift !== 0 && { lift }) };
 }
 
 // ---------- "Z rzutu dachu" ----------

@@ -5,7 +5,8 @@ import { SHEET_KINDS, type SheetKind } from '../project/projectFile';
 import { useProject, type PdfState, type SheetRow } from '../state/store';
 import { planeValue, withPlane } from '../project/vertical';
 import { formatHeight } from '../project/levels';
-import { useLevelReference, useRefValue } from '../state/levels';
+import { useHouseLift, useLevelReference, useRefValue } from '../state/levels';
+import { MAX_LIFT } from '../house/blocks';
 import { deriveSite } from '../state/site';
 import { deriveVertical, isVertical, placementFor, useReference, type VerticalKind } from '../state/vertical';
 import type { ParseSummary } from '../worker/protocol';
@@ -234,10 +235,19 @@ function AlignLine({ row, sheet }: { row: SheetRow; sheet?: NormalizedSheet }) {
 /** `±0.00 = 355.40 m n.p.m. (4 arkusze)`, or why heights are relative only. */
 function ReferenceLine() {
   const r = useLevelReference();
+  const lift = useHouseLift();
+  const setLift = useProject((s) => s.setHouseLift);
   if (r.ok)
     return (
       <div className="save-bar">
-        ±0.00 = <strong>{r.value.toFixed(2)} m n.p.m.</strong> <span className="muted">({t.reference.sheets(r.sheets)})</span>
+        ±0.00 = <strong>{(r.value + lift).toFixed(2)} m n.p.m.</strong>{' '}
+        <span className="muted">
+          ({lift === 0 ? t.reference.sheets(r.sheets) : t.reference.asBuilt(r.value.toFixed(2), t.reference.sheets(r.sheets))})
+        </span>
+        <br />
+        <label title={t.reference.liftTitle}>
+          {t.reference.lift} <ZInput value={lift} onChange={setLift} accept={(v) => Math.abs(v) <= MAX_LIFT} /> m
+        </label>
       </div>
     );
   return (

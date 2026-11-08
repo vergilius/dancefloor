@@ -93,6 +93,8 @@ export type ProjectState = {
   toggleOpening(key: string): void;
   /** Replaces the block with the same name, or appends it. */
   putBlock(block: Block): void;
+  /** As-built house lift (m, ADR 0007); the loaded versions are rebased to it (absolute heights kept). */
+  setHouseLift(lift: number): void;
   /** Replaces block `index`; refused (false) if the new name is taken by another block. */
   updateBlock(index: number, block: Block): boolean;
   removeBlock(index: number): void;
@@ -299,7 +301,7 @@ export const useProject = create<ProjectState>()((set, get) => ({
       ...(layers && Object.keys(layers).length > 0 && { layers }),
     }));
     try {
-      const withHouse = house.blocks.length > 0 || house.hiddenOpenings.length > 0;
+      const withHouse = house.blocks.length > 0 || house.hiddenOpenings.length > 0 || !!house.lift;
       await writeProjectFile(dir, { version: 1, sheets: out, groups, ...(withHouse && { house }) });
       // Keep the written placements/transforms on the rows, so they are used (not re-derived) from now on.
       set({ dirty: false, saveError: undefined, sheets: sheets.map((r) => ({ ...r, source: 'saved' })) });
@@ -372,6 +374,11 @@ export const useProject = create<ProjectState>()((set, get) => ({
       const blocks = i < 0 ? [...st.house.blocks, block] : st.house.blocks.map((b, k) => (k === i ? block : b));
       return { dirty: true, house: { ...st.house, blocks } };
     });
+  },
+
+  setHouseLift(lift) {
+    if (lift === (get().house.lift ?? 0)) return;
+    set((st) => ({ dirty: true, house: { ...st.house, lift } }));
   },
 
   updateBlock(index, block) {

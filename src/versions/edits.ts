@@ -63,6 +63,12 @@ export function withEdgeHeight(e: Edit & { tool: 'level' }, side: Side, h: numbe
   return { ...e, z: (lo + hi) / 2, tilt: { x: t.x, y: hi - lo } };
 }
 
+/** The edit with its absolute heights (Wyrównaj z, Mur top) moved by `d` m: a ±0.00 change (ADR 0007). */
+export function shiftEdit(e: Edit, d: number): Edit {
+  const r = (v: number) => Math.round((v + d) * 1e6) / 1e6;
+  return e.tool === 'level' ? { ...e, z: r(e.z) } : e.tool === 'wall' ? { ...e, top: r(e.top) } : e;
+}
+
 /** Podnieś / Obniż default step (m). */
 export const DEFAULT_DZ = 0.1;
 

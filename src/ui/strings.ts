@@ -145,6 +145,10 @@ export const t = {
     sheets: (n: number) => `${n} ${n === 1 ? 'arkusz' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'arkusze' : 'arkuszy'}`,
     none: 'Brak poziomu odniesienia ±0.00 (0,00= … m npm) na wczytanych arkuszach: wysokości tylko względne',
     disagree: 'Poziomy odniesienia ±0.00 się różnią, wysokości tylko względne',
+    asBuilt: (drawn: string, sheets: string) => `wykonany; na rysunkach ${drawn}, ${sheets}`,
+    lift: 'Dom wyżej o',
+    liftTitle:
+      'Ile wyżej dom został wybudowany niż na rysunkach (m). Dom zostaje na swoich rzędnych, teren (bezwzględny) czyta się o tyle niżej; wersje terenu zachowują rzędne n.p.m.',
   },
   levels: { title: 'Rzędne', withPoint: 'z punktem', without: 'bez punktu' },
   pdf: {

@@ -6,7 +6,8 @@ import { parseEdit, type Edit } from './edits';
 
 export type GridGeometry = { cell: number; origin: { x: number; y: number }; cols: number; rows: number };
 
-export type VersionFile = { version: 1 | 2; id: string; name: string; created: string; grid: GridGeometry; edits: Edit[] };
+/** `lift` (ADR 0007): the house lift its heights (the .bin and the edits) are relative to; missing = 0. */
+export type VersionFile = { version: 1 | 2; id: string; name: string; created: string; grid: GridGeometry; edits: Edit[]; lift?: number };
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isCount = (v: unknown): v is number => Number.isInteger(v) && (v as number) > 0;
@@ -35,6 +36,8 @@ export function parseVersionFile(text: string): VersionFile {
   )
     throw new Error('grid: expected { cell > 0, origin: { x, y }, cols, rows }');
   if (!Array.isArray(edits)) throw new Error('edits: expected an array');
+  const lift = v.lift ?? 0;
+  if (typeof lift !== 'number' || !Number.isFinite(lift)) throw new Error('lift: expected a number');
   return {
     version: v.version,
     id,
@@ -42,6 +45,7 @@ export function parseVersionFile(text: string): VersionFile {
     created,
     grid: { cell: grid.cell as number, origin: { x: grid.origin.x as number, y: grid.origin.y as number }, cols: grid.cols, rows: grid.rows },
     edits: edits.map((e, i) => parseEdit(e, `edits[${i}]`)),
+    ...(lift !== 0 && { lift }),
   };
 }
 

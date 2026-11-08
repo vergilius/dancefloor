@@ -42,7 +42,7 @@ All AC1021, mm, pure 2D, parse in 0.1–0.5 s each.
 
 | Fact | Source | Consequence |
 |---|---|---|
-| **±0.00 = +355.40 m a.s.l.** | elevations, MTEXT `0,00= +355.40 m npm` | Absolute reference solved — no manual input needed |
+| **±0.00 = +355.40 m a.s.l.** | elevations, MTEXT `0,00= +355.40 m npm` | Absolute reference solved — no manual input needed. As built: house 0.20 m higher, `house.lift` (ADR 0007) |
 | Designed terrain spot heights `Tp= 355,08` etc. (7 labels, 353.48–355.20) | PZT-01, layer `G-ANNO-TEXT-4` (MTEXT + circle/hatch symbol) | Parse value + insertion point → designed-terrain points in plan coords |
 | Existing/designed terrain at façade corners `Ti=…`, `Tp=…`, `Tp=Ti=…` (352.65–355.70 m) | elevations, `G-ANNO-DIMS` | ~3 m fall across the house footprint — **sloped plot, garden levels matter** |
 | Existing terrain profile lines | `PZT_TEREN ISTNIEJĄCY` (LINEs) in every elevation (8–12) and PZT-01 (60) | In elevations: vertical profile along each façade (x = along façade, y = height). In PZT: outline only, no heights |

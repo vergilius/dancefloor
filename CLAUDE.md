@@ -34,8 +34,9 @@ TypeScript is pinned to `~6.0` because typescript-eslint 8 doesn't support TS 7 
 
 ## Domain rules (easy to get wrong)
 - DWG units are **mm** (`INSUNITS=4`). The scene is in **metres**, so scale by 0.001 on import.
-- Heights: relative to ±0.00; **absolute = 355.40 m a.s.l. + relative**. Show both. The 355.40 is parsed
-  from the drawings, never hard-coded as the only source.
+- Heights: relative to ±0.00; **absolute = 355.40 m a.s.l. + house lift + relative** (ADR 0007: the house was
+  built `house.lift` = 0.20 m higher; ±0.00 = the as-built floor). Show both. The 355.40 is parsed from the
+  drawings, never hard-coded as the only source.
 - Terrain is a **regular height grid** (default 0.10 m cells), not a TIN. Features are applied in order over
   `terrain.base`. **Never mutate `terrain.base`.** Cut/fill = Σ(Δh × cell area).
 - Keep existing terrain (`Ti`) and architect-designed terrain (`Tp`) as separate surfaces.
