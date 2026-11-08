@@ -1,5 +1,5 @@
 // Existing terrain in the Environment viewport (PLAN.md §5 M3): one vertex per grid corner, height-tinted.
-// Cells with an uncertain corner (outside the profiles' hull) are a second, lighter and semi-transparent index
+// Cells with an uncertain corner (outside the profiles' hull) are a second, lighter (opaque, no contours) index
 // over the same positions. Plot outline (`PZT_ZAKRES`) draped just above the surface. Contours every 0.25 m
 // (certain cells only), whole metres thicker and darker.
 import { Line } from '@react-three/drei';
@@ -13,9 +13,8 @@ import { ENV_LAYER } from './split';
 
 /** Height ramp low → high. */
 const RAMP = ['#4f7a35', '#9bbf5e', '#e0d08f'].map((c) => new Color(c));
-/** Uncertain cells: mixed this far toward white, at this opacity. */
-const UNCERTAIN_LIGHTEN = 0.55;
-const UNCERTAIN_OPACITY = 0.45;
+/** Uncertain cells: mixed this far toward white (opaque: semi-transparent read as a hole, user 2026-11-08). */
+const UNCERTAIN_LIGHTEN = 0.3;
 const OUTLINE_COLOR = '#b3261e';
 /** Outline sits this far above the surface (m), sampled every OUTLINE_STEP (m) so it follows the relief. */
 const OUTLINE_LIFT = 0.03;
@@ -41,7 +40,7 @@ export function TerrainMesh() {
         <meshLambertMaterial vertexColors side={DoubleSide} />
       </mesh>
       <mesh layers={ENV_LAYER} geometry={geo.uncertain}>
-        <meshLambertMaterial vertexColors side={DoubleSide} transparent opacity={UNCERTAIN_OPACITY} depthWrite={false} />
+        <meshLambertMaterial vertexColors side={DoubleSide} />
       </mesh>
       {lines && lines.minor.length > 0 && (
         <lineSegments layers={ENV_LAYER}>

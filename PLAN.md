@@ -381,7 +381,7 @@ Requirements:
 - **Survey points deferred** (user, 2026-11-08): no spot-height tool and no survey import in M3. Parts of the plot are
   outside the profile hull and show as uncertain until then.
 - **Environment viewport:** the terrain mesh (one vertex per cell corner, height-tinted), uncertain cells drawn
-  lighter and semi-transparent, contour lines every 0.25 m (marching squares, every 1 m thicker), and the plot
+  lighter (opaque since 2026-11-08: semi-transparent read as a missing piece), contour lines every 0.25 m (marching squares, every 1 m thicker), and the plot
   outline. Toggle "Teren" (view setting, default on, not saved). Design is unchanged.
 - **Visible checks (one panel line + Ti list):** seeds used / segments dropped, grid size, height range (rel + abs),
   uncertain share; the **Ti check**: for every resolved Ti / Tp=Ti marker the grid height at its point vs the label
