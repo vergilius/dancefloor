@@ -476,6 +476,11 @@ Requirements:
   release), one undo step per drag. A click (no drag) near an edge of the selected edit cycles it Skarpa → Uskok →
   Esc cancels a drag or clears the selection. The bar's 1:n acts on the selected edit (and is the default for the
   next). Skarpa works the same on a ramp (top = the ramp's height along the edge).
+- **Quick wins (user 2026-11-08):** Shift+drag an edge of the selected edit = resize it (its snap: 0.5 m, Mur 5 cm),
+  Shift+drag inside = move it. Lift / tilt drags snap within 6 px to ±0.00, the drawings' level marks, the other
+  edits' heights (and edge heights of ramps) and the drag's start; the bar shows "= <target>"; Alt = free.
+  **Bilansuj** (Inspector, Wyrównaj): bisects the edit's z (1 cm) so its own cut = fill (slopes included), against the
+  surface before it; one undo step.
 - **Skarpa (pure, in `replay`):** the rect is the flat top (or bottom) you dragged; the slope goes **outside** it until
   it meets the surface (daylight). For a grid corner outside the rect, p = the nearest rect-edge corner, d = distance
   to p (m), top = h(p) after the edit. Fill side (top above the corner): h = max(h, top − d/n); cut side: h =

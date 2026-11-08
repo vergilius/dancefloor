@@ -5,7 +5,7 @@ import { Trash } from 'lucide-react';
 import { formatHeight } from '../project/levels';
 import { useRefValue } from '../state/levels';
 import { useActiveVersion, useVersions, versionSurface } from '../state/versions';
-import { edgeHeights, edgesOf, editValue, rectSize, SIDES, slopeOf, totals, type Edit } from '../versions/edits';
+import { balanceZ, edgeHeights, edgesOf, editValue, rectSize, SIDES, slopeOf, totals, type Edit } from '../versions/edits';
 import type { HeightGrid } from '../terrain/grid';
 import { EdgeControls } from './EdgeControls';
 import { wallSolid } from '../versions/walls';
@@ -29,7 +29,7 @@ export function VersionPanel() {
             <h3>
               {t.shell.inspector} {index + 1}: {t.versions.tools[version.edits[index]!.tool]}
             </h3>
-            <EditDetails edit={version.edits[index]!} index={index} surface={surface} />
+            <EditDetails edit={version.edits[index]!} index={index} surface={surface} balance={() => balanceZ(version.grid, version.edits, index)} />
           </>
         ) : (
           <NewEditDefaults />
@@ -82,8 +82,8 @@ function NewEditDefaults() {
   );
 }
 
-function EditDetails({ edit: e, index, surface }: { edit: Edit; index: number; surface: Surface }) {
-  const { setEditValue, setEditShape, setNewSlope, deleteEdit } = useVersions();
+function EditDetails({ edit: e, index, surface, balance }: { edit: Edit; index: number; surface: Surface; balance: () => number | undefined }) {
+  const { setEditValue, setEditShape, setNewSlope, deleteEdit, replaceEdit } = useVersions();
   const ref = useRefValue();
   const vol = surface.volumes[index]!;
   const size = rectSize(e.rect);
@@ -122,6 +122,18 @@ function EditDetails({ edit: e, index, surface }: { edit: Edit; index: number; s
             }}
           />
           <div className="muted">{t.versions.editVolume(vol.cut, vol.fill)}</div>
+          {e.tool === 'level' && (
+            <button
+              type="button"
+              title={t.versions.balanceTitle}
+              onClick={() => {
+                const z = balance();
+                if (z !== undefined) replaceEdit({ ...e, z });
+              }}
+            >
+              {t.versions.balance}
+            </button>
+          )}
         </>
       )}
       <button type="button" className="danger" onClick={() => deleteEdit(e.id)}>

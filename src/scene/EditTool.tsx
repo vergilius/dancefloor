@@ -2,15 +2,19 @@
 // left drag that starts on the terrain draws a rect snapped to the 0.5 m lattice and adds the edit on release
 // (Wyrównaj flat at the drag's start height, Podnieś / Obniż by dz), selected. On a selected Wyrównaj, a drag inside
 // moves it up / down and a drag near an edge moves only that edge (a ramp), 1 cm per pixel, previewed live, one undo
-// step per drag. A click near an edge of the selected edit cycles it Skarpa → Uskok → Mur. Esc cancels a drag, or
-// clears the selection. A drag that starts anywhere else orbits as usual.
+// step per drag. A click near an edge of the selected edit cycles it Skarpa → Uskok → Mur. Shift+drag an edge resizes
+// the selected edit, Shift+drag inside moves it (its snap). Heights snap to ±0.00, the drawings' levels and the other
+// edits (Alt = free). Esc cancels a drag, or clears the selection. A drag that starts anywhere else orbits as usual.
 import { useEffect, useMemo, useRef } from 'react';
 import { useThree } from '@react-three/fiber';
 import { Box3, Plane, Raycaster, Vector2, Vector3, type Camera } from 'three';
 import { useProject } from '../state/store';
-import { useEnvSurface, useVersions, versionSurface } from '../state/versions';
+import { useActiveVersion, useEnvSurface, useVersions, versionSurface } from '../state/versions';
+import { useDrawnSheets } from '../state/drawn';
+import { useLevelMarkers } from './LevelMarkers';
+import { t } from '../ui/strings';
 import { isOutside, rayGrid, sampleGrid, type HeightGrid } from '../terrain/grid';
-import { DEFAULT_DZ, edgeHeights, edgesOf, editValue, heightAt, snapOf, snapRect, WALL_SNAP, withEdgeHeight, withValue, type EdgeMode, type Edges, type Edit, type Rect, type Side } from '../versions/edits';
+import { DEFAULT_DZ, edgeHeights, edgesOf, editValue, heightAt, moveRect, resizeRect, snapHeight, snapOf, snapRect, withEdgeHeight, withValue, type EdgeMode, type Edges, type Edit, type Rect, type Side, type SnapTarget } from '../versions/edits';
 import { groundUnder, NEW_WALL_ABOVE } from '../versions/walls';
 import { ENV_LAYER, halfAt } from './split';
 
@@ -23,6 +27,8 @@ const LIFT = 0.04;
 const STEP = 0.1;
 /** Lift / tilt drags: metres per screen pixel of vertical mouse movement. */
 const M_PER_PX = 0.01;
+/** Lift / tilt drags snap to a target height within this many px (Alt = free). */
+const SNAP_PX = 6;
 /** A press that moves less than this (px) is a click. */
 const CLICK_PX = 3;
 /** Hover distance to an edge of the selected edit (plan m). */
@@ -79,18 +85,8 @@ function wallHover(camera: Camera, el: HTMLElement, e: Edit & { tool: 'wall' }, 
   return boxHit || inPolygon(client, poly) ? 'inside' : undefined;
 }
 
-/** The wall's rect with one side moved to plan coordinate v (5 cm snap), at least one snap wide. */
-function resizeRect(r: Rect, side: Side, v: number): Rect {
-  const s = Math.round(Math.round(v / WALL_SNAP) * WALL_SNAP * 1000) / 1000;
-  if (side === 'w') return { ...r, x0: Math.min(s, r.x1 - WALL_SNAP) };
-  if (side === 'e') return { ...r, x1: Math.max(s, r.x0 + WALL_SNAP) };
-  if (side === 's') return { ...r, y0: Math.min(s, r.y1 - WALL_SNAP) };
-  return { ...r, y1: Math.max(s, r.y0 + WALL_SNAP) };
-}
-
 /** Dragged up / down from its middle: Wyrównaj (z) and Mur (top). */
 const liftable = (e: Edit) => e.tool === 'level' || e.tool === 'wall';
-const sideKey = { w: 'x0', e: 'x1', s: 'y0', n: 'y1' } as const;
 
 /** The side of `r` within EDGE_HIT of plan point p (the nearest), if any. */
 function nearSide(r: Rect, [x, y]: [number, number]): Side | undefined {
@@ -142,11 +138,28 @@ export function EditTool() {
     const hit = raycaster.ray.intersectBox(box, new Vector3());
     return hit ? hit.distanceTo(raycaster.ray.origin) : undefined;
   };
+  // Snap targets for lift / tilt drags: ±0.00, the drawings' level marks, the other edits' heights.
+  const markers = useLevelMarkers(useDrawnSheets());
+  const edits = useActiveVersion()?.edits;
+  const targets = useMemo(() => {
+    const out: (SnapTarget & { id?: string })[] = [{ z: 0, label: '±0.00' }];
+    for (const m of markers) out.push({ z: Math.round(m.world[2] * 100) / 100, label: m.label });
+    (edits ?? []).forEach((e, i) => {
+      const label = `${t.versions.tools[e.tool]} ${i + 1}`;
+      if (e.tool === 'wall') out.push({ id: e.id, z: e.top, label });
+      if (e.tool !== 'level') return;
+      out.push({ id: e.id, z: e.z, label });
+      if (e.tilt) for (const [s, z] of Object.entries(edgeHeights(e))) out.push({ id: e.id, z, label: `${label} ${t.versions.sides[s as Side]}` });
+    });
+    return out;
+  }, [markers, edits]);
+  const targetsRef = useRef(targets);
   const pickRef = useRef(pick);
   const wallHitRef = useRef(wallHit);
   const cameraRef = useRef(camera);
   useEffect(() => {
     pickRef.current = pick;
+    targetsRef.current = targets;
     wallHitRef.current = wallHit;
     cameraRef.current = camera;
   });
@@ -169,7 +182,8 @@ export function EditTool() {
       | { kind: 'area'; start: [number, number]; rect: Rect; z0: number }
       | { kind: 'lift'; edit: Edit; y0: number; moved: boolean }
       | { kind: 'edge'; edit: Edit; side: Side; y0: number; moved: boolean }
-      | { kind: 'resize'; edit: Edit & { tool: 'wall' }; side: Side; y0: number; moved: boolean };
+      | { kind: 'resize'; edit: Edit; side: Side; z: number; moved: boolean }
+      | { kind: 'move'; edit: Edit; z: number; start: [number, number]; moved: boolean };
     let drag: Drag | undefined;
     let placing: Edit | undefined;
     let frame = 0;
@@ -180,7 +194,8 @@ export function EditTool() {
       if (o === over) return;
       over = o;
       setHoverSide(o && o !== 'inside' ? o : undefined);
-      el.style.cursor = o === 'inside' ? 'ns-resize' : o ? 'pointer' : '';
+      const sel = selectedEdit();
+      el.style.cursor = o === 'inside' ? (sel && liftable(sel) ? 'ns-resize' : 'move') : o ? 'pointer' : '';
     };
     const reset = () => {
       drag = placing = undefined;
@@ -189,16 +204,30 @@ export function EditTool() {
       setPreview(undefined);
     };
     /** Shows a dragged edit on the surface (once per frame) and its height in the bar. */
-    const show = (e: Edit, z: number) => {
+    const show = (e: Edit, z: number, snap?: string) => {
       placing = e;
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
-        setDraft({ ...e.rect, z });
+        setDraft({ ...e.rect, z, snap });
         setPreview(e);
       });
     };
     const dz = (y0: number, y: number) => (y0 - y) * M_PER_PX;
     const cm = (v: number) => Math.round(v * 100) / 100;
+    /** A dragged height snapped to a target (not the dragged edit's own heights), unless Alt is held. */
+    const snapped = (z: number, edit: Edit, start: number, alt: boolean) =>
+      alt ? { z } : snapHeight(z, [{ z: start, label: t.versions.snapStart }, ...targetsRef.current.filter((s) => s.id !== edit.id)], SNAP_PX * M_PER_PX + 1e-9);
+    /** Plan point under the pointer on the horizontal plane at height z. */
+    const planeAt = (clientX: number, clientY: number, z: number): [number, number] | undefined => {
+      const { half, ndc } = halfAt(clientX, clientY, el.getBoundingClientRect());
+      if (half !== 'env') return undefined;
+      raycaster.setFromCamera(new Vector2(...ndc), cameraRef.current);
+      const hit = raycaster.ray.intersectPlane(new Plane(new Vector3(0, 1, 0), -z), new Vector3());
+      return hit ? [hit.x, -hit.z] : undefined;
+    };
+    /** Height of the plane a resize / move follows: the wall's top, the platform's height, else the ground. */
+    const planeZ = (e: Edit) =>
+      e.tool === 'wall' ? e.top : e.tool === 'level' ? e.z : heightAt(grid, (e.rect.x0 + e.rect.x1) / 2, (e.rect.y0 + e.rect.y1) / 2);
 
     const onMove = (e: PointerEvent) => {
       if (!drag) {
@@ -212,7 +241,7 @@ export function EditTool() {
         const side = nearSide(sel.rect, p);
         const r = sel.rect;
         const inside = p[0] > r.x0 && p[0] < r.x1 && p[1] > r.y0 && p[1] < r.y1;
-        return setOver(side ?? (inside && liftable(sel) ? 'inside' : undefined));
+        return setOver(side ?? (inside ? 'inside' : undefined));
       }
       if (drag.kind === 'area') {
         const p = pickRef.current(grid, e.clientX, e.clientY);
@@ -221,28 +250,31 @@ export function EditTool() {
         setDraft({ ...drag.rect, z: st().tool === 'level' ? drag.z0 : undefined });
         return;
       }
-      if (drag.kind === 'resize') {
-        // The side follows the pointer on the horizontal plane of the wall's top.
-        const { half, ndc } = halfAt(e.clientX, e.clientY, el.getBoundingClientRect());
-        if (half !== 'env') return;
-        raycaster.setFromCamera(new Vector2(...ndc), cameraRef.current);
-        const hit = raycaster.ray.intersectPlane(new Plane(new Vector3(0, 1, 0), -drag.edit.top), new Vector3());
+      if (drag.kind === 'resize' || drag.kind === 'move') {
+        // The side (or the whole rect) follows the pointer on the horizontal plane at the edit's height.
+        const hit = planeAt(e.clientX, e.clientY, drag.z);
         if (!hit) return;
-        const v = drag.side === 'w' || drag.side === 'e' ? hit.x : -hit.z;
-        const rect = resizeRect(drag.edit.rect, drag.side, v);
-        if (rect[sideKey[drag.side]] === drag.edit.rect[sideKey[drag.side]] && !drag.moved) return;
+        const step = snapOf(drag.edit.tool);
+        const r0 = drag.edit.rect;
+        const rect =
+          drag.kind === 'resize'
+            ? resizeRect(r0, drag.side, drag.side === 'w' || drag.side === 'e' ? hit[0] : hit[1], step)
+            : moveRect(r0, hit[0] - drag.start[0], hit[1] - drag.start[1], step);
+        if (!drag.moved && rect.x0 === r0.x0 && rect.x1 === r0.x1 && rect.y0 === r0.y0 && rect.y1 === r0.y1) return;
         drag.moved = true;
-        show({ ...drag.edit, rect }, drag.edit.top);
+        show({ ...drag.edit, rect }, editValue(drag.edit));
         return;
       }
       if (Math.abs(e.clientY - drag.y0) > CLICK_PX) drag.moved = true;
       if (!drag.moved) return;
       if (drag.kind === 'lift') {
-        const z = cm(editValue(drag.edit) + dz(drag.y0, e.clientY));
-        show(withValue(drag.edit, z), z);
+        const z0 = editValue(drag.edit);
+        const s = snapped(cm(z0 + dz(drag.y0, e.clientY)), drag.edit, z0, e.altKey);
+        show(withValue(drag.edit, s.z), s.z, s.snap);
       } else if (drag.edit.tool === 'level') {
-        const h = cm(edgeHeights(drag.edit)[drag.side] + dz(drag.y0, e.clientY));
-        show(withEdgeHeight(drag.edit, drag.side, h), h);
+        const h0 = edgeHeights(drag.edit)[drag.side];
+        const s = snapped(cm(h0 + dz(drag.y0, e.clientY)), drag.edit, h0, e.altKey);
+        show(withEdgeHeight(drag.edit, drag.side, s.z), s.z, s.snap);
       }
     };
     const onUp = () => {
@@ -279,10 +311,25 @@ export function EditTool() {
         e.stopPropagation();
         e.preventDefault();
       };
+      // 0. Shift on the selected edit: an edge resizes it, the inside moves it.
+      if (sel && over && e.shiftKey) {
+        const z = planeZ(sel);
+        const start = planeAt(e.clientX, e.clientY, z);
+        if (over !== 'inside') {
+          grab();
+          drag = { kind: 'resize', edit: sel, side: over, z, moved: false };
+          return;
+        }
+        if (start) {
+          grab();
+          drag = { kind: 'move', edit: sel, z, start, moved: false };
+          return;
+        }
+      }
       // 1. The selected wall: a side resizes it, its box lifts its top.
       if (sel?.tool === 'wall' && over) {
         grab();
-        drag = over === 'inside' ? { kind: 'lift', edit: sel, y0: e.clientY, moved: false } : { kind: 'resize', edit: sel, side: over, y0: e.clientY, moved: false };
+        drag = over === 'inside' ? { kind: 'lift', edit: sel, y0: e.clientY, moved: false } : { kind: 'resize', edit: sel, side: over, z: sel.top, moved: false };
         return;
       }
       // 2. Another wall under the pointer (the nearest box along the ray) gets selected, even on a selected terrace.

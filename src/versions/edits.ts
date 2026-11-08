@@ -14,7 +14,7 @@ const EPS = 1e-6;
 /** x0 < x1, y0 < y1, all on the lattice. */
 export type Rect = { x0: number; y0: number; x1: number; y1: number };
 /** A rect being dragged; `z` = the height Wyrównaj will level it to. */
-export type Draft = Rect & { z?: number };
+export type Draft = Rect & { z?: number; snap?: string };
 /**
  * Corners inside the rect: Wyrównaj (`level`) sets them to `z`; Podnieś / Obniż (`raise` / `lower`) move them up /
  * down by `dz` > 0. Mur (`wall`): a solid over the rect from the lowest surface under it up to `top`; no terrain change.
@@ -188,6 +188,63 @@ function applySlope(g: HeightGrid, h: Float32Array, c: Range, edges: Edges, n: n
       if (next !== cur) set(k, Math.fround(next));
     }
   }
+}
+
+/** A height a dragged value snaps to, with what it is (shown in the bar). */
+export type SnapTarget = { z: number; label: string };
+
+/** The nearest target within `tol` (m) of z, else z itself. */
+export function snapHeight(z: number, targets: readonly SnapTarget[], tol: number): { z: number; snap?: string } {
+  let best: SnapTarget | undefined;
+  for (const s of targets) if (Math.abs(s.z - z) <= tol && (!best || Math.abs(s.z - z) < Math.abs(best.z - z))) best = s;
+  return best ? { z: best.z, snap: best.label } : { z };
+}
+
+/** A rect moved by (dx, dy) snapped to `step`. */
+export function moveRect(r: Rect, dx: number, dy: number, step = LATTICE): Rect {
+  const q = (v: number) => Math.round(Math.round(v / step) * step * 1000) / 1000;
+  const sx = q(dx), sy = q(dy);
+  const f = (v: number) => Math.round(v * 1000) / 1000;
+  return { x0: f(r.x0 + sx), x1: f(r.x1 + sx), y0: f(r.y0 + sy), y1: f(r.y1 + sy) };
+}
+
+/** The rect with one side moved to plan coordinate v (snapped to `step`), at least one step wide. */
+export function resizeRect(r: Rect, side: Side, v: number, step = LATTICE): Rect {
+  const s = Math.round(Math.round(v / step) * step * 1000) / 1000;
+  if (side === 'w') return { ...r, x0: Math.min(s, r.x1 - step) };
+  if (side === 'e') return { ...r, x1: Math.max(s, r.x0 + step) };
+  if (side === 's') return { ...r, y0: Math.min(s, r.y1 - step) };
+  return { ...r, y1: Math.max(s, r.y0 + step) };
+}
+
+/**
+ * Bilansuj: the Wyrównaj height (1 cm) at which edit `index` has its cut equal to its fill (slopes included),
+ * against the surface just before it. Bisection; fill − cut grows with z.
+ */
+export function balanceZ(g: HeightGrid, edits: readonly Edit[], index: number): number | undefined {
+  const e = edits[index];
+  if (!e || e.tool !== 'level') return undefined;
+  const before = { ...g, base: replay(g, edits.slice(0, index)).h };
+  const net = (z: number) => {
+    const v = replay(before, [{ ...e, z }]).volumes[0]!;
+    return v.fill - v.cut;
+  };
+  let lo = Infinity, hi = -Infinity;
+  for (let k = 0; k < before.base.length; k++) {
+    if (isOutside(g, k)) continue;
+    lo = Math.min(lo, before.base[k]!);
+    hi = Math.max(hi, before.base[k]!);
+  }
+  const t = e.tilt ? Math.abs(e.tilt.x) + Math.abs(e.tilt.y) : 0;
+  lo -= t;
+  hi += t;
+  if (!(lo < hi)) return undefined;
+  for (let n = 0; n < 30 && hi - lo > 0.002; n++) {
+    const m = (lo + hi) / 2;
+    if (net(m) > 0) hi = m;
+    else lo = m;
+  }
+  return Math.round(((lo + hi) / 2) * 100) / 100;
 }
 
 /** Against the frozen base, each corner standing for one cell area. m³. */

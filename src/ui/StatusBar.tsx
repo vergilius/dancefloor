@@ -46,6 +46,7 @@ function ToolStatus() {
         <span className="st-item">
           <strong>{t.versions.rectSize(size.w, size.h, size.area)}</strong>
           {draft.z !== undefined && <> → {formatHeight(draft.z, ref)}</>}
+          {draft.snap && <strong> = {draft.snap}</strong>}
           {preview && <span className="muted"> · {t.versions.heightHint}</span>}
         </span>
       ) : (
