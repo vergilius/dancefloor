@@ -314,8 +314,10 @@ function Sun() {
       intensity={clean ? 1.6 : 1}
       castShadow={clean}
       shadow-mapSize={[4096, 4096]}
-      shadow-bias={-0.0005}
-      shadow-normalBias={0.02}
+      // Against shadow acne (flickering stripes) on sloped, double-sided faces such as the roof: offset the lookup
+      // along the normal (m) more than in depth.
+      shadow-bias={-0.0002}
+      shadow-normalBias={0.06}
     />
   );
 }

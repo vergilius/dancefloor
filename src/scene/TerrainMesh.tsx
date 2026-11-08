@@ -8,6 +8,7 @@ import { useEnvSurface, useVersions, versionSurface } from '../state/versions';
 import { contours, type Contour } from '../terrain/contours';
 import { cellOutside, isOutside, sampleGrid, type HeightGrid } from '../terrain/grid';
 import { useUi } from '../state/ui';
+import { FACE_OFFSET } from './HouseMesh';
 import { ENV_LAYER } from './split';
 
 /** Height ramp low → high. */
@@ -43,7 +44,7 @@ export function TerrainMesh() {
   return (
     <group>
       <mesh layers={ENV_LAYER} geometry={geo} receiveShadow castShadow={clean}>
-        <meshLambertMaterial key={lawn ? 'lawn' : 'tint'} vertexColors={!lawn} color={lawn ? LAWN_COLOR : '#ffffff'} side={DoubleSide} />
+        <meshLambertMaterial key={lawn ? 'lawn' : 'tint'} vertexColors={!lawn} color={lawn ? LAWN_COLOR : '#ffffff'} side={DoubleSide} {...FACE_OFFSET} />
       </mesh>
       {!clean && lines && lines.minor.length > 0 && (
         <lineSegments layers={ENV_LAYER}>

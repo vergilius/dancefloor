@@ -5,7 +5,7 @@ import { BufferAttribute, BufferGeometry, DoubleSide, EdgesGeometry } from 'thre
 import { useEnvSurface, useVersions } from '../state/versions';
 import { useProject } from '../state/store';
 import { wallSolid } from '../versions/walls';
-import { CLEAN_COLORS, COLORS, ENV_EDGE_COLOR } from './HouseMesh';
+import { CLEAN_COLORS, COLORS, ENV_EDGE_COLOR, FACE_OFFSET } from './HouseMesh';
 import { useUi } from '../state/ui';
 import { ENV_LAYER } from './split';
 
@@ -37,7 +37,7 @@ export function WallMesh() {
   return (
     <>
       <mesh layers={ENV_LAYER} geometry={geo} castShadow receiveShadow>
-        <meshLambertMaterial color={clean ? CLEAN_COLORS.stone : COLORS.gable} side={DoubleSide} />
+        <meshLambertMaterial color={clean ? CLEAN_COLORS.stone : COLORS.gable} side={DoubleSide} {...FACE_OFFSET} />
       </mesh>
       {!clean && (
         <lineSegments layers={ENV_LAYER} geometry={edges}>

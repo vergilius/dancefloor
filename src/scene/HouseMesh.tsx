@@ -23,6 +23,11 @@ const OPENING_COLOR = '#2b3036';
 const WALL_COLOR = '#f1eee8';
 const WALL_EDGE_COLOR = '#8a847a';
 const SLAB_COLOR = '#d8d2c6';
+/**
+ * Faces drawn a little behind their depth, so the edge lines on top of them always win the depth test instead of
+ * flickering in and out (z-fighting), most visible on large sloped faces like the roof.
+ */
+export const FACE_OFFSET = { polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 } as const;
 /** Clean view (showcase): plaster walls, a dark roof, concrete slabs, stone garden walls; no edge lines. */
 export const CLEAN_COLORS = { plaster: '#f4efe6', roof: '#4b4f56', slab: '#bdb8ae', flat: '#d9d3c8', thin: '#6f6a62', stone: '#b9ad99' };
 
@@ -89,7 +94,7 @@ function WallFaces({ triangles, color, clean }: { triangles: number[]; color: st
   return (
     <>
       <mesh layers={ENV_LAYER} geometry={geo} castShadow receiveShadow>
-        <meshLambertMaterial color={color} side={DoubleSide} />
+        <meshLambertMaterial color={color} side={DoubleSide} {...FACE_OFFSET} />
       </mesh>
       {!clean && (
         <lineSegments layers={ENV_LAYER} geometry={edges}>
@@ -117,12 +122,12 @@ function BlockSolid({ block, hollow, roofHoles, clean }: { block: Block; hollow:
       ? part ? CLEAN_COLORS.roof : CLEAN_COLORS.plaster
       : thin ? CLEAN_COLORS.thin : CLEAN_COLORS.flat
     : block.kind === 'gable' ? COLORS.gable : thin ? COLORS.thin : COLORS.flat;
-  // Flat blocks often share a face with the main body's wall: push them back so the wall wins instead of flickering.
-  const behind = block.kind === 'flat';
+  // Flat blocks often share a face with the main body's wall: push them back further so the wall wins.
+  const offset = block.kind === 'flat' ? 2 : 1;
   return (
     <>
       <mesh layers={ENV_LAYER} geometry={part ?? full} castShadow receiveShadow>
-        <meshLambertMaterial color={color} flatShading side={DoubleSide} polygonOffset={behind} polygonOffsetFactor={1} polygonOffsetUnits={1} />
+        <meshLambertMaterial color={color} flatShading side={DoubleSide} polygonOffset polygonOffsetFactor={offset} polygonOffsetUnits={offset} />
       </mesh>
       {!clean && (
         <lineSegments layers={ENV_LAYER} geometry={partEdges ?? fullEdges}>
