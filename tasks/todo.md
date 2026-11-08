@@ -1,74 +1,68 @@
-# M3 task list
+# M4a task list
 
-Next: M3 done (all verified 2026-11-08); merge `feat/m3` → `main`, then spec M4. T4: `src/terrain/contours.ts`
-(marching squares, skips uncertain cells, saddles by centre average); minor = `lineSegments`, major (whole metres) =
-drei `<Line segments>` 2 px. T3 done 2026-11-08: mesh = two indexed geometries
-(certain / uncertain cells) sharing positions + normals; "Teren" toggle sits in the view bar (not LayerPanel); a
-directional light on ENV_LAYER only; the env ground Grid is hidden while the terrain is shown. `useTerrain()` also
-returns `plot` (PZT_ZAKRES segments in plan coords). Known: `useTerrain()` computes per caller (panel + mesh), fine so far.
-T2 (2026-11-08): grid 314 × 426, Ti max |Δ| ≤ 1.1 cm except PAB-09 353.48 (+6.9 cm, drawing conflict, PLAN.md §5 M3 facts).
-`useTerrain()` (seeds + grid) replaced `useTerrainSeeds()`; `connectedSegments()` in `src/terrain/seeds.ts`.
-Note (T1): `useDrawnSheets` is in `src/state/drawn.ts` (memoized); `useTerrainSeeds()` in `src/state/terrain.ts`. Plan: `tasks/plan.md`. Spec: PLAN.md §5 M3, ADR 0002.
-M2 task notes are in git history (`tasks/todo.md` at 48b5a42).
+Next: T1 (versions: create, list, rename, delete, files, show the frozen terrain).
+Plan: `tasks/plan.md`. Spec: PLAN.md §5 M4a, ADR 0003. M3 task notes are in git history (`tasks/todo.md` at c477be0).
 
 Commands: `pnpm dev`, `pnpm check` (build + lint + guards). No automated tests (CLAUDE.md).
 Every task: typecheck, lint and build green, and a "verify in browser" checklist goes to the user.
 
 ---
 
-### Task 1: Terrain seeds from the profiles, panel line
-**Description:** Move `useDrawnSheets` from `Viewport.tsx` to `src/state/drawn.ts`. Pure `src/terrain/seeds.ts`:
-from each placed elevation/section, the `PZT_TEREN ISTNIEJĄCY` segments; chain by endpoints within 2 cm; drop
-segments with no neighbour; densify to ≤ 1 m; map to plan (x, y, h) through the vertical placement. A terrain panel
-line: `Teren: n punktów z k arkuszy, m odcinków pominiętych` (per-sheet breakdown on hover/title).
+### Task 1: Edit versions, stored in the project folder
+**Description:** Pure `src/versions/file.ts` (version JSON parse/serialize, `.bin` = base Float32 + uncertain Uint8)
+and folder helpers for `dancefloor-versions/`. Store `src/state/versions.ts`: list loaded on folder open, `active`
+('preview' | id), create ("Nowa wersja" = copy of the generated grid, named "Wersja n", opened), rename, delete
+(confirm, removes both files). Environment view bar: selector Podgląd | versions + the three buttons. `TerrainMesh`
+draws the active source via `useEnvSurface()`. Panel line for the active version: name, grid size, edits 0, saved.
 **Acceptance criteria:**
-- [x] 7 sheets contribute (PAB-04..10); dropped: 1 legend segment per elevation + the PAB-08 stub + the PAB-10
-      piece (6)
-- [x] The Design view is unchanged after the move
-**Verification:** `pnpm check`; user reads the panel line and per-sheet counts.
+- [ ] Nowa wersja → files appear in `dancefloor-versions/`; the version looks identical to Podgląd
+- [ ] Rename and delete work and persist across a reload; unreadable files are flagged, not deleted
+- [ ] Design and Podgląd unchanged
+**Verification:** `pnpm check`; user creates, renames, deletes, reloads, and looks in the folder.
 **Dependencies:** none
-**Files:** `src/state/drawn.ts`, `src/scene/Viewport.tsx`, `src/terrain/seeds.ts`, `src/state/terrain.ts`, `src/ui/TerrainPanel.tsx`, `src/ui/strings.ts`
-**Scope:** M
+**Files:** `src/versions/file.ts`, `src/project/folder.ts`, `src/state/versions.ts`, `src/scene/Viewport.tsx`, `src/scene/TerrainMesh.tsx`, `src/ui/strings.ts`
+**Scope:** M–L
 
-### Task 2: Height grid and the Ti check
-**Description:** Add `delaunator`. Pure `src/terrain/grid.ts`: merge seeds within 1 cm, triangulate, rasterize
-0.10 m corner heights inside the hull, outside = height of the nearest hull-boundary point, flagged uncertain.
-Extent = `PZT_ZAKRES` bbox (through PZT-01's transform) + 2 m, else seed bbox + 5 m. `sampleGrid(x, y)` (bilinear).
-Panel: grid size, cell count, extent source, height range (rel + abs), uncertain share; Ti list: each Ti / Tp=Ti
-marker's label value vs the grid height at its point, Δ, and max |Δ|.
+### Task 2: Wyrównaj by dragging a rect, totals, autosave
+**Description:** Add `three-mesh-bvh`. Pure `src/versions/edits.ts`: lattice snap (0.5 m, anchored at plan 0, 0),
+apply edits in order over the frozen base (corners inside the rect, edges included), totals cut / fill / net and
+uncertain share. `src/scene/EditTool.tsx`: with "Wyrównaj" active in a version, drag on the terrain → snapped rect
+draped on the surface with its size; release → edit with z = mean height under the rect (1 cm). Panel: totals line,
+numeric z of the last edit. Autosave the JSON 1 s after a change; save errors in the bar.
 **Acceptance criteria:**
-- [x] Grid ≈ 310 × 430 from `PZT_ZAKRES` (314 × 426); height range within the profile range (≈ −2.80…+0.63)
-- [x] Ti check: max |Δ| ≤ 2 cm (11 of 12; PAB-09 353.48 is a drawing conflict, user accepted)
-**Verification:** `pnpm check`; user reads the panel values.
+- [ ] 4 × 6 m rect → 24.00 m²; z +0.30 → +0.40 grows net by ≈ 2.40 m³
+- [ ] Mesh and contours show the levelled area; a reload brings the edit back
+**Verification:** `pnpm check`; user drags, reads totals, changes z, reloads.
 **Dependencies:** T1
-**Files:** `package.json`, `src/terrain/grid.ts`, `src/state/terrain.ts`, `src/ui/TerrainPanel.tsx`, `src/ui/strings.ts`
-**Scope:** M
+**Files:** `package.json`, `src/versions/edits.ts`, `src/scene/EditTool.tsx`, `src/state/versions.ts`, `src/ui/VersionPanel.tsx`, `src/ui/strings.ts`
+**Scope:** M–L
 
 ### Checkpoint A (after T1–T2)
-- [x] `pnpm check` green; counts and Ti check match the spec (user check)
+- [ ] `pnpm check` green; versions persist and the volume check holds (user check)
 
-### Task 3: Terrain mesh in the Environment viewport
-**Description:** `src/scene/TerrainMesh.tsx`: one indexed mesh from the grid corners (environment layer only),
-height-tinted vertex colours, uncertain cells lighter and semi-transparent. Plot outline (`PZT_ZAKRES`) on the
-environment layer. Toggle "Teren" (store view setting, default on, not saved).
+### Task 3: Podnieś / Obniż and the edit list
+**Description:** Tools Podnieś and Obniż (dz default 0.10 m). Panel list of the active version's edits: tool, size,
+dz or z (rel + abs), cut / fill against the surface before it. Select → rect outlined in the view; change dz / z;
+delete.
 **Acceptance criteria:**
-- [x] Environment shows the terrain under the markers (Ti markers on the surface); Design shows no terrain
-- [x] Uncertain area visibly different; toggle hides/shows terrain and outline
-**Verification:** `pnpm check`; user orbits Environment and toggles.
+- [ ] Podnieś 1 × 1 m by 0.10 → net +0.10 m³ (± one cell row); Obniż mirrors it
+- [ ] Changing or deleting an earlier edit replays the later ones; totals follow
+**Verification:** `pnpm check`; user stacks edits, changes and deletes one.
 **Dependencies:** T2
-**Files:** `src/scene/TerrainMesh.tsx`, `src/scene/Viewport.tsx`, `src/state/store.ts`, `src/ui/LayerPanel.tsx`, `src/ui/strings.ts`
+**Files:** `src/versions/edits.ts`, `src/scene/EditTool.tsx`, `src/state/versions.ts`, `src/ui/VersionPanel.tsx`, `src/ui/strings.ts`
 **Scope:** M
 
-### Task 4: Contour lines
-**Description:** Pure `src/terrain/contours.ts` (marching squares on the grid corners) → segments at every 0.25 m;
-`src/scene/TerrainMesh.tsx` draws them just above the surface, every 1 m thicker/darker. Hidden with the terrain.
+### Task 4: Undo/redo and the Δh map
+**Description:** Per-version command stack over add / change / delete (Ctrl+Z, Ctrl+Shift+Z, buttons), cleared on
+folder load. Toggle "Różnice": vertex colours by Δh = surface − frozen base (red cut, blue fill, white 0, saturated
+±1.0 m) with a small legend.
 **Acceptance criteria:**
-- [x] Contours every 0.25 m, 1 m ones distinct; they follow the profiles (a contour crosses a profile at its height)
-- [x] Orbiting the Environment view stays smooth (60 fps)
-**Verification:** `pnpm check`; user orbits and reads a contour vs a Ti marker.
+- [ ] Undo/redo restore totals exactly; a second version keeps its own history and totals
+- [ ] Różnice shows red/blue where expected; off = M3 height tint
+**Verification:** `pnpm check`; user undoes/redoes across two versions, toggles Różnice, orbits (smooth).
 **Dependencies:** T3
-**Files:** `src/terrain/contours.ts`, `src/scene/TerrainMesh.tsx`
-**Scope:** S
+**Files:** `src/state/versions.ts`, `src/scene/TerrainMesh.tsx`, `src/scene/Viewport.tsx`, `src/ui/VersionPanel.tsx`, `src/ui/strings.ts`
+**Scope:** M
 
 ### Checkpoint B (after T3–T4)
-- [x] `pnpm check` green; all M3 ✅ in PLAN.md verified by the user; PLAN.md/CLAUDE.md status updated; merge
+- [ ] `pnpm check` green; the M4a ✅ in PLAN.md verified by the user; PLAN.md/CLAUDE.md status updated; merge

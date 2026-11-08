@@ -1,6 +1,6 @@
 # ADR 0003: Edit versions — frozen snapshots, area tools, files in the project folder
 
-Date: 2026-11-08 · Status: proposed (M4a spec, awaiting user approval)
+Date: 2026-11-08 · Status: accepted (user, 2026-11-08)
 
 ## Context
 ADR 0002 left open how the environment copy is saved. PLAN.md §4/§5 sketched polygon platforms in `dancefloor.json`.

@@ -409,7 +409,7 @@ simulation games, not on single cells and not on drawn polygons.
 Build order M4a → M4b → M4c → M4d. The original ✅ (terrace at +0.30 next to the house with a 1:2 slope to −0.32,
 volumes update live) closes with M4b.
 
-**M4a — Versions + editor core** (spec draft 2026-11-08, awaiting approval)
+**M4a — Versions + editor core** (spec approved 2026-11-08)
 
 Requirements:
 - **Preview vs version (Environment view bar):** a selector "Podgląd" | the versions by name. Podgląd shows the
