@@ -228,14 +228,26 @@ export const t = {
     overhang: (m: number) => `okap ${m.toFixed(2)} m`,
     fromPlan: 'Z rzutu parteru',
     fromPlanTitle:
-      'Dobudówki (długie ściany A-WALL poza bryłą główną), płyty (obrys A-DETL-1 domknięty do ściany), słupy (małe zamknięte prostokąty A-WALL) i kolumny (prostokąty S-COLS). Wysokości z linii na elewacjach (A-WALL, potem PZT_UTWARDZENIA) i z przekroju (S-COLS); czego nie ma, zostaje jak było.',
+      'Dobudówki (długie ściany A-WALL poza bryłą główną), płyty (obrys A-DETL-1 domknięty do ściany), podest (obrys PZT_UTWARDZENIA, przerwy na słupach domknięte), słupy (małe zamknięte prostokąty A-WALL), filary (małe A-WALL przy ścianie) i kolumny (prostokąty S-COLS). Wysokości z linii na elewacjach (A-WALL, potem PZT_UTWARDZENIA) i z przekroju (S-COLS); czego nie ma, zostaje jak było.',
     needsMain: '„Z rzutu parteru” wymaga bryły głównej',
     annexName: { north: 'Dobudówka północna', south: 'Dobudówka południowa', east: 'Dobudówka wschodnia', west: 'Dobudówka zachodnia' },
     slabName: (n: number) => `Płyta ${n}`,
     postName: (n: number) => `Słup ${n}`,
     columnName: (n: number) => `Kolumna ${n}`,
-    fromPlanResult: (sheet: string, annexes: number, slabs: number, posts: number, columns: number) =>
-      `z arkusza ${sheet}: ${annexes} ${plural(annexes, 'dobudówka', 'dobudówki', 'dobudówek')}, ${slabs} ${plural(slabs, 'płyta', 'płyty', 'płyt')}, ${posts} ${plural(posts, 'słup', 'słupy', 'słupów')}, ${columns} ${plural(columns, 'kolumna', 'kolumny', 'kolumn')} (S-COLS)`,
+    fromPlanResult: (sheet: string, n: { annexes: number; slabs: number; deck: number; posts: number; piers: number; columns: number }) =>
+      `z arkusza ${sheet}: ` +
+      [
+        `${n.annexes} ${plural(n.annexes, 'dobudówka', 'dobudówki', 'dobudówek')}`,
+        `${n.slabs} ${plural(n.slabs, 'płyta', 'płyty', 'płyt')}`,
+        `${n.deck} ${plural(n.deck, 'podest', 'podesty', 'podestów')}`,
+        `${n.posts} ${plural(n.posts, 'słup', 'słupy', 'słupów')}`,
+        `${n.piers} ${plural(n.piers, 'filar', 'filary', 'filarów')}`,
+        `${n.columns} ${plural(n.columns, 'kolumna', 'kolumny', 'kolumn')} (S-COLS)`,
+      ].join(', '),
+    deckName: 'Podest',
+    deckFrom: (support: string) => `wierzch = spód: ${support} (stoją na podeście)`,
+    pierName: (n: number) => `Filar ${n}`,
+    pierFrom: (slab: string, onDeck: boolean) => `${onDeck ? 'od podestu ' : ''}do wierzchu: ${slab}`,
     columnsAll: (n: number) => `Kolumny 1–${n}`,
     heightsRead: (name: string, bottom: number | undefined, top: number | undefined, from: string) =>
       `${name}: ${[bottom !== undefined && `spód ${formatRel(bottom, 3)}`, top !== undefined && `góra ${formatRel(top, 3)}`].filter(Boolean).join(', ')} z ${from}`,

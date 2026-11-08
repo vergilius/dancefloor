@@ -491,7 +491,9 @@ Requirements:
   sides, ridge = the sheet's z, pitch parsed from the `NN°` label on that sheet (fallback 38, flagged).
 - **"Z rzutu parteru"** (button, ADR 0005 amendment): from the ground plan around the main body, builds or updates
   "Dobudówka <side>" (long `A-WALL` lines beyond one side, bbox closed to the main wall), "Płyta n" (`A-DETL-1` chain
-  closed along the main rectangle), "Słup n" (small closed 4-sided `A-WALL` loops) and "Kolumna n" (closed 4-sided
+  closed along the main rectangle), "Podest" (the `PZT_UTWARDZENIA` outline, gaps at the posts bridged; top = the
+  supports' bottom), "Słup n" (small closed 4-sided `A-WALL` loops), "Filar n" (small open `A-WALL` chains against
+  the main wall; deck → top of the slab above) and "Kolumna n" (closed 4-sided
   `S-COLS*` loops, heights from the `S-COLS*` extent on a placed section/elevation: 7 × 0.20 × 0.03 m, −0.02…+2.63). Heights are read from the placed
   elevations (horizontal `A-WALL`, then `PZT_UTWARDZENIA` lines across the block's width, elevations where it is
   hidden behind the main body skipped; annex: top only) and the columns' from a section's `S-COLS`; each is listed

@@ -5,13 +5,23 @@
 //   only (posts are drawn as nested rectangles), as their bbox. Only 4-sided loops; others (e.g. round ones) counted.
 // - Columns: closed 4-sided loops on the `S-COLS*` layers (any size up to POST_MAX), outermost only; their heights
 //   come from a vertical sheet's `S-COLS*` extent (section A-A on the real files), see `columnHeights`.
+// - Deck: the `PZT_UTWARDZENIA` (paving) outline around the main body. It is interrupted where the posts stand, so
+//   gaps whose two ends lie on one post's outline are bridged along it; then closed like a slab (reach DECK_REACH).
 // - Slabs: `A-DETL-1` chains whose two open ends lie near the main rectangle, closed along its perimeter (the
-//   shorter way). Closed loops inside a slab (openings) are counted, not modelled.
+//   way giving the smaller polygon). Closed loops inside a slab (openings) are counted, not modelled.
+// - Piers: open `A-WALL` chains ≤ POST_MAX standing against the main body (the wall is their missing side), closed
+//   along it. PAB-01: the pier ending the south canopy, 0.45 × 0.49 m.
 import type { NormalizedSheet } from '../dwg/types';
 import { polygonArea, type GableBlock, type Vec2 } from './blocks';
 
 export const WALL_LAYER = 'A-WALL';
 export const SLAB_LAYER = 'A-DETL-1';
+export const DECK_LAYER = 'PZT_UTWARDZENIA';
+/** The deck's east end stops 0.90 m from the main wall at the stairs (PAB-01). */
+const DECK_REACH = 1;
+/** Points this close (m) to the main rectangle's boundary are on its face (PAB-01's wall lines sit 1 cm inside). */
+const FACE_TOL = 0.02;
+const PIER_REACH = 0.5;
 const isColumnLayer = (name: string) => /^S-COLS/.test(name);
 const ANNEX_MIN_LEN = 2;
 /** Lines must lie this far (m) beyond the main body's side to count for an annex. */
@@ -30,8 +40,11 @@ type Seg = [number, number, number, number];
 export type PlanBlocks = {
   annexes: { side: Side; polygon: Vec2[] }[];
   posts: Vec2[][];
+  piers: Vec2[][];
   columns: Vec2[][];
   slabs: Vec2[][];
+  /** The largest closed paving outline around the main body, or undefined. */
+  deck?: Vec2[];
   /** Closed `A-DETL-1` loops inside a slab, not modelled. */
   slabOpenings: number;
   /** Small closed `A-WALL` loops that aren't 4-sided (round posts, pipes), not modelled. */
@@ -128,8 +141,8 @@ function perimeterT(r: Rect, p: Vec2): { t: number; q: Vec2 } {
   return { t: 2 * w + h + (r.y1 - cy), q: { x: r.x0, y: cy } };
 }
 
-/** Perimeter path from t = a to t = b (exclusive of both ends' points): the corners passed, the shorter way. */
-function perimeterCorners(r: Rect, a: number, b: number): Vec2[] {
+/** Perimeter corners strictly between t = a and t = b, counter-clockwise (`ccw`) or clockwise, in walking order. */
+function perimeterCorners(r: Rect, a: number, b: number, ccw: boolean): Vec2[] {
   const w = r.x1 - r.x0;
   const h = r.y1 - r.y0;
   const P = 2 * (w + h);
@@ -140,10 +153,8 @@ function perimeterCorners(r: Rect, a: number, b: number): Vec2[] {
     { t: 2 * w + h, p: { x: r.x0, y: r.y1 } },
   ];
   const mod = (v: number) => ((v % P) + P) % P;
-  const fwd = mod(b - a);
-  // Forward (counter-clockwise) if that is the shorter way, else backward; corners strictly between, in order.
-  const dist = fwd <= P / 2 ? (t: number) => mod(t - a) : (t: number) => mod(a - t);
-  const len = fwd <= P / 2 ? fwd : P - fwd;
+  const dist = ccw ? (t: number) => mod(t - a) : (t: number) => mod(a - t);
+  const len = ccw ? mod(b - a) : mod(a - b);
   return corners
     .map((c) => ({ s: dist(c.t), p: c.p }))
     .filter((c) => c.s > 1e-6 && c.s < len - 1e-6)
@@ -189,6 +200,63 @@ export function columnHeights(sheet: NormalizedSheet): { bottom: number; top: nu
   return top > bottom ? { bottom: mm(bottom), top: mm(top) } : undefined;
 }
 
+/**
+ * An open chain closed along the main rectangle's perimeter, if both ends lie within `reach`. Of the two ways round,
+ * the one giving the smaller polygon: the other one encloses the main body (the deck wraps three sides of it).
+ */
+function closeOnMain(path: Vec2[], r: Rect, reach: number): Vec2[] | undefined {
+  const a = perimeterT(r, path[0]!);
+  const b = perimeterT(r, path.at(-1)!);
+  const near = (p: Vec2, q: Vec2) => Math.hypot(p.x - q.x, p.y - q.y) <= reach;
+  if (!near(path[0]!, a.q) || !near(path.at(-1)!, b.q)) return undefined;
+  // path end → its perimeter point → corners → the start's perimeter point (then back to path[0]).
+  const polys = [true, false]
+    .map((ccw) => clean([...path, b.q, ...perimeterCorners(r, b.t, a.t, ccw), a.q]))
+    .filter((p) => p.length >= 3 && polygonArea(p) > 0.01)
+    .sort((p, q) => polygonArea(p) - polygonArea(q));
+  return polys[0];
+}
+
+/**
+ * Segments bridging the gaps a post leaves in an outline: two open ends lying on the same post's outline are joined
+ * along it (through the corner both edges share, if they are on different edges).
+ */
+function postBridges(segs: Seg[], posts: Vec2[][]): Seg[] {
+  const key = (x: number, y: number) => `${Math.round(x / JOIN)},${Math.round(y / JOIN)}`;
+  const deg = new Map<string, number>();
+  for (const s of segs) for (const k of [key(s[0], s[1]), key(s[2], s[3])]) deg.set(k, (deg.get(k) ?? 0) + 1);
+  const open = segs.flatMap(segPts).filter((p) => deg.get(key(p.x, p.y)) === 1);
+  const out: Seg[] = [];
+  for (const post of posts) {
+    const b = bbox(post);
+    // Edges a point lies on: 0 south, 1 east, 2 north, 3 west.
+    const edges = (p: Vec2) =>
+      [
+        Math.abs(p.y - b.y0) < JOIN && p.x > b.x0 - JOIN && p.x < b.x1 + JOIN,
+        Math.abs(p.x - b.x1) < JOIN && p.y > b.y0 - JOIN && p.y < b.y1 + JOIN,
+        Math.abs(p.y - b.y1) < JOIN && p.x > b.x0 - JOIN && p.x < b.x1 + JOIN,
+        Math.abs(p.x - b.x0) < JOIN && p.y > b.y0 - JOIN && p.y < b.y1 + JOIN,
+      ].flatMap((on, i) => (on ? [i] : []));
+    const ends = open.filter((p) => edges(p).length > 0);
+    if (ends.length !== 2) continue;
+    const [p, q] = ends as [Vec2, Vec2];
+    const ep = edges(p);
+    const eq = edges(q);
+    if (ep.some((e) => eq.includes(e))) {
+      out.push([p.x, p.y, q.x, q.y]);
+      continue;
+    }
+    // Adjacent edges meet in one corner.
+    const e = ep[0]!;
+    const f = eq.find((g) => (g + 1) % 4 === e || (e + 1) % 4 === g);
+    if (f === undefined) continue;
+    const cx = [e, f].includes(1) ? b.x1 : b.x0;
+    const cy = [e, f].includes(2) ? b.y1 : b.y0;
+    out.push([p.x, p.y, cx, cy], [cx, cy, q.x, q.y]);
+  }
+  return out;
+}
+
 export function blocksFromPlan(sheet: NormalizedSheet, main: GableBlock): PlanBlocks {
   const r: Rect = { x0: main.x0, y0: main.y0, x1: main.x1, y1: main.y1 };
   const walls = segments(sheet, WALL_LAYER);
@@ -214,6 +282,18 @@ export function blocksFromPlan(sheet: NormalizedSheet, main: GableBlock): PlanBl
   }
 
   const outsideAll = (p: Vec2) => !inside(p, r) && !annexRects.some((a) => inside(p, a));
+  // Piers: wall lines lying along the main body's faces belong to the wall itself, not to a pier.
+  const onFace = (p: Vec2) => !inside(p, r, -FACE_TOL);
+  const alongFace = (s: Seg) => segPts(s).every((p) => inside(p, r, FACE_TOL));
+  const pierSegs = walls.filter((s) => segPts(s).every((p) => onFace(p) && !annexRects.some((a) => inside(p, a, FACE_TOL))) && !alongFace(s));
+  const piers = components(pierSegs).flatMap((c) => {
+    if (c.closed) return [];
+    const b = bbox(c.segs.flatMap(segPts));
+    if (b.x1 - b.x0 > POST_MAX || b.y1 - b.y0 > POST_MAX) return [];
+    const path = walk(c.segs);
+    const poly = path && path.length >= 3 ? closeOnMain(path, r, PIER_REACH) : undefined;
+    return poly ? [poly] : [];
+  });
   const postLoops = smallLoops(walls.filter((s) => segPts(s).every(outsideAll)), POST_MIN);
   const posts = postLoops.rects;
   const skippedLoops = postLoops.skipped;
@@ -229,18 +309,18 @@ export function blocksFromPlan(sheet: NormalizedSheet, main: GableBlock): PlanBl
   for (const c of components(segments(sheet, SLAB_LAYER))) {
     const path = walk(c.segs);
     if (!path || path.length < 3) continue;
-    if (c.closed) {
-      closedLoops.push(path);
-      continue;
+    if (c.closed) closedLoops.push(path);
+    else {
+      const poly = closeOnMain(path, r, SLAB_REACH);
+      if (poly) slabs.push(poly);
     }
-    const a = perimeterT(r, path[0]!);
-    const b = perimeterT(r, path.at(-1)!);
-    const reach = (p: Vec2, q: Vec2) => Math.hypot(p.x - q.x, p.y - q.y) <= SLAB_REACH;
-    if (!reach(path[0]!, a.q) || !reach(path.at(-1)!, b.q)) continue;
-    // path end → its perimeter point → corners → the start's perimeter point (then back to path[0]).
-    const poly = clean([...path, b.q, ...perimeterCorners(r, b.t, a.t), a.q]);
-    if (poly.length >= 3 && polygonArea(poly) > 0.01) slabs.push(poly);
   }
+  const decks = components([...segments(sheet, DECK_LAYER), ...postBridges(segments(sheet, DECK_LAYER), posts)]).flatMap((c) => {
+    const path = c.closed ? undefined : walk(c.segs);
+    const poly = path && path.length >= 3 ? closeOnMain(path, r, DECK_REACH) : undefined;
+    return poly ? [poly] : [];
+  });
+  const deck = decks.sort((p, q) => polygonArea(q) - polygonArea(p))[0];
   // Closed loops: openings if inside a slab's bbox, else slabs of their own.
   let slabOpenings = 0;
   for (const loop of closedLoops) {
@@ -248,7 +328,7 @@ export function blocksFromPlan(sheet: NormalizedSheet, main: GableBlock): PlanBl
     if (slabs.some((s) => within(lb, bbox(s)))) slabOpenings++;
     else slabs.push(clean(loop));
   }
-  return { annexes, posts, columns, slabs, slabOpenings, skippedLoops };
+  return { annexes, posts, piers, columns, slabs, deck, slabOpenings, skippedLoops };
 }
 
 /** An elevation placed in 3D (M1b): sheet x = (plan point − origin) · dir, sheet y = height rel. ±0.00. */
@@ -309,3 +389,20 @@ export function heightsFrom(
     }
   return undefined;
 }
+
+/** Point in polygon (even-odd). */
+export function pointInPolygon(p: Vec2, poly: Vec2[]): boolean {
+  let inPoly = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const a = poly[i]!;
+    const b = poly[j]!;
+    if (a.y > p.y !== b.y > p.y && p.x < ((b.x - a.x) * (p.y - a.y)) / (b.y - a.y) + a.x) inPoly = !inPoly;
+  }
+  return inPoly;
+}
+
+/** Centre of a polygon's bbox (for a small block: "which slab is above it"). */
+export const centre = (poly: Vec2[]): Vec2 => {
+  const b = bbox(poly);
+  return { x: (b.x0 + b.x1) / 2, y: (b.y0 + b.y1) / 2 };
+};

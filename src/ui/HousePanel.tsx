@@ -14,7 +14,7 @@ import {
   type MainBody,
   type Vec2,
 } from '../house/blocks';
-import { blocksFromPlan, columnHeights, heightsFrom, WALL_LAYER, type PlanBlocks } from '../house/fromPlan';
+import { blocksFromPlan, centre, columnHeights, heightsFrom, pointInPolygon, WALL_LAYER, type PlanBlocks } from '../house/fromPlan';
 import { formatHeight, formatRel } from '../project/levels';
 import { useDrawnSheets } from '../state/drawn';
 import { useRefValue } from '../state/levels';
@@ -76,18 +76,37 @@ export function HousePanel() {
       const h = heightsFrom(a.polygon, elevations, 1, mainOutline);
       put(t.house.annexName[a.side], a.polygon, h ? { top: h.heights.at(-1)!, from: src(h) } : {});
     }
+    const slabTops: { poly: Vec2[]; top: number; from: string }[] = [];
     r.slabs.forEach((p, i) => {
       const h = heightsFrom(p, elevations, 2, mainOutline);
-      put(t.house.slabName(i + 1), p, h ? { bottom: h.heights[0]!, top: h.heights.at(-1)!, from: src(h) } : {});
+      const name = t.house.slabName(i + 1);
+      put(name, p, h ? { bottom: h.heights[0]!, top: h.heights.at(-1)!, from: src(h) } : {});
+      if (h) slabTops.push({ poly: p, top: h.heights.at(-1)!, from: name });
     });
+    // Supports stand on the deck: its top is their (read) bottom.
+    let standOn: { z: number; from: string } | undefined;
     r.posts.forEach((p, i) => {
       const h = heightsFrom(p, elevations, 2, mainOutline);
-      put(t.house.postName(i + 1), p, h ? { bottom: h.heights[0]!, top: h.heights.at(-1)!, from: src(h) } : {});
+      const name = t.house.postName(i + 1);
+      put(name, p, h ? { bottom: h.heights[0]!, top: h.heights.at(-1)!, from: src(h) } : {});
+      if (h) standOn ??= { z: h.heights[0]!, from: name };
     });
     const colRead = columnsFrom ? { bottom: columnsFrom.bottom, top: columnsFrom.top } : {};
     r.columns.forEach((p, i) => put(t.house.columnName(i + 1), p, colRead));
-    if (columnsFrom && r.columns.length > 0)
+    if (columnsFrom && r.columns.length > 0) {
       notes.push(t.house.heightsRead(t.house.columnsAll(r.columns.length), columnsFrom.bottom, columnsFrom.top, `${sheetName(columnsFrom.file)} S-COLS`));
+      standOn ??= { z: columnsFrom.bottom, from: t.house.columnsAll(r.columns.length) };
+    }
+    if (r.deck) put(t.house.deckName, r.deck, standOn ? { top: standOn.z, from: t.house.deckFrom(standOn.from) } : {});
+    // Piers: from the deck up to the top of the slab they carry (they end the slab's edge, flush with it).
+    r.piers.forEach((p, i) => {
+      const slab = slabTops.find((st) => pointInPolygon(centre(p), st.poly));
+      put(
+        t.house.pierName(i + 1),
+        p,
+        slab ? { ...(standOn && { bottom: standOn.z }), top: slab.top, from: t.house.pierFrom(slab.from, standOn !== undefined) } : {},
+      );
+    });
     setFromPlan({ ...r, file: ground.file, notes, unset });
   };
 
@@ -123,7 +142,14 @@ export function HousePanel() {
       </p>
       {fromPlan && (
         <p className="muted">
-          {t.house.fromPlanResult(sheetName(fromPlan.file), fromPlan.annexes.length, fromPlan.slabs.length, fromPlan.posts.length, fromPlan.columns.length)}
+          {t.house.fromPlanResult(sheetName(fromPlan.file), {
+            annexes: fromPlan.annexes.length,
+            slabs: fromPlan.slabs.length,
+            deck: fromPlan.deck ? 1 : 0,
+            posts: fromPlan.posts.length,
+            piers: fromPlan.piers.length,
+            columns: fromPlan.columns.length,
+          })}
           {fromPlan.notes.map((n) => (
             <span key={n}>
               <br />

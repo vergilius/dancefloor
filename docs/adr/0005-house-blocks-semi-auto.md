@@ -43,6 +43,13 @@ simple, so "Z rzutu parteru" builds them from the ground plan (rules in `src/hou
   shorter way. PAB-01: an L of 31.90 m² (terrace x 0.034…8.124 to y −14.966, a 0.30 m strip along the west wall,
   a 0.50 m canopy over the south windows; PAB-09 confirms the band +2.635…+3.22 along the whole west side).
   Its inner closed loop (an opening) is counted, not modelled.
+- **Deck and piers** (user, 2026-11-08, from the renders: posts and columns stand on a raised deck; a pier ends
+  the south canopy): the deck is the `PZT_UTWARDZENIA` outline, interrupted where the posts stand (gaps whose ends lie
+  on one post's outline are bridged along it), closed along the main body; of the two ways round, the smaller polygon
+  (the other encloses the house). PAB-01: 52.20 m² (0.90 m strip west, the terrace, a 0.90 m strip east to the
+  stairs). Its top = the supports' read bottom (−0.02), bottom −1.40. Piers: open `A-WALL` chains ≤ 1 m against the
+  main body (the wall is their missing side). PAB-01: one, 0.45 × 0.49 m at x 13.667…14.117; no lines across it on the
+  elevations, so it runs from the deck to the top of the slab above it (+3.22).
 - **Heights from the elevations** (user, 2026-11-08, screenshot: the slab at the −1.40/+3.00 defaults filled the
   whole terrace): per block, the horizontal lines of a placed elevation lying within the block's width there (ends
   ± 3 cm) and covering ≥ half of it, `A-WALL` first, then `PZT_UTWARDZENIA`. Elevations on which the block stands
