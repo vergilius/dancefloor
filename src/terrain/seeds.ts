@@ -37,6 +37,13 @@ export function profileSeeds(sheets: { file: string; placement: VerticalPlacemen
   return { points: Float64Array.from(out), sheets: stats };
 }
 
+/** The segments of `s` that share an end with another one (drops legend samples and stubs). */
+export function connectedSegments(s: Float64Array): Float64Array {
+  const out: number[] = [];
+  for (let i = 0; i < s.length / 4; i++) if (hasNeighbour(s, i)) out.push(s[4 * i]!, s[4 * i + 1]!, s[4 * i + 2]!, s[4 * i + 3]!);
+  return Float64Array.from(out);
+}
+
 /** Does segment i share an end (within JOIN) with any other segment? `s` = [x1, y1, x2, y2, …]. */
 function hasNeighbour(s: Float64Array, i: number): boolean {
   for (let e = 0; e < 2; e++) {

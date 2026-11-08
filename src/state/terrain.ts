@@ -2,7 +2,7 @@
 import { useMemo } from 'react';
 import { sheetToWorld } from '../scene/coords';
 import { grow, heightGrid, segmentsBox, type Box, type HeightGrid } from '../terrain/grid';
-import { profileSeeds, type Seeds } from '../terrain/seeds';
+import { connectedSegments, profileSeeds, type Seeds } from '../terrain/seeds';
 import { useDrawnSheets, type DrawnSheet } from './drawn';
 
 export const PLOT_LAYER = 'PZT_ZAKRES';
@@ -25,12 +25,12 @@ export function useTerrain(): Terrain {
   }, [drawn]);
 }
 
-/** `PZT_ZAKRES` of an aligned site sheet (one with a transform), in plan coords. */
+/** `PZT_ZAKRES` of an aligned site sheet (one with a transform), in plan coords. Isolated lines (a legend sample) are left out. */
 function plotBox(drawn: DrawnSheet[]): Box | undefined {
   for (const d of drawn) {
     if (d.kind !== 'site' || d.placement.type !== 'horizontal' || !d.placement.transform) continue;
     const s = d.sheet.layers.find((l) => l.name === PLOT_LAYER)?.segments;
-    const box = s && segmentsBox(s, (x, y) => sheetToWorld(d.placement, x, y));
+    const box = s && segmentsBox(connectedSegments(s), (x, y) => sheetToWorld(d.placement, x, y));
     if (box) return box;
   }
   return undefined;
