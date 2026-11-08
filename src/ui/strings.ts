@@ -224,6 +224,18 @@ export const t = {
     wallFace: 'lico ściany',
     pitch: (deg: number) => `kąt ${deg.toFixed(1)}°`,
     overhang: (m: number) => `okap ${m.toFixed(2)} m`,
+    fromPlan: 'Z rzutu parteru',
+    fromPlanTitle:
+      'Dobudówki (długie ściany A-WALL poza bryłą główną), płyty (obrys A-DETL-1 domknięty do ściany) i słupy (małe zamknięte prostokąty A-WALL). Bloki o tej samej nazwie zachowują wysokości.',
+    needsMain: '„Z rzutu parteru” wymaga bryły głównej',
+    annexName: { north: 'Dobudówka północna', south: 'Dobudówka południowa', east: 'Dobudówka wschodnia', west: 'Dobudówka zachodnia' },
+    slabName: (n: number) => `Płyta ${n}`,
+    postName: (n: number) => `Słup ${n}`,
+    fromPlanResult: (sheet: string, annexes: number, slabs: number, posts: number) =>
+      `z arkusza ${sheet}: ${annexes} ${plural(annexes, 'dobudówka', 'dobudówki', 'dobudówek')}, ${slabs} ${plural(slabs, 'płyta', 'płyty', 'płyt')}, ${posts} ${plural(posts, 'słup', 'słupy', 'słupów')}`,
+    fromPlanSkipped: (openings: number, loops: number) =>
+      `pominięte: ${openings} ${plural(openings, 'otwór w płycie', 'otwory w płycie', 'otworów w płycie')}, ${loops} ${plural(loops, 'nieprostokątny obrys', 'nieprostokątne obrysy', 'nieprostokątnych obrysów')} A-WALL`,
+    setHeights: 'Wysokości nowych bloków: spód −1.40, góra +3.00 — ustaw je z listy (rzędne z elewacji i przekrojów).',
     addBlock: 'Dodaj blok',
     addBlockTitle: 'Narysuj blok z płaskim dachem: klikaj narożniki na rzutach (w widoku Projekt, przyciąganie do końców linii)',
     drawing: 'Nowy blok',

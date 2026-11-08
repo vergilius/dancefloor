@@ -489,6 +489,11 @@ Requirements:
 - **"Z rzutu dachu"** (button): builds or replaces the block named "Bryła główna" as a `gable` from the horizontal
   sheet that has an `A-ROOF` layer: rect = `A-ROOF` extent, overhang = (`A-ROOF-OTLN` extent − rect) on the long
   sides, ridge = the sheet's z, pitch parsed from the `NN°` label on that sheet (fallback 38, flagged).
+- **"Z rzutu parteru"** (button, ADR 0005 amendment): from the ground plan around the main body, builds or updates
+  "Dobudówka <side>" (long `A-WALL` lines beyond one side, bbox closed to the main wall), "Płyta n" (`A-DETL-1` chain
+  closed along the main rectangle) and "Słup n" (small closed 4-sided `A-WALL` loops). Existing blocks with the same
+  name keep their heights; new ones get −1.40 / +3.00. Counts and skipped loops/openings shown. The height list also
+  offers the relative `+N.NN` labels of the elevations and sections.
 - **Drawing a flat block** (Design viewport, like the measure tool): "Dodaj blok" → click corners with endpoint
   snapping (`snap.ts`); click the first corner or press Enter to close; Esc cancels; Backspace removes the last
   corner. While drawing: outline + edge lengths. Then it gets name "Blok n", top +3.00 (to be changed). A block is

@@ -1,7 +1,18 @@
 // House panel (PLAN.md §5 M5): "Z rzutu dachu", "Dodaj blok" and one entry per block (derived values shown so the
 // browser check can compare them with the drawings; rename, heights, re-draw, delete).
 import { useMemo, useState } from 'react';
-import { hasRoofLayer, isValidBlock, mainBodyFromRoof, polygonArea, wallFace, type Block, type MainBody } from '../house/blocks';
+import {
+  DEFAULT_BOTTOM,
+  hasRoofLayer,
+  isValidBlock,
+  mainBodyFromRoof,
+  polygonArea,
+  wallFace,
+  type Block,
+  type MainBody,
+  type Vec2,
+} from '../house/blocks';
+import { blocksFromPlan, WALL_LAYER, type PlanBlocks } from '../house/fromPlan';
 import { formatHeight, formatRel } from '../project/levels';
 import { useDrawnSheets } from '../state/drawn';
 import { useRefValue } from '../state/levels';
@@ -10,6 +21,10 @@ import { t } from './strings';
 
 const sheetName = (file: string) => file.replace(/\.dwg$/i, '').split(' - ')[0]!;
 const LEVELS_LIST = 'house-levels';
+/** Same as a drawn block: to be set from the list. */
+const NEW_TOP = 3;
+/** A relative height label on an elevation/section: `+3.59`, `−0.32`, `-1,40` (absolute values are left out). */
+const REL_LABEL = /^[+−-]\s*(\d{1,2}[.,]\d{2,3})$/;
 
 export function HousePanel() {
   const blocks = useProject((s) => s.house.blocks);
@@ -21,6 +36,34 @@ export function HousePanel() {
   const drawn = useDrawnSheets();
   const roof = useMemo(() => drawn.find((d) => d.kind === 'plan' && d.placement.type === 'horizontal' && hasRoofLayer(d.sheet)), [drawn]);
   const [last, setLast] = useState<(MainBody & { file: string }) | undefined>();
+  const main = blocks.find((b) => b.kind === 'gable');
+  // The ground plan: a horizontal plan with walls, nearest to ±0.00.
+  const ground = useMemo(
+    () =>
+      drawn
+        .filter((d) => d.kind === 'plan' && d.placement.type === 'horizontal' && d.sheet.layers.some((l) => l.name === WALL_LAYER))
+        .sort((a, b) => Math.abs(a.placement.type === 'horizontal' ? a.placement.z : 0) - Math.abs(b.placement.type === 'horizontal' ? b.placement.z : 0))[0],
+    [drawn],
+  );
+  const [fromPlan, setFromPlan] = useState<(PlanBlocks & { file: string }) | undefined>();
+
+  const buildFromPlan = () => {
+    if (!ground || main?.kind !== 'gable') return;
+    const r = blocksFromPlan(ground.sheet, main);
+    // A block with the same name keeps its heights, so running it again doesn't undo the heights set by hand.
+    const put = (name: string, polygon: Vec2[]) => {
+      const old = useProject.getState().house.blocks.find((b) => b.name === name);
+      putBlock(
+        old?.kind === 'flat'
+          ? { ...old, polygon }
+          : { kind: 'flat', name, polygon, bottom: DEFAULT_BOTTOM, top: NEW_TOP },
+      );
+    };
+    for (const a of r.annexes) put(t.house.annexName[a.side], a.polygon);
+    r.slabs.forEach((p, i) => put(t.house.slabName(i + 1), p));
+    r.posts.forEach((p, i) => put(t.house.postName(i + 1), p));
+    setFromPlan({ ...r, file: ground.file });
+  };
 
   const build = () => {
     if (!roof || roof.placement.type !== 'horizontal') return;
@@ -37,6 +80,9 @@ export function HousePanel() {
         <button type="button" disabled={!roof} title={t.house.fromRoofTitle} onClick={build}>
           {t.house.fromRoof}
         </button>{' '}
+        <button type="button" disabled={!ground || !main} title={t.house.fromPlanTitle} onClick={buildFromPlan}>
+          {t.house.fromPlan}
+        </button>{' '}
         {drawing ? (
           <button type="button" onClick={cancelHouseDraw}>
             {t.house.cancelDraw}
@@ -47,7 +93,21 @@ export function HousePanel() {
           </button>
         )}
         {!roof && <span className="muted"> {t.house.noRoofSheet}</span>}
+        {roof && !main && <span className="muted"> {t.house.needsMain}</span>}
       </p>
+      {fromPlan && (
+        <p className="muted">
+          {t.house.fromPlanResult(sheetName(fromPlan.file), fromPlan.annexes.length, fromPlan.slabs.length, fromPlan.posts.length)}
+          {(fromPlan.slabOpenings > 0 || fromPlan.skippedLoops > 0) && (
+            <>
+              <br />
+              {t.house.fromPlanSkipped(fromPlan.slabOpenings, fromPlan.skippedLoops)}
+            </>
+          )}
+          <br />
+          {t.house.setHeights}
+        </p>
+      )}
       {last && (
         <p className="muted">
           {t.house.fromSheet(sheetName(last.file), formatRel(last.block.ridge))}
@@ -85,14 +145,21 @@ export function HousePanel() {
 function LevelOptions() {
   const parsed = useProject((s) => s.parsed);
   const sheets = useProject((s) => s.sheets);
+  const drawn = useDrawnSheets();
   const ref = useRefValue();
   const values = useMemo(() => {
     const out = new Set<string>();
+    for (const d of drawn)
+      if (d.placement.type === 'vertical')
+        for (const tx of d.sheet.texts) {
+          const m = REL_LABEL.exec(tx.text.trim());
+          if (m) out.add(((tx.text.trim().startsWith('+') ? 1 : -1) * Number(m[1]!.replace(',', '.'))).toFixed(3));
+        }
     for (const s of sheets) if (s.kind === 'plan' && s.placement?.type === 'horizontal') out.add(s.placement.z.toFixed(2));
     if (ref !== undefined)
       for (const p of Object.values(parsed)) if (p.status === 'done') for (const l of p.summary.labels.levels) out.add((l.value - ref).toFixed(2));
-    return [...out].map(Number).sort((a, b) => a - b);
-  }, [parsed, sheets, ref]);
+    return [...new Set([...out].map((v) => Number(v).toFixed(2)))].map(Number).sort((a, b) => a - b);
+  }, [parsed, sheets, drawn, ref]);
   return (
     <datalist id={LEVELS_LIST}>
       {values.map((v) => (

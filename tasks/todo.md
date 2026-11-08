@@ -1,6 +1,7 @@
 # M5 task list
 
-Next: T2 implemented, awaiting the user's browser check (then tick T2 + checkpoint A, start T3).
+Next: T2 + "Z rzutu parteru" implemented, awaiting the user's browser check (then tick T2 + checkpoint A, start T3).
+T2 note: "Z rzutu parteru" (ADR 0005 amendment) builds the annex, the terrace slab (L, 31.90 m²) and 2 posts from PAB-01; heights are set from the list.
 T1 note: Design also shows the block edges (not solids), so they can be compared with the elevation underlays.
 Plan: `tasks/plan.md`. Spec: PLAN.md §5 M5, ADR 0005. M4a task notes are in git history (`tasks/todo.md` at e859430).
 

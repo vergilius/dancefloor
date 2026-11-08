@@ -28,3 +28,18 @@ the main walls (14.80 × 10.30 m), and the elevations' glazing/door pieces give 
 - Openings are only as good as the elevations: merged gable/roof windows on PAB-08 and roof windows shown as façade
   openings need hiding.
 - IFC remains the better source if it ever arrives (`web-ifc`, PLAN.md §3); then the blocks are replaced.
+
+## Amendment (user, 2026-11-08: "naprawdę nie jesteś w stanie wygenerować garażu od razu?")
+The failed loop tracing was about the **whole house** footprint. Around a known main rectangle the extra blocks are
+simple, so "Z rzutu parteru" builds them from the ground plan (rules in `src/house/fromPlan.ts`, checked on PAB-01):
+- **Annex** per side of the main body: `A-WALL` lines ≥ 2 m lying wholly > 5 cm beyond that side, their bbox extended
+  to the main wall. PAB-01: north, x 3.624…14.324, y −1.476…2.904 (10.70 × 4.38 m). The entrance walls (< 2 m) don't count.
+- **Posts**: closed 4-sided `A-WALL` loops ≤ 1 m outside the main body and annexes, outermost of nested ones. PAB-01:
+  two, 0.55 × 0.47 m. A round 0.24 m loop at the entrance is skipped (counted).
+- **Slab**: an `A-DETL-1` chain with both open ends ≤ 0.5 m from the main rectangle, closed along its perimeter the
+  shorter way. PAB-01: an L of 31.90 m² (terrace x 0.034…8.124 to y −14.966, a 0.30 m strip along the west wall,
+  a 0.50 m canopy over the south windows; PAB-09 confirms the band +2.635…+3.22 along the whole west side).
+  Its inner closed loop (an opening) is counted, not modelled.
+- **Heights are not guessed**: new blocks get −1.40 / +3.00, set from the list, which now also holds the relative
+  `+N.NN` labels of the elevations and sections (+3.59, +3.22, +2.64, −0.02 …). Re-running keeps heights by block name.
+Drawing by hand stays for anything the rules miss.
