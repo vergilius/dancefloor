@@ -1,6 +1,7 @@
 # M5 task list
 
-Next: user's browser check of the simplified hollow house (shell + paired partitions + roof holes, ADR 0006 amendment); user reported "nie ma poddasza" before it — re-check the attic. Then T4 (hide openings; the merged PAB-08 gable box still cuts a big hole).
+Next: user's browser check of (a) the simplified hollow house (shell + paired partitions + roof holes, ADR 0006 amendment; user reported "nie ma poddasza" before it — re-check the attic) and (b) T4 hide/show (panel "Lista otworów" per elevation; hidden = not cut, no quad, no roof hole; keys in `house.hiddenOpenings`). Then T4 docs (PLAN.md M5 ✅, CLAUDE.md status) and Checkpoint B.
+T4 note: hidden openings still count in "znalezione", not in "bez ściany"; stale keys (rect moved > 1 cm in the DWG) are kept in the file but match nothing.
 T3 note: pieces are joined where their boxes touch (the garage door's panel lines end mid-frame); counts 6/8/7/1 as specified. Rays start 0.3 m in front of the elevation plane (PAB-08's plane is 1 cm inside the gable).
 T6 note: openings cut the wall lines (plans draw lines across some openings: garage door, podcień doors) and get sill/head fills; a cut needs a wall face within 0.25 m of where the opening was placed (roof windows stay dark quads). West recess (0.60 m, under the terrace roof) found too; soffits via `soffitFrom`.
 T2 note: "Z rzutu parteru" (ADR 0005 amendment) builds the annex, the terrace slab (L, 31.90 m²), the deck (52.20 m²), 2 posts, 1 pier and 7 S-COLS columns from PAB-01, heights read from the elevations/section (annex +3.59, slab +2.635…+3.22, posts −0.02…+2.635, columns −0.02…+2.63).

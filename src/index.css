@@ -51,6 +51,8 @@ html, body, #root { height: 100%; margin: 0; }
 .draw-readout { border-color: #8250df; }
 .house-blocks { margin: 4px 0; padding-left: 16px; font-size: 12px; }
 .house-blocks li { margin-bottom: 8px; }
+.house-openings { margin: 2px 0; padding-left: 4px; list-style: none; }
+.house-openings li { margin-bottom: 2px; }
 .house-height { display: flex; align-items: center; gap: 4px; margin: 2px 0; }
 .height-input { width: 64px; font-variant-numeric: tabular-nums; }
 .house-actions { display: flex; gap: 4px; margin-top: 2px; }

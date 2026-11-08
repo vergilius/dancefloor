@@ -273,6 +273,10 @@ export const t = {
     roofHoles: (n: number) => `${n} ${plural(n, 'otwór w dachu', 'otwory w dachu', 'otworów w dachu')}`,
     openingsHidden: (found: number) => `znalezione ${found} (ukryte: przycisk „Otwory” wyłączony)`,
     openingsTitle: 'Okna i drzwi z elewacji',
+    openingsHiddenCount: (n: number) => `; ukryte ${n}`,
+    openingsList: 'Lista otworów',
+    openingShowTitle: 'Odznacz, aby ukryć ten otwór (bez wycięcia i bez ciemnego prostokąta); zapisywane w projekcie',
+    openingLine: (w: number, h: number, sill: string, x: number) => `${w.toFixed(2)} × ${h.toFixed(2)} m, dół ${sill}, od lewej ${x.toFixed(2)} m`,
     openingsLine: (found: number, holes: number, quads: number, missed: number) =>
       `znalezione ${found}: ${holes} ${plural(holes, 'otwór w ścianie', 'otwory w ścianach', 'otworów w ścianach')}, ${quads} na bryle (ciemne)` +
       (missed > 0 ? `, bez ściany za nimi ${missed} (okna dachowe?)` : ''),

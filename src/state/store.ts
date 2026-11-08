@@ -89,6 +89,8 @@ export type ProjectState = {
   setShowTerrain(show: boolean): void;
   setShowHouse(show: boolean): void;
   setShowOpenings(show: boolean): void;
+  /** Hide or show one façade opening (saved in `house.hiddenOpenings`). */
+  toggleOpening(key: string): void;
   /** Replaces the block with the same name, or appends it. */
   putBlock(block: Block): void;
   /** Replaces block `index`; refused (false) if the new name is taken by another block. */
@@ -354,6 +356,14 @@ export const useProject = create<ProjectState>()((set, get) => ({
 
   setShowOpenings(showOpenings) {
     set({ showOpenings });
+  },
+
+  toggleOpening(key) {
+    set((st) => {
+      const h = st.house.hiddenOpenings;
+      const hiddenOpenings = h.includes(key) ? h.filter((k) => k !== key) : [...h, key];
+      return { dirty: true, house: { ...st.house, hiddenOpenings } };
+    });
   },
 
   putBlock(block) {

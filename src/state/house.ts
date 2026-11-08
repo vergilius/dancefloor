@@ -14,8 +14,11 @@ export type ElevationOpenings = {
   found: OpeningRect[];
   /** `hole`: cut through the hollow shell or the roof (M5b); otherwise drawn as a dark quad. */
   placed: (PlacedOpening & { key: string; hole: boolean })[];
-  /** Found but no house face behind them within MAX_DEPTH (roof windows, mostly). */
+  /** Found but no house face behind them within MAX_DEPTH (roof windows, mostly); hidden ones not counted. */
   missed: number;
+  /** Keys of `found` (same order) and how many of them are hidden (T4). */
+  keys: string[];
+  hidden: number;
 };
 
 export type House3D = {
@@ -40,20 +43,23 @@ export function useHouse3D(): House3D {
   const drawn = useDrawnSheets();
   const blocks = useProject((s) => s.house.blocks);
   const cut = useProject((s) => s.showOpenings);
-  return useMemo(() => shared(drawn, blocks, cut), [drawn, blocks, cut]);
+  const hidden = useProject((s) => s.house.hiddenOpenings);
+  return useMemo(() => shared(drawn, blocks, cut, hidden), [drawn, blocks, cut, hidden]);
 }
 
 type Blocks = ReturnType<typeof useProject.getState>['house']['blocks'];
-let last: { drawn: ReturnType<typeof useDrawnSheets>; blocks: Blocks; cut: boolean; out: House3D } | undefined;
+let last: { drawn: ReturnType<typeof useDrawnSheets>; blocks: Blocks; cut: boolean; hidden: string[]; out: House3D } | undefined;
 
 /** One result for the mesh and the panel (the walls are built twice per change: uncut, then cut). */
-function shared(drawn: ReturnType<typeof useDrawnSheets>, blocks: Blocks, cut: boolean): House3D {
-  if (last?.drawn !== drawn || last.blocks !== blocks || last.cut !== cut) last = { drawn, blocks, cut, out: build(drawn, blocks, cut) };
+function shared(drawn: ReturnType<typeof useDrawnSheets>, blocks: Blocks, cut: boolean, hidden: string[]): House3D {
+  if (last?.drawn !== drawn || last.blocks !== blocks || last.cut !== cut || last.hidden !== hidden)
+    last = { drawn, blocks, cut, hidden, out: build(drawn, blocks, cut, hidden) };
   return last.out;
 }
 
-/** `cut` false ("Otwory" off): closed walls and roof, no dark quads; the openings are still found and counted. */
-function build(drawn: ReturnType<typeof useDrawnSheets>, blocks: Blocks, cut: boolean): House3D {
+/** `cut` false ("Otwory" off): closed walls and roof, no dark quads; the openings are still found and counted.
+ *  Hidden openings (T4) are listed but neither cut, drawn nor turned into roof holes. */
+function build(drawn: ReturnType<typeof useDrawnSheets>, blocks: Blocks, cut: boolean, hidden: string[]): House3D {
   {
     if (blocks.length === 0) return EMPTY;
     const triangles = Float64Array.from(blocks.flatMap(blockTriangles));
@@ -74,17 +80,19 @@ function build(drawn: ReturnType<typeof useDrawnSheets>, blocks: Blocks, cut: bo
     // Openings on the solid blocks first; with walls from the plans they become cuts + fills.
     const placed = elevations.map(({ file, sheet, e }) => {
       const found = findOpenings(sheet);
-      const on = found.flatMap((r) => {
+      const keys = found.map((r) => openingKey(file, r));
+      const visible = found.filter((_, i) => !hidden.includes(keys[i]!));
+      const on = visible.flatMap((r) => {
         const p = placeOpening(r, e, triangles);
         return p ? [{ ...p, key: openingKey(file, r), e }] : [];
       });
-      return { file, found, on };
+      return { file, found, keys, visible, on };
     });
     const all = placed.flatMap((p) => p.on);
     const walls = storeys.length ? hollowWalls(storeys, blocks, cut ? all : []) : undefined;
     const main = blocks.find((b): b is GableBlock => b.kind === 'gable');
     // Roof windows: every opening found on an elevation looking at a slope, placed or not.
-    const roofHoles = cut && main && walls ? elevations.flatMap(({ sheet, e }) => findOpenings(sheet).flatMap((r) => roofHole(main, r, e) ?? [])) : [];
+    const roofHoles = cut && main && walls ? placed.flatMap(({ visible }, i) => visible.flatMap((r) => roofHole(main, r, elevations[i]!.e) ?? [])) : [];
     const slabs = walls
       ? hollowSlabs(
           main,
@@ -96,12 +104,14 @@ function build(drawn: ReturnType<typeof useDrawnSheets>, blocks: Blocks, cut: bo
         )
       : undefined;
     let k = 0;
-    const openings = placed.map(({ file, found, on }) => ({
+    const openings = placed.map(({ file, found, keys, visible, on }) => ({
       file,
       found,
+      keys,
+      hidden: found.length - visible.length,
       // A hole in the shell, or (above the wall face, on a slope seen face-on) in the roof.
       placed: on.map((o) => ({ ...o, hole: (walls?.hole[k++] ?? false) || (!!main && !!walls && roofHole(main, o.rect, o.e) !== undefined) })),
-      missed: found.length - on.length,
+      missed: visible.length - on.length,
     }));
     return {
       openings,

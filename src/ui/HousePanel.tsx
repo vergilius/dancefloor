@@ -266,10 +266,12 @@ function WallsSummary() {
   );
 }
 
-/** Per placed elevation: openings found / drawn / not placed (T3). */
+/** Per placed elevation: openings found / drawn / not placed (T3), and each one with hide/show (T4). */
 function OpeningsSummary() {
   const elevations = useHouse3D().openings;
   const shown = useProject((s) => s.showOpenings);
+  const hidden = useProject((s) => s.house.hiddenOpenings);
+  const toggle = useProject((s) => s.toggleOpening);
   if (elevations.length === 0) return null;
   return (
     <>
@@ -281,6 +283,23 @@ function OpeningsSummary() {
             {shown
               ? t.house.openingsLine(e.found.length, e.placed.filter((o) => o.hole).length, e.placed.filter((o) => !o.hole).length, e.missed)
               : t.house.openingsHidden(e.found.length)}
+            {e.hidden > 0 && t.house.openingsHiddenCount(e.hidden)}
+            <details>
+              <summary>{t.house.openingsList}</summary>
+              <ul className="house-openings">
+                {e.found.map((r, i) => {
+                  const key = e.keys[i]!;
+                  return (
+                    <li key={key}>
+                      <label title={t.house.openingShowTitle}>
+                        <input type="checkbox" checked={!hidden.includes(key)} onChange={() => toggle(key)} />{' '}
+                        {t.house.openingLine(r.x1 - r.x0, r.y1 - r.y0, formatRel(r.y0), r.x0)}
+                      </label>
+                    </li>
+                  );
+                })}
+              </ul>
+            </details>
           </li>
         ))}
       </ul>
