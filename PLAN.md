@@ -333,17 +333,54 @@ PZT's circles (e.g. the `Tp= 355,08` circle at sheet (18.565, −11.038) is at p
 tank rectangle on PZT-01 is 3.00 × 2.40 m (± 1 cm), PAB-01's `A-WALL` x-extent is 15.090 m (± 1 cm), and on
 PAB-08 Δh from ±0.00 to the ridge is 9.12 m (± 1 cm).
 
-**M3 — Terrain grid**
-- Seed points: PZT `Tp` points (plan coords) + elevation profiles `PZT_TEREN ISTNIEJĄCY`
-  projected onto their façade lines (3D polylines) + `Ti` corner values.
-- Existing terrain = delaunator over existing-terrain points → rasterize; outside the hull,
-  extrapolate with nearest/plane fit and render it visibly as "uncertain" (hatched/transparent).
-- Keep existing (`Ti`) and architect-designed (`Tp`) as two separate surfaces; user designs on top.
-- **Survey points, fallback until DWG arrives:** PDF underlay (`pdfjs-dist`, render the page to a
-  texture at high DPI), align it to PZT-01 with the 2-point tool (scale from the drawing), then a
-  "spot height" tool: click the dot, type the value. Roughly 15–20 min of clicking for the whole plot.
-- When the survey DWG arrives: import its points instead; keep the manual points for comparison.
-- ✅ Terrain around the house matches all Ti values within 2 cm; contour lines every 0.25 m; 60 fps.
+**M3 — Terrain grid** (spec sharpened 2026-11-08 on the real files, awaiting approval)
+
+Facts (raw model-space LINEs on `PZT_TEREN ISTNIEJĄCY` / `PZT_TEREN PROJEKTOWANY`, sheet coords in m):
+- **Elevations** PAB-07..10: one existing-terrain profile each (8–12 LINEs, sheet x along the façade, y = height
+  rel ±0.00), spanning roughly the plot (e.g. PAB-08 x −34.4…7.6, heights −2.80…+0.39). Every Ti / Tp=Ti label
+  of M2 sits on a profile vertex (e.g. PAB-08 `Ti= +354.54` at x −14.97, profile vertex (−14.97, −0.86)). The
+  SE corner Ti 354.54 and the SW corner Ti 354.05 agree between the two elevations that show them.
+- **Noise in the elevations:** a legend pair (1.00 m horizontal `ISTNIEJĄCY` at y 3.78 and `PROJEKTOWANY` at y 3.38,
+  far right) on every elevation, and one isolated 0.40 m stub on PAB-08 (x −22.34…−21.94, y −1.92, 30 cm below the
+  profile there). Both are single segments that share no endpoint with another profile segment.
+- **Sections** PAB-04..06: existing-terrain profiles (4–11 LINEs) across the whole cut, including under the house
+  (PAB-06 has a gap there). Small gaps of ≤ 1 cm between consecutive segments (PAB-04). Short designed-terrain
+  pieces (`PROJEKTOWANY`, 5–6 LINEs) around the house.
+- **Consistency:** section A-A and section B-B agree where they cross (−0.78 vs −0.78). Elevation vs section
+  differs by **15–18 cm** (PAB-08 vs B-B at (15.12, −6.36): −0.21 vs −0.39; PAB-10 vs A-A at (6.71, −14.97):
+  −1.21 vs −1.36). The elevation terrain line is probably not cut at the façade plane. Both are used anyway (user,
+  2026-11-08); near the crossings the surface gets small bumps.
+- **PZT-01** `PZT_TEREN ISTNIEJĄCY` = 60 short slope-hatch ticks (an existing embankment along the SE and W edges),
+  no heights. Not used.
+- **Plot:** `PZT_ZAKRES` on PZT-01 is a closed 6-corner outline, **1043 m²**, plan bbox x −7.7…21.6, y −34.6…5.9
+  (after the M1c rotation). At 0.10 m cells the grid is ~310 × 430 ≈ 133k cells.
+
+Requirements:
+- **Seeds (pure `src/terrain/seeds.ts`, main thread, from the normalized `PZT_TEREN ISTNIEJĄCY` layer of every
+  placed elevation and section):** chain segments whose endpoints meet within 2 cm; **drop segments with no
+  neighbour** (legend, stub), counted per sheet. Densify the kept segments to ≤ 1 m spacing and map them to plan
+  coords through the sheet's vertical placement (origin + x·dir, height = sheet y). Elevations go on their façade
+  plane as placed in M1b. Unplaced sheets give no seeds.
+- **Existing terrain = `terrain.base`** (pure `src/terrain/grid.ts`): delaunator over all seeds (duplicates within
+  1 cm merged), linear interpolation inside the hull. Outside the hull: the height of the nearest point on the hull
+  boundary (continuous, flat outward), and the cell is flagged **uncertain**. Grid: 0.10 m cells over the plot bbox
+  + 2 m margin (`PZT_ZAKRES` through PZT-01's transform). Without an aligned PZT-01: seed bbox + 5 m.
+- **Not saved:** `terrain.base` is recomputed from the DWGs on load (deterministic, no change to `dancefloor.json`).
+  Manual or survey points will be the first saved terrain data.
+- **Tp:** no Tp surface in M3. The Tp points stay as M2 markers, for reference in M4 (user, 2026-11-08).
+- **Survey points deferred** (user, 2026-11-08): no spot-height tool and no survey import in M3. Parts of the plot are
+  outside the profile hull and show as uncertain until then.
+- **Environment viewport:** the terrain mesh (one vertex per cell corner, height-tinted), uncertain cells drawn
+  lighter and semi-transparent, contour lines every 0.25 m (marching squares, every 1 m thicker), and the plot
+  outline. Toggle "Teren" (view setting, default on, not saved). Design is unchanged.
+- **Visible checks (one panel line + Ti list):** seeds used / segments dropped, grid size, height range (rel + abs),
+  uncertain share; the **Ti check**: for every resolved Ti / Tp=Ti marker the grid height at its point vs the label
+  value, and the max |Δ|.
+- **Best available, not exact** (user, 2026-11-08): the terrain will mostly be reshaped in the later editor, so
+  M3 keeps the simplest approach that works. No conflict resolution between sources, no crossing analysis.
+
+✅ Ti check: all Ti / Tp=Ti points within 2 cm. Legend segments and the PAB-08 stub are dropped. Contours every
+0.25 m; uncertain area visibly different; orbiting the Environment view stays smooth (60 fps).
 
 **M4 — Garden tools (core value)**
 - Platform: draw polygon snapped to underlay vertices/edges, set Z numerically. Paving platforms have a
