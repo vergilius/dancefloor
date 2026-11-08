@@ -145,6 +145,16 @@ export const t = {
     sheet: (segments: number, points: number) => `${segments} ${plural(segments, 'odcinek', 'odcinki', 'odcinków')} → ${points} pkt`,
     dropped: 'pominięte (bez sąsiada)',
     none: 'Brak profili terenu (warstwa PZT_TEREN ISTNIEJĄCY) na umieszczonych elewacjach i przekrojach',
+    grid: (cols: number, rows: number, cell: number) =>
+      `Siatka ${cols} × ${rows} = ${(cols * rows).toLocaleString('pl-PL')} oczek po ${cell.toFixed(2)} m`,
+    extent: { plot: 'zakres: działka PZT_ZAKRES + 1 m', seeds: 'zakres: punkty profili + 2,5 m (PZT-01 niewyrównany)' },
+    range: 'Wysokości',
+    uncertain: (pct: number) => `Poza profilami (wysokość przedłużona, niepewna): ${pct.toFixed(0)} % węzłów`,
+    noGrid: 'Za mało punktów, by zbudować siatkę',
+    tiTitle: 'Kontrola Ti (rzędna z opisu vs siatka)',
+    tiNone: 'Brak punktów Ti / Tp=Ti z położeniem',
+    tiMax: (cm: number) => `max |Δ| = ${cm.toFixed(1)} cm`,
+    tiRow: (grid: string, deltaCm: string) => `siatka ${grid}, Δ ${deltaCm} cm`,
   },
   fileCount: (n: number) => `${n} ${n === 1 ? 'plik' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'pliki' : 'plików'}`,
 } as const;
