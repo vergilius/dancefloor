@@ -1,5 +1,6 @@
 // House massing blocks (PLAN.md §5 M5, ADR 0005). Pure: types, strict parse, the main body from the roof plan,
-// and block → triangles. Plan coords in m (x east, y north), heights rel. ±0.00.
+// and block → triangles (three's ShapeUtils only for the earcut maths). Plan coords in m (x east, y north), heights rel. ±0.00.
+import { ShapeUtils, Vector2 } from 'three';
 import type { NormalizedSheet } from '../dwg/types';
 
 export type Vec2 = { x: number; y: number };
@@ -19,8 +20,8 @@ export type GableBlock = {
   overhang: number;
 };
 
-/** Polygon prism. */
-export type FlatBlock = { kind: 'flat'; name: string; polygon: Vec2[]; bottom: number; top: number };
+/** Polygon prism; `holes` = openings through it (the awning opening in the terrace slab). */
+export type FlatBlock = { kind: 'flat'; name: string; polygon: Vec2[]; holes?: Vec2[][]; bottom: number; top: number };
 
 export type Block = GableBlock | FlatBlock;
 
@@ -98,11 +99,19 @@ function parseBlock(v: unknown, where: string): Block {
     const top = num(v, 'top', where);
     if (!(top > bottom)) throw new Error(`${where}: expected top > bottom`);
     if (!Array.isArray(v.polygon) || v.polygon.length < 3) throw new Error(`${where}.polygon: expected ≥ 3 corners`);
-    const polygon = v.polygon.map((p, i) => {
-      if (!isObj(p)) throw new Error(`${where}.polygon[${i}]: expected { x, y }`);
-      return { x: num(p, 'x', `${where}.polygon[${i}]`), y: num(p, 'y', `${where}.polygon[${i}]`) };
-    });
-    return { kind: 'flat', name, polygon, bottom, top };
+    const ring = (r: unknown[], w: string) =>
+      r.map((p, i) => {
+        if (!isObj(p)) throw new Error(`${w}[${i}]: expected { x, y }`);
+        return { x: num(p, 'x', `${w}[${i}]`), y: num(p, 'y', `${w}[${i}]`) };
+      });
+    const polygon = ring(v.polygon, `${where}.polygon`);
+    const block: FlatBlock = { kind: 'flat', name, polygon, bottom, top };
+    if (v.holes !== undefined) {
+      if (!Array.isArray(v.holes) || v.holes.some((h) => !Array.isArray(h) || h.length < 3))
+        throw new Error(`${where}.holes: expected rings of ≥ 3 corners`);
+      block.holes = (v.holes as unknown[][]).map((h, i) => ring(h, `${where}.holes[${i}]`));
+    }
+    return block;
   }
   throw new Error(`${where}.kind: unknown "${String(v.kind)}"`);
 }
@@ -244,46 +253,23 @@ function gableTriangles(b: GableBlock): number[] {
 }
 
 function flatTriangles(b: FlatBlock): number[] {
-  const p = signedArea(b.polygon) < 0 ? [...b.polygon].reverse() : b.polygon;
+  const holes = b.holes ?? [];
   const out: number[] = [];
-  for (let i = 0; i < p.length; i++) {
-    const a = p[i]!;
-    const c = p[(i + 1) % p.length]!;
-    quad(out, [a.x, a.y, b.bottom], [c.x, c.y, b.bottom], [c.x, c.y, b.top], [a.x, a.y, b.top]);
-  }
-  for (const [i, j, k] of earClip(p)) {
-    const [a, c, d] = [p[i]!, p[j]!, p[k]!];
+  // Side faces round the outline and round each opening.
+  for (const ring of [b.polygon, ...holes])
+    for (let i = 0; i < ring.length; i++) {
+      const a = ring[i]!;
+      const c = ring[(i + 1) % ring.length]!;
+      quad(out, [a.x, a.y, b.bottom], [c.x, c.y, b.bottom], [c.x, c.y, b.top], [a.x, a.y, b.top]);
+    }
+  // Top and bottom (earcut via three). It needs real Vector2s (it calls .equals, whatever its types say) and trims a
+  // repeated end point in place, so it gets fresh ones.
+  const pts = [b.polygon, ...holes].flat();
+  const v2 = (ring: Vec2[]) => ring.map((p) => new Vector2(p.x, p.y));
+  for (const [i, j, k] of ShapeUtils.triangulateShape(v2(b.polygon), holes.map(v2))) {
+    const [a, c, d] = [pts[i!]!, pts[j!]!, pts[k!]!];
     out.push(a.x, a.y, b.top, c.x, c.y, b.top, d.x, d.y, b.top);
     out.push(a.x, a.y, b.bottom, d.x, d.y, b.bottom, c.x, c.y, b.bottom);
   }
   return out;
-}
-
-const cross = (o: Vec2, a: Vec2, b: Vec2) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
-
-/** Ear clipping of a simple CCW polygon → index triples. Falls back to a fan if it gets stuck (self-intersecting input). */
-function earClip(p: Vec2[]): [number, number, number][] {
-  const idx = p.map((_, i) => i);
-  const tris: [number, number, number][] = [];
-  let guard = 0;
-  while (idx.length > 3 && guard++ < 10_000) {
-    let clipped = false;
-    for (let n = 0; n < idx.length; n++) {
-      const i = idx[(n + idx.length - 1) % idx.length]!;
-      const j = idx[n]!;
-      const k = idx[(n + 1) % idx.length]!;
-      if (cross(p[i]!, p[j]!, p[k]!) <= 1e-12) continue; // reflex or collinear
-      const inside = idx.some(
-        (m) => m !== i && m !== j && m !== k && cross(p[i]!, p[j]!, p[m]!) >= 0 && cross(p[j]!, p[k]!, p[m]!) >= 0 && cross(p[k]!, p[i]!, p[m]!) >= 0,
-      );
-      if (inside) continue;
-      tris.push([i, j, k]);
-      idx.splice(n, 1);
-      clipped = true;
-      break;
-    }
-    if (!clipped) break;
-  }
-  for (let n = 1; n + 1 < idx.length; n++) tris.push([idx[0]!, idx[n]!, idx[n + 1]!]);
-  return tris;
 }

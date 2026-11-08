@@ -482,7 +482,7 @@ Requirements:
   overlap (no booleans).
   - `gable`: rectangle `{x0, y0, x1, y1}`, `bottom`, `ridge`, `pitch` (deg), `overhang` (m, long sides only). Ridge
     along the long side, centred. Derived and shown: wall-face height = ridge − (short side / 2) × tan(pitch).
-  - `flat`: polygon (≥ 3 corners, plan m), `bottom`, `top`.
+  - `flat`: polygon (≥ 3 corners, plan m), optional `holes` (openings through it), `bottom`, `top`.
   - Defaults: `bottom` = −1.40 (top of the shallowest foundation, so walls reach into the sloped terrain without a
     gap); heights typed in the panel or picked from the level values found on the sheets (M2 labels). Rel + abs
     shown everywhere.

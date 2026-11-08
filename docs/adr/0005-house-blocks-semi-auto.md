@@ -42,7 +42,8 @@ simple, so "Z rzutu parteru" builds them from the ground plan (rules in `src/hou
 - **Slab**: an `A-DETL-1` chain with both open ends ≤ 0.5 m from the main rectangle, closed along its perimeter the
   shorter way. PAB-01: an L of 31.90 m² (terrace x 0.034…8.124 to y −14.966, a 0.30 m strip along the west wall,
   a 0.50 m canopy over the south windows; PAB-09 confirms the band +2.635…+3.22 along the whole west side).
-  Its inner closed loop (an opening) is counted, not modelled.
+  Closed loops inside it are its openings (`holes`, user 2026-11-08: "the awning opening"): PAB-01 x 0.644…7.574,
+  y −14.416…−12.276 (6.93 × 2.14 m), so the slab is the white frame of the renders (net 17.07 m²).
 - **Deck and piers** (user, 2026-11-08, from the renders: posts and columns stand on a raised deck; a pier ends
   the south canopy): the deck is the `PZT_UTWARDZENIA` outline, interrupted where the posts stand (gaps whose ends lie
   on one post's outline are bridged along it), closed along the main body; of the two ways round, the smaller polygon

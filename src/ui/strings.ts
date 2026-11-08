@@ -252,8 +252,9 @@ export const t = {
     heightsRead: (name: string, bottom: number | undefined, top: number | undefined, from: string) =>
       `${name}: ${[bottom !== undefined && `spód ${formatRel(bottom, 3)}`, top !== undefined && `góra ${formatRel(top, 3)}`].filter(Boolean).join(', ')} z ${from}`,
     heightsUnset: (names: string) => `nie znaleziono wysokości na elewacjach: ${names} — ustaw z listy`,
-    fromPlanSkipped: (openings: number, loops: number) =>
-      `pominięte: ${openings} ${plural(openings, 'otwór w płycie', 'otwory w płycie', 'otworów w płycie')}, ${loops} ${plural(loops, 'nieprostokątny obrys', 'nieprostokątne obrysy', 'nieprostokątnych obrysów')} A-WALL`,
+    fromPlanSkipped: (loops: number) =>
+      `pominięte: ${loops} ${plural(loops, 'nieprostokątny obrys', 'nieprostokątne obrysy', 'nieprostokątnych obrysów')} A-WALL`,
+    holes: (n: number) => `${n} ${plural(n, 'otwór', 'otwory', 'otworów')}`,
     addBlock: 'Dodaj blok',
     addBlockTitle: 'Narysuj blok z płaskim dachem: klikaj narożniki na rzutach (w widoku Projekt, przyciąganie do końców linii)',
     drawing: 'Nowy blok',

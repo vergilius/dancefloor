@@ -62,10 +62,10 @@ export function HousePanel() {
     const notes: string[] = [];
     const unset: string[] = [];
     // Heights read from the sheets win; a block with the same name otherwise keeps its heights (set by hand).
-    const put = (name: string, polygon: Vec2[], read: { bottom?: number; top?: number; from?: string }) => {
+    const put = (name: string, polygon: Vec2[], read: { bottom?: number; top?: number; from?: string }, holes: Vec2[][] = []) => {
       const old = useProject.getState().house.blocks.find((b) => b.name === name);
       const kept = old?.kind === 'flat' ? { bottom: old.bottom, top: old.top } : { bottom: DEFAULT_BOTTOM, top: DEFAULT_TOP };
-      const block = { kind: 'flat' as const, name, polygon, bottom: read.bottom ?? kept.bottom, top: read.top ?? kept.top };
+      const block = { kind: 'flat' as const, name, polygon, ...(holes.length > 0 && { holes }), bottom: read.bottom ?? kept.bottom, top: read.top ?? kept.top };
       putBlock(isValidBlock(block) ? block : { ...block, ...kept });
       if (read.from) notes.push(t.house.heightsRead(name, read.bottom, read.top, read.from));
       else if (!old) unset.push(name);
@@ -80,7 +80,7 @@ export function HousePanel() {
     r.slabs.forEach((p, i) => {
       const h = heightsFrom(p, elevations, 2, mainOutline);
       const name = t.house.slabName(i + 1);
-      put(name, p, h ? { bottom: h.heights[0]!, top: h.heights.at(-1)!, from: src(h) } : {});
+      put(name, p, h ? { bottom: h.heights[0]!, top: h.heights.at(-1)!, from: src(h) } : {}, r.slabHoles[i]);
       if (h) slabTops.push({ poly: p, top: h.heights.at(-1)!, from: name });
     });
     // Supports stand on the deck: its top is their (read) bottom.
@@ -162,10 +162,10 @@ export function HousePanel() {
               <span className="error">{t.house.heightsUnset(fromPlan.unset.join(', '))}</span>
             </>
           )}
-          {(fromPlan.slabOpenings > 0 || fromPlan.skippedLoops > 0) && (
+          {fromPlan.skippedLoops > 0 && (
             <>
               <br />
-              {t.house.fromPlanSkipped(fromPlan.slabOpenings, fromPlan.skippedLoops)}
+              {t.house.fromPlanSkipped(fromPlan.skippedLoops)}
             </>
           )}
         </p>
@@ -274,7 +274,8 @@ function BlockEntry({ index, block: b, refValue }: { index: number; block: Block
         </>
       ) : (
         <>
-          {t.house.area(polygonArea(b.polygon))} · {t.house.corners(b.polygon.length)}
+          {t.house.area(polygonArea(b.polygon) - (b.holes ?? []).reduce((a, h) => a + polygonArea(h), 0))} · {t.house.corners(b.polygon.length)}
+          {b.holes && b.holes.length > 0 && <> · {t.house.holes(b.holes.length)}</>}
           {height(t.house.top, b.top, (top) => ({ ...b, top }))}
           {height(t.house.bottom, b.bottom, (bottom) => ({ ...b, bottom }))}
           {b.bottom === DEFAULT_BOTTOM && b.top === DEFAULT_TOP && <div className="error">{t.house.defaultHeights}</div>}

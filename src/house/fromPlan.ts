@@ -8,7 +8,7 @@
 // - Deck: the `PZT_UTWARDZENIA` (paving) outline around the main body. It is interrupted where the posts stand, so
 //   gaps whose two ends lie on one post's outline are bridged along it; then closed like a slab (reach DECK_REACH).
 // - Slabs: `A-DETL-1` chains whose two open ends lie near the main rectangle, closed along its perimeter (the
-//   way giving the smaller polygon). Closed loops inside a slab (openings) are counted, not modelled.
+//   way giving the smaller polygon). Closed loops inside a slab are its openings (the awning opening on PAB-01).
 // - Piers: open `A-WALL` chains ≤ POST_MAX standing against the main body (the wall is their missing side), closed
 //   along it. PAB-01: the pier ending the south canopy, 0.45 × 0.49 m.
 import type { NormalizedSheet } from '../dwg/types';
@@ -43,10 +43,10 @@ export type PlanBlocks = {
   piers: Vec2[][];
   columns: Vec2[][];
   slabs: Vec2[][];
+  /** Per slab (same index): its openings, closed `A-DETL-1` loops inside it. */
+  slabHoles: Vec2[][][];
   /** The largest closed paving outline around the main body, or undefined. */
   deck?: Vec2[];
-  /** Closed `A-DETL-1` loops inside a slab, not modelled. */
-  slabOpenings: number;
   /** Small closed `A-WALL` loops that aren't 4-sided (round posts, pipes), not modelled. */
   skippedLoops: number;
 };
@@ -321,14 +321,18 @@ export function blocksFromPlan(sheet: NormalizedSheet, main: GableBlock): PlanBl
     return poly ? [poly] : [];
   });
   const deck = decks.sort((p, q) => polygonArea(q) - polygonArea(p))[0];
-  // Closed loops: openings if inside a slab's bbox, else slabs of their own.
-  let slabOpenings = 0;
+  // Closed loops: openings of the slab they lie in, else slabs of their own.
+  const slabHoles: Vec2[][][] = slabs.map(() => []);
   for (const loop of closedLoops) {
-    const lb = bbox(loop);
-    if (slabs.some((s) => within(lb, bbox(s)))) slabOpenings++;
-    else slabs.push(clean(loop));
+    const ring = clean(loop);
+    const k = slabs.findIndex((s) => ring.every((p) => pointInPolygon(p, s)));
+    if (k >= 0) slabHoles[k]!.push(ring);
+    else {
+      slabs.push(ring);
+      slabHoles.push([]);
+    }
   }
-  return { annexes, posts, piers, columns, slabs, deck, slabOpenings, skippedLoops };
+  return { annexes, posts, piers, columns, slabs, slabHoles, deck, skippedLoops };
 }
 
 /** An elevation placed in 3D (M1b): sheet x = (plan point − origin) · dir, sheet y = height rel. ±0.00. */
