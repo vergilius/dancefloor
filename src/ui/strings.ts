@@ -178,7 +178,7 @@ export const t = {
     saveError: 'Błąd zapisu wersji',
     tools: { level: 'Wyrównaj', raise: 'Podnieś', lower: 'Obniż' },
     toolTitles: {
-      level: 'Przeciągnij po terenie: prostokąt (siatka 0,5 m) wyrównany do średniej wysokości pod nim',
+      level: 'Przeciągnij po terenie: prostokąt (siatka 0,5 m) wyrównany do wysokości w punkcie startu',
       raise: 'Przeciągnij po terenie: prostokąt (siatka 0,5 m) podniesiony o dz (domyślnie 0,10 m)',
       lower: 'Przeciągnij po terenie: prostokąt (siatka 0,5 m) obniżony o dz (domyślnie 0,10 m)',
     },

@@ -1,6 +1,6 @@
 // Terrain edits of a version (PLAN.md §5 M4a): rects on a 0.5 m lattice applied in order over the frozen base.
 // Pure: no React, no three, no I/O. Heights in m rel ±0.00, plan coords in m.
-import { isOutside, type HeightGrid } from '../terrain/grid';
+import { isOutside, sampleGrid, type HeightGrid } from '../terrain/grid';
 
 /** Tile lattice (m), anchored at plan (0, 0) = the S-GRID-1 origin. */
 export const LATTICE = 0.5;
@@ -9,6 +9,8 @@ const EPS = 1e-6;
 
 /** x0 < x1, y0 < y1, all on the lattice. */
 export type Rect = { x0: number; y0: number; x1: number; y1: number };
+/** A rect being dragged; `z` = the height Wyrównaj will level it to. */
+export type Draft = Rect & { z?: number };
 /**
  * Corners inside the rect: Wyrównaj (`level`) sets them to `z`; Podnieś / Obniż (`raise` / `lower`) move them up /
  * down by `dz` > 0.
@@ -41,22 +43,8 @@ function cornerRange(g: HeightGrid, r: Rect) {
   return i0 <= i1 && j0 <= j1 ? { i0, i1, j0, j1 } : undefined;
 }
 
-/** Mean height of the corners inside the rect (and the modelled area), rounded to 1 cm (Wyrównaj's default z). */
-export function meanUnder(g: HeightGrid, h: Float32Array, r: Rect): number | undefined {
-  const c = cornerRange(g, r);
-  if (!c) return undefined;
-  const w = g.cols + 1;
-  let sum = 0;
-  let n = 0;
-  for (let j = c.j0; j <= c.j1; j++) {
-    for (let i = c.i0; i <= c.i1; i++) {
-      if (isOutside(g, j * w + i)) continue;
-      sum += h[j * w + i]!;
-      n++;
-    }
-  }
-  return n ? Math.round((sum / n) * 100) / 100 : undefined;
-}
+/** Surface height at a plan point, rounded to 1 cm (Wyrównaj's z: the height where the drag starts). */
+export const heightAt = (g: HeightGrid, x: number, y: number) => Math.round(sampleGrid(g, x, y) * 100) / 100;
 
 /** Cut / fill of one edit against the surface just before it (m³). */
 export type EditVolume = { cut: number; fill: number };

@@ -6,7 +6,7 @@ import { useThree } from '@react-three/fiber';
 import { Raycaster, Vector2 } from 'three';
 import { useEnvSurface, useVersions } from '../state/versions';
 import { isOutside, rayGrid, sampleGrid, type HeightGrid } from '../terrain/grid';
-import { DEFAULT_DZ, meanUnder, snapRect, type Edit, type Rect } from '../versions/edits';
+import { DEFAULT_DZ, heightAt, snapRect, type Edit, type Rect } from '../versions/edits';
 import { ENV_LAYER, halfAt } from './split';
 
 const COLOR = '#0969da';
@@ -52,9 +52,12 @@ export function EditTool() {
     const { setDraft, addEdit } = useVersions.getState();
     let start: [number, number] | undefined;
     let rect: Rect | undefined;
+    /** Wyrównaj's z: the surface height where the drag started (1 cm). */
+    let z: number | undefined;
     const end = () => {
       start = undefined;
       rect = undefined;
+      z = undefined;
       setDraft(undefined);
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
@@ -63,17 +66,16 @@ export function EditTool() {
       const p = start && pickRef.current(grid, e.clientX, e.clientY);
       if (!start || !p) return;
       rect = snapRect(start[0], start[1], p[0], p[1]);
-      setDraft(rect);
+      setDraft({ ...rect, z });
     };
     const onUp = () => {
       const r = rect;
+      const level = z;
       end();
       if (!r || !tool) return;
       let edit: Edit | undefined;
       if (tool === 'level') {
-        // Default z = mean height under the rect before the edit (1 cm).
-        const z = meanUnder(grid, grid.base, r);
-        if (z !== undefined) edit = { id: newId(), tool, rect: r, z };
+        if (level !== undefined) edit = { id: newId(), tool, rect: r, z: level };
       } else edit = { id: newId(), tool, rect: r, dz: DEFAULT_DZ };
       if (edit) addEdit(edit);
     };
@@ -86,7 +88,8 @@ export function EditTool() {
       e.preventDefault();
       start = p;
       rect = snapRect(p[0], p[1], p[0], p[1]);
-      setDraft(rect);
+      z = tool === 'level' ? heightAt(grid, p[0], p[1]) : undefined;
+      setDraft({ ...rect, z });
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
     };

@@ -4,7 +4,7 @@
 import { create } from 'zustand';
 import { listFiles, readFile, removeFile, versionsDir, writeFile } from '../project/folder';
 import type { HeightGrid } from '../terrain/grid';
-import { replay, withValue, type Edit, type EditVolume, type Rect, type Tool } from '../versions/edits';
+import { replay, withValue, type Edit, type Draft, type EditVolume, type Tool } from '../versions/edits';
 import { packGrid, parseVersionFile, serializeVersionFile, unpackGrid, type VersionFile } from '../versions/file';
 import { useTerrain, type Terrain } from './terrain';
 
@@ -22,8 +22,8 @@ type VersionsState = {
   active: Active;
   /** Edit tool armed in the active version (none in Podgląd). */
   tool?: Tool;
-  /** The rect being dragged with the tool (plan m, on the lattice), shown with its size. View state. */
-  draft?: Rect;
+  /** The rect being dragged with the tool (plan m, on the lattice), shown with its size (and Wyrównaj's z). View state. */
+  draft?: Draft;
   /** Edit of the active version selected in the list (outlined in the view). View state. */
   selected?: string;
   /** Undo / redo per version: edit lists before each command. Not saved; cleared on folder load. */
@@ -43,7 +43,7 @@ type VersionsState = {
   remove(id: string): Promise<void>;
   setActive(active: Active): void;
   setTool(tool: Tool | undefined): void;
-  setDraft(draft: Rect | undefined): void;
+  setDraft(draft: Draft | undefined): void;
   /** Appends an edit to the active version (autosaved). */
   addEdit(edit: Edit): void;
   /** Sets an edit's z (Wyrównaj) or dz (Podnieś / Obniż) in the active version (autosaved); later edits replay over it. */

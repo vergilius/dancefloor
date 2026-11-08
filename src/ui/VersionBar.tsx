@@ -1,5 +1,7 @@
 // Environment view bar (PLAN.md §5 M4a): Podgląd or an edit version, plus Nowa wersja / Zmień nazwę / Usuń.
 import { useEffect } from 'react';
+import { formatHeight } from '../project/levels';
+import { useRefValue } from '../state/levels';
 import { CUT_COLOR, DIFF_SATURATION, FILL_COLOR } from '../scene/TerrainMesh';
 import { useActiveVersion, useEnvSurface, useVersions } from '../state/versions';
 import { rectSize, TOOLS } from '../versions/edits';
@@ -10,6 +12,7 @@ export function VersionBar() {
   const { versions, broken, active, saveError, unsaved, tool, draft, history, showDiff, create, rename, remove, setActive, setTool, undo, redo, setShowDiff } =
     useVersions();
   const version = useActiveVersion();
+  const ref = useRefValue();
 
   const h = version && history[version.id];
 
@@ -89,6 +92,7 @@ export function VersionBar() {
       {draft ? (
         <span className="status">
           <strong>{t.versions.rectSize(rectSize(draft).w, rectSize(draft).h, rectSize(draft).area)}</strong>
+          {draft.z !== undefined && <> → {formatHeight(draft.z, ref)}</>}
         </span>
       ) : (
         tool && <span className="status muted">{t.versions.dragHint}</span>

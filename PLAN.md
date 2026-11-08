@@ -430,7 +430,7 @@ Requirements:
   A save error shows in the bar. Versions are not in `dancefloor.json`.
 - **Edits** (pure `src/versions/edits.ts`): `{ id, tool, rect: { x0, y0, x1, y1 } /* plan m, on the 0.5 m lattice */,
   … }` with tools **Podnieś** (`dz` > 0, default 0.10 m), **Obniż** (`dz` > 0, applied down, default 0.10 m), and
-  **Wyrównaj** (`z` rel ±0.00, default = mean height under the rect before the edit, rounded to 1 cm). A grid corner
+  **Wyrównaj** (`z` rel ±0.00, default = the surface height where the drag starts, rounded to 1 cm and shown in the bar while dragging; was the mean under the rect, changed 2026-11-08: unpredictable, user). A grid corner
   inside the rect (edges included) is changed; a later edit wins on top of an earlier one. Replayed from scratch on
   every change (target < 30 ms).
 - **Picking:** with a tool active, drag on the terrain (ray marched over the version's height grid, `rayGrid` in `src/terrain/grid.ts`; a heightfield needs no BVH, user OK 2026-11-08); the rect
