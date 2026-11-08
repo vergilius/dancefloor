@@ -124,7 +124,8 @@ export function wallsFromPlans(storeys: Storey[], blocks: Block[], cuts: WallCut
         let top: (p: Vec2) => number;
         if (main && nearRect(mid, main)) {
           bottom = exterior && k === 0 ? main.bottom : st.z;
-          top = next !== undefined ? () => next : (p) => roofHeight(main, p.x, p.y);
+          // Never above the roof planes, whatever the next storey says.
+          top = next !== undefined ? (p) => Math.min(next, roofHeight(main, p.x, p.y)) : (p) => roofHeight(main, p.x, p.y);
         } else {
           const host = hosts.find((hb) => nearPolygon(mid, hb.polygon));
           if (!host) {
@@ -137,7 +138,8 @@ export function wallsFromPlans(storeys: Storey[], blocks: Block[], cuts: WallCut
         // Up to `top` from `lo` (a constant, or another height function), split at the ridge so the top follows both
         // roof planes.
         const emit = (p: Vec2, q: Vec2, lo: number, hi: (p: Vec2) => number) => {
-          const r = main && next === undefined ? ridgeLine(main) : undefined;
+          if (hi(p) <= lo && hi(q) <= lo) return; // starts above its top (e.g. a plan placed above the roof)
+          const r = main ? ridgeLine(main) : undefined;
           const cp = r ? (r.alongX ? p.y : p.x) - r.at : 0;
           const cq = r ? (r.alongX ? q.y : q.x) - r.at : 0;
           if (cp * cq < 0) {

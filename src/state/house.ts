@@ -1,7 +1,7 @@
 // Derived house geometry shared by the mesh and the panel (PLAN.md §5 M5, M5b): block triangles, the placed façade
 // openings of every placed elevation, and the hollow house (walls cut by the openings, fills, slabs).
 import { useMemo } from 'react';
-import { blockTriangles, type GableBlock } from '../house/blocks';
+import { blockTriangles, hasRoofLayer, type GableBlock } from '../house/blocks';
 import { findOpenings, openingKey, placeOpening, type OpeningRect, type PlacedOpening } from '../house/openings';
 import { hollowSlabs, openingFills, type Slab } from '../house/slabs';
 import { hostsWalls, wallsFromPlans, WALL_LAYERS, type StoreyWalls } from '../house/walls';
@@ -58,7 +58,8 @@ function build(drawn: ReturnType<typeof useDrawnSheets>, blocks: Blocks): House3
       d.kind === 'section' && d.placement.type === 'vertical' ? [{ file: d.file, sheet: d.sheet, origin: d.placement.origin, dir: d.placement.dir }] : [],
     );
     const storeys = drawn.flatMap((d) =>
-      d.kind === 'plan' && d.placement.type === 'horizontal' && d.sheet.layers.some((l) => WALL_LAYERS.includes(l.name))
+      // The roof plan (PAB-03) draws walls too, but it is no storey: the attic's walls end under the roof planes.
+      d.kind === 'plan' && d.placement.type === 'horizontal' && !hasRoofLayer(d.sheet) && d.sheet.layers.some((l) => WALL_LAYERS.includes(l.name))
         ? [{ file: d.file, z: d.placement.z, sheet: d.sheet }]
         : [],
     );
