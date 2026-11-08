@@ -1,4 +1,5 @@
-// WASD pans the shared camera (both halves) in the ground plane: W / S along the view direction, A / D sideways.
+// WASD pans the shared camera (both halves) in the ground plane: W / S along the view direction, A / D sideways;
+// Q / E move it down / up (camera and target together).
 // Speed follows the zoom (a fraction of the visible size per second), Shift ×3. Ignored while typing in a field or
 // with Ctrl / Cmd / Alt held (undo and other shortcuts).
 import { useEffect, useRef } from 'react';
@@ -9,7 +10,7 @@ import type { ComponentRef } from 'react';
 
 type Controls = ComponentRef<typeof CameraControls>;
 
-const KEYS = new Set(['w', 'a', 's', 'd']);
+const KEYS = new Set(['w', 'a', 's', 'd', 'q', 'e']);
 /** Visible size (m) crossed per second. */
 const RATE = 0.6;
 const FAST = 3;
@@ -53,12 +54,14 @@ export function KeyPan() {
     if (!controls || held.size === 0) return;
     const fwd = (held.has('w') ? 1 : 0) - (held.has('s') ? 1 : 0);
     const side = (held.has('d') ? 1 : 0) - (held.has('a') ? 1 : 0);
-    if (!fwd && !side) return;
+    const up = (held.has('e') ? 1 : 0) - (held.has('q') ? 1 : 0);
+    if (!fwd && !side && !up) return;
     const visible = camera instanceof OrthographicCamera ? size.height / camera.zoom : Math.max(controls.distance, MIN_DIST);
     const step = visible * RATE * Math.min(dt, 0.1) * (fast.current ? FAST : 1);
-    const len = Math.hypot(fwd, side);
+    const len = Math.hypot(fwd, side, up);
     if (fwd) void controls.forward((fwd / len) * step, false);
     if (side) void controls.truck((side / len) * step, 0, false);
+    if (up) void controls.elevate((up / len) * step, false);
   });
 
   return null;
