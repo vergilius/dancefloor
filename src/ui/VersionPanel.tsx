@@ -4,7 +4,8 @@ import { useMemo } from 'react';
 import { formatHeight } from '../project/levels';
 import { useRefValue } from '../state/levels';
 import { useActiveVersion, useVersions, versionSurface } from '../state/versions';
-import { EDGE_MODES, edgesOf, editValue, rectSize, SIDES, slopeOf, totals } from '../versions/edits';
+import { edgesOf, editValue, rectSize, slopeOf, totals } from '../versions/edits';
+import { EdgeControls } from './EdgeControls';
 import { ZInput } from './SheetList';
 import { t } from './strings';
 
@@ -34,7 +35,6 @@ export function VersionPanel() {
             {version.edits.map((e, i) => {
               const size = rectSize(e.rect);
               const vol = surface.volumes[i]!;
-              const edges = edgesOf(e);
               return (
                 <li key={e.id} className={e.id === selected ? 'selected' : undefined}>
                   <button type="button" className="link" onClick={() => select(e.id === selected ? undefined : e.id)}>
@@ -57,26 +57,7 @@ export function VersionPanel() {
                     {e.tool === 'level' ? formatHeight(e.z, ref) : `${e.tool === 'raise' ? '+' : '−'}${e.dz.toFixed(2)} m`}
                   </span>
                   <br />
-                  <span className="edge-row">
-                    {SIDES.map((side) => (
-                      <label key={side} title={t.versions.sideTitles[side]}>
-                        {t.versions.sides[side]}
-                        <select value={edges[side]} onChange={(ev) => setEditShape(e.id, { edges: { ...edges, [side]: ev.target.value } })}>
-                          {EDGE_MODES.map((m) => (
-                            <option key={m} value={m}>
-                              {t.versions.edgeModes[m]}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    ))}
-                    {SIDES.some((side) => edges[side] === 'slope') && (
-                      <label title={t.versions.slopeTitle}>
-                        1:
-                        <ZInput key={`${e.id}/slope`} value={slopeOf(e)} accept={(v) => v > 0} onChange={(v) => setEditShape(e.id, { slope: v })} />
-                      </label>
-                    )}
-                  </span>
+                  <EdgeControls id={`${e.id}/list`} edges={edgesOf(e)} slope={slopeOf(e)} onChange={(shape) => setEditShape(e.id, shape)} />
                   <br />
                   <span className="muted">{t.versions.editVolume(vol.cut, vol.fill)}</span>
                 </li>

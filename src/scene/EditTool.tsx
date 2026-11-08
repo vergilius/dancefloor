@@ -6,11 +6,13 @@ import { useThree } from '@react-three/fiber';
 import { Raycaster, Vector2 } from 'three';
 import { useEnvSurface, useVersions } from '../state/versions';
 import { isOutside, rayGrid, sampleGrid, type HeightGrid } from '../terrain/grid';
-import { DEFAULT_DZ, heightAt, snapRect, type Edit, type Rect } from '../versions/edits';
+import { DEFAULT_DZ, heightAt, snapRect, type Edit, type Rect, type Side } from '../versions/edits';
 import { ENV_LAYER, halfAt } from './split';
 
 const COLOR = '#0969da';
 const SELECTED_COLOR = '#bf8700';
+/** The edge hovered in the edge controls. */
+const EDGE_COLOR = '#cf222e';
 /** Draped this far above the surface (m), sampled every STEP (m). */
 const LIFT = 0.04;
 const STEP = 0.1;
@@ -23,6 +25,7 @@ export function EditTool() {
   const tool = useVersions((s) => s.tool);
   const draft = useVersions((s) => s.draft);
   const selected = useVersions((s) => version?.edits.find((e) => e.id === s.selected));
+  const hoverSide = useVersions((s) => s.hoverSide);
   const camera = useThree((s) => s.camera);
   const el = useThree((s) => s.events.connected) as HTMLElement | undefined;
   const on = Boolean(tool && version && grid);
@@ -49,7 +52,7 @@ export function EditTool() {
 
   useEffect(() => {
     if (!on || !el || !grid) return;
-    const { setDraft, addEdit } = useVersions.getState();
+    const { setDraft, addEdit, select } = useVersions.getState();
     let start: [number, number] | undefined;
     let rect: Rect | undefined;
     /** Wyrównaj's z: the surface height where the drag started (1 cm). */
@@ -73,11 +76,16 @@ export function EditTool() {
       const level = z;
       end();
       if (!r || !tool) return;
+      const { newEdges: edges, newSlope: slope } = useVersions.getState();
+      const shape = { id: newId(), rect: r, edges, slope };
       let edit: Edit | undefined;
       if (tool === 'level') {
-        if (level !== undefined) edit = { id: newId(), tool, rect: r, z: level };
-      } else edit = { id: newId(), tool, rect: r, dz: DEFAULT_DZ };
-      if (edit) addEdit(edit);
+        if (level !== undefined) edit = { ...shape, tool, z: level };
+      } else edit = { ...shape, tool, dz: DEFAULT_DZ };
+      if (!edit) return;
+      addEdit(edit);
+      // Selected right away: the bar's edge controls now act on it.
+      select(edit.id);
     };
     // Capture phase on the container: a drag that starts on the terrain never reaches the camera controls.
     const onDown = (e: PointerEvent) => {
@@ -105,10 +113,12 @@ export function EditTool() {
 
   const line = useMemo(() => on && draft && grid && drapedRect(grid, draft), [on, draft, grid]);
   const sel = useMemo(() => selected && grid && drapedRect(grid, selected.rect), [selected, grid]);
+  const edge = useMemo(() => hoverSide && selected && grid && drapedRect(grid, selected.rect, hoverSide), [hoverSide, selected, grid]);
   return (
     <>
       {line && <Outline points={line} color={COLOR} />}
       {sel && <Outline points={sel} color={SELECTED_COLOR} />}
+      {edge && <Outline points={edge} color={EDGE_COLOR}/>}
     </>
   );
 }
@@ -126,12 +136,17 @@ function Outline({ points, color }: { points: Float32Array; color: string }) {
 
 const raycaster = new Raycaster();
 
-/** The rect's outline as scene segments following the surface. */
-function drapedRect(g: HeightGrid, r: Rect): Float32Array {
+/** Corner index k → k + 1 of the outline below, per side. */
+const SIDE_START: Record<Side, number> = { s: 0, e: 1, n: 2, w: 3 };
+
+/** The rect's outline (or one side of it) as scene segments following the surface. */
+function drapedRect(g: HeightGrid, r: Rect, side?: Side): Float32Array {
   const out: number[] = [];
-  const at = (x: number, y: number) => out.push(x, sampleGrid(g, x, y) + LIFT, -y);
+  const lift = side ? 2 * LIFT : LIFT;
+  const at = (x: number, y: number) => out.push(x, sampleGrid(g, x, y) + lift, -y);
   const corners: [number, number][] = [[r.x0, r.y0], [r.x1, r.y0], [r.x1, r.y1], [r.x0, r.y1]];
   for (let k = 0; k < 4; k++) {
+    if (side && k !== SIDE_START[side]) continue;
     const [x1, y1] = corners[k]!;
     const [x2, y2] = corners[(k + 1) % 4]!;
     const n = Math.max(1, Math.ceil(Math.hypot(x2 - x1, y2 - y1) / STEP));

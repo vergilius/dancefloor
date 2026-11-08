@@ -4,7 +4,7 @@
 import { create } from 'zustand';
 import { listFiles, readFile, removeFile, versionsDir, writeFile } from '../project/folder';
 import type { HeightGrid } from '../terrain/grid';
-import { replay, withValue, type Edit, type Draft, type Edges, type EditVolume, type Tool } from '../versions/edits';
+import { replay, withValue, type Edit, DEFAULT_SLOPE, type Draft, type Edges, type EditVolume, type Side, type Tool } from '../versions/edits';
 import { packGrid, parseVersionFile, serializeVersionFile, unpackGrid, type VersionFile } from '../versions/file';
 import { useTerrain, type Terrain } from './terrain';
 
@@ -26,6 +26,11 @@ type VersionsState = {
   draft?: Draft;
   /** Edit of the active version selected in the list (outlined in the view). View state. */
   selected?: string;
+  /** Edges and 1:n for the next dragged edit (the last ones chosen in the bar). View state, default Skarpa 1:2. */
+  newEdges: Edges;
+  newSlope: number;
+  /** Edge under the pointer in the edge controls: outlined on the selected edit. View state. */
+  hoverSide?: Side;
   /** Undo / redo per version: edit lists before each command. Not saved; cleared on folder load. */
   history: Record<string, { undo: Edit[][]; redo: Edit[][] }>;
   /** "Różnice": colour the version's surface by Δh against its frozen base. View state. */
@@ -52,6 +57,8 @@ type VersionsState = {
   setEditShape(id: string, shape: { edges?: Edges; slope?: number }): void;
   deleteEdit(id: string): void;
   select(id: string | undefined): void;
+  setNewShape(shape: { edges?: Edges; slope?: number }): void;
+  setHoverSide(side: Side | undefined): void;
   undo(): void;
   redo(): void;
   setShowDiff(show: boolean): void;
@@ -89,6 +96,8 @@ export const useVersions = create<VersionsState>()((set, get) => ({
   unsaved: [],
   history: {},
   showDiff: false,
+  newEdges: { w: 'slope', e: 'slope', s: 'slope', n: 'slope' },
+  newSlope: DEFAULT_SLOPE,
 
   async load(dir) {
     cancelSaves();
@@ -213,6 +222,14 @@ export const useVersions = create<VersionsState>()((set, get) => ({
 
   select(selected) {
     set({ selected });
+  },
+
+  setNewShape({ edges, slope }) {
+    set((st) => ({ newEdges: edges ?? st.newEdges, newSlope: slope ?? st.newSlope }));
+  },
+
+  setHoverSide(hoverSide) {
+    set({ hoverSide });
   },
 }));
 

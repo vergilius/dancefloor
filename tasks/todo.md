@@ -1,6 +1,8 @@
 # M4b task list
 
-Next: Task 1 (Skarpa per edge) implemented, waiting for the browser check; then Task 2. Spec approved 2026-11-08 (PLAN.md §5 M4b); plan `tasks/plan.md`.
+Next: Tasks 1 + 2 implemented, waiting for the browser check (Checkpoint A); then Task 3. Spec approved 2026-11-08 (PLAN.md §5 M4b); plan `tasks/plan.md`.
+Later (user 2026-11-08): the left sidebar is poor UI/UX (the version panel sits below the long sheet list); address after M4b.
+Bundle: index 1490 kB of the 1500 kB budget after T2; keep T3 small.
 Branch: m4b-spec (on top of level-from-start-point: Wyrównaj levels to the drag's start height, browser check pending).
 Drawings have no slopes or walls (checked PZT, PAB-11, PAB-12): all M4b geometry is the user's design.
 T1 note: scratchpad check on a flat −0.32 grid: 4 × 6 m to +0.30, 1:2 → slope 1.20 m wide (last corner above ground; 1.24 exact), 1:3 → 1.80 m; no edges = M4a fill to 4 decimals; 10 sloped edits (Δ 1.5 m, n = 3) replay in ~14 ms warm (36 ms first run).
@@ -30,6 +32,7 @@ when both edges slope; Mur behaves as step here). Store: `setEditEdges(id, edges
 Skarpa 1:2); new edits get it on all 4 edges. Hovering an edge select in the list outlines that edge in the view.
 **Acceptance criteria:**
 - [ ] A new drag with Skarpa 1:2 chosen gets 4 sloped edges; with Uskok it behaves as M4a
+- [ ] (changed 2026-11-08, user: the sidebar is too far from the view) the edge controls also live in the Environment bar: they act on the selected edit (a new drag is selected right away) and set the default for the next one
 - [ ] Hovering "↓" on an edit outlines its bottom edge (as seen in the Design top view)
 **Verification:** `pnpm check`; user browser check.
 **Dependencies:** Task 1

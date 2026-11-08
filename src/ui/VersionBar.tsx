@@ -4,17 +4,25 @@ import { formatHeight } from '../project/levels';
 import { useRefValue } from '../state/levels';
 import { CUT_COLOR, DIFF_SATURATION, FILL_COLOR } from '../scene/TerrainMesh';
 import { useActiveVersion, useEnvSurface, useVersions } from '../state/versions';
-import { rectSize, TOOLS } from '../versions/edits';
+import { edgesOf, rectSize, slopeOf, TOOLS, type Edges } from '../versions/edits';
+import { EdgeControls } from './EdgeControls';
 import { t } from './strings';
 
 export function VersionBar() {
   const { live } = useEnvSurface();
   const { versions, broken, active, saveError, unsaved, tool, draft, history, showDiff, create, rename, remove, setActive, setTool, undo, redo, setShowDiff } =
     useVersions();
+  const { selected, newEdges, newSlope, setNewShape, setEditShape } = useVersions();
   const version = useActiveVersion();
   const ref = useRefValue();
 
   const h = version && history[version.id];
+  // Edge controls act on the selected edit (and become the default for the next one), else on the next edit only.
+  const sel = version?.edits.find((e) => e.id === selected);
+  const onShape = (shape: { edges?: Edges; slope?: number }) => {
+    setNewShape(shape);
+    if (sel) setEditShape(sel.id, shape);
+  };
 
   // Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z (and Ctrl+Y). Not while typing in a field: there the field's own undo applies.
   useEffect(() => {
@@ -69,6 +77,17 @@ export function VersionBar() {
             {t.versions.tools[k]}
           </button>
         ))}
+      {version && (
+        <span className="status" title={sel ? t.versions.edgesSelectedTitle : t.versions.edgesNewTitle}>
+          <span className="muted">{sel ? t.versions.edgesSelected(version.edits.indexOf(sel) + 1) : t.versions.edgesNew}</span>{' '}
+          <EdgeControls
+            id={sel ? `${sel.id}/bar` : 'new'}
+            edges={sel ? edgesOf(sel) : newEdges}
+            slope={sel ? slopeOf(sel) : newSlope}
+            onChange={onShape}
+          />
+        </span>
+      )}
       {version && (
         <>
           <button type="button" disabled={!h?.undo.length} title={t.versions.undoTitle} onClick={undo}>
