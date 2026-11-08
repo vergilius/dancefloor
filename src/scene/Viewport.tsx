@@ -242,13 +242,27 @@ function ShowMenu() {
   const { showDiff, setShowDiff } = useVersions();
   const hasVersion = useVersions((s) => s.active !== 'preview');
   const ref = useRef<HTMLDetailsElement>(null);
+  // Closes on a press anywhere outside the menu (also in the viewports) or on Esc.
+  useEffect(() => {
+    const close = (e: Event) => {
+      const el = ref.current;
+      if (el?.open && !(e instanceof PointerEvent && el.contains(e.target as Node))) el.open = false;
+    };
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close(e);
+    window.addEventListener('pointerdown', close, { capture: true });
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('pointerdown', close, { capture: true });
+      window.removeEventListener('keydown', onKey);
+    };
+  }, []);
   const item = (label: string, title: string, on: boolean, set: (v: boolean) => void) => (
     <label title={title}>
       <input type="checkbox" checked={on} onChange={(e) => set(e.target.checked)} /> {label}
     </label>
   );
   return (
-    <details className="menu" ref={ref} onMouseLeave={() => ref.current?.removeAttribute('open')}>
+    <details className="menu" ref={ref}>
       <summary className="tb">
         <Eye size={16} /> {t.shell.show} <ChevronDown size={14} />
       </summary>
