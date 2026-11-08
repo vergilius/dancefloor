@@ -7,6 +7,8 @@ import { useProject } from '../state/store';
 import { useEnvSurface, useVersions, versionSurface } from '../state/versions';
 import { contours, type Contour } from '../terrain/contours';
 import { cellOutside, isOutside, sampleGrid, type HeightGrid } from '../terrain/grid';
+import { useUi } from '../state/ui';
+import { FACE_OFFSET } from './HouseMesh';
 import { ENV_LAYER } from './split';
 
 /** Height ramp low → high. */
@@ -20,6 +22,8 @@ const CONTOUR_LIFT = 0.02;
 const MINOR_COLOR = '#5b6b3a';
 const MAJOR_COLOR = '#2e3a1c';
 const MAJOR_WIDTH = 2; // px
+/** Clean view (showcase): one lawn colour, no contours or plot outline. */
+const LAWN_COLOR = '#7da35a';
 
 export function TerrainMesh() {
   const show = useProject((s) => s.showTerrain);
@@ -34,13 +38,15 @@ export function TerrainMesh() {
   const previewing = useVersions((s) => s.preview !== undefined);
   const contourGrid = previewing && version ? versionSurface(version).grid : grid;
   const lines = useMemo(() => contourGrid && contourLines(contours(contourGrid)), [contourGrid]);
+  const clean = useUi((s) => s.clean);
   if (!show || !geo) return null;
+  const lawn = clean && !diffBase;
   return (
     <group>
-      <mesh layers={ENV_LAYER} geometry={geo}>
-        <meshLambertMaterial vertexColors side={DoubleSide} />
+      <mesh layers={ENV_LAYER} geometry={geo} receiveShadow castShadow={clean}>
+        <meshLambertMaterial key={lawn ? 'lawn' : 'tint'} vertexColors={!lawn} color={lawn ? LAWN_COLOR : '#ffffff'} side={DoubleSide} {...FACE_OFFSET} />
       </mesh>
-      {lines && lines.minor.length > 0 && (
+      {!clean && lines && lines.minor.length > 0 && (
         <lineSegments layers={ENV_LAYER}>
           <bufferGeometry>
             <bufferAttribute attach="attributes-position" args={[lines.minor, 3]} />
@@ -51,7 +57,7 @@ export function TerrainMesh() {
       {lines && lines.major.length > 0 && (
         <Line layers={ENV_LAYER} segments points={lines.major} color={MAJOR_COLOR} lineWidth={MAJOR_WIDTH} />
       )}
-      {outline && (
+      {!clean && outline && (
         <lineSegments layers={ENV_LAYER}>
           <bufferGeometry>
             <bufferAttribute attach="attributes-position" args={[outline, 3]} />

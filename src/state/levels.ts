@@ -14,8 +14,15 @@ export function useLevelReference(): LevelReference {
   );
 }
 
-/** The reference value, or undefined (heights are then shown relative only). */
+/**
+ * The as-built ±0.00 (m a.s.l.): the drawings' reference + the house lift (ADR 0007), or undefined (heights are then
+ * shown relative only). Every relative height in the app is relative to it; absolute labels are read against it.
+ */
 export function useRefValue(): number | undefined {
   const r = useLevelReference();
-  return r.ok ? r.value : undefined;
+  const lift = useHouseLift();
+  return r.ok ? r.value + lift : undefined;
 }
+
+/** As-built house lift (m), 0 when not set. */
+export const useHouseLift = () => useProject((s) => s.house.lift ?? 0);

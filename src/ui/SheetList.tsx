@@ -5,27 +5,20 @@ import { SHEET_KINDS, type SheetKind } from '../project/projectFile';
 import { useProject, type PdfState, type SheetRow } from '../state/store';
 import { planeValue, withPlane } from '../project/vertical';
 import { formatHeight } from '../project/levels';
-import { useLevelReference, useRefValue } from '../state/levels';
-import { deriveSite, unsavedTransforms } from '../state/site';
-import { deriveVertical, isVertical, placementFor, unsavedPlacements, useReference, type VerticalKind } from '../state/vertical';
+import { useHouseLift, useLevelReference, useRefValue } from '../state/levels';
+import { MAX_LIFT } from '../house/blocks';
+import { deriveSite } from '../state/site';
+import { deriveVertical, isVertical, placementFor, useReference, type VerticalKind } from '../state/vertical';
 import type { ParseSummary } from '../worker/protocol';
 import { GroupToggles, SheetLayers } from './LayerPanel';
 import { t } from './strings';
 
 export function SheetList() {
   const sheets = useProject((s) => s.sheets);
-  const dirty = useProject((s) => s.dirty);
   const loadError = useProject((s) => s.loadError);
-  const saveError = useProject((s) => s.saveError);
-  const save = useProject((s) => s.save);
   const parsed = useProject((s) => s.parsed);
   const parse = useProject((s) => s.parse);
-  const [saving, setSaving] = useState(false);
 
-  const onSave = () => {
-    setSaving(true);
-    void save({ placements: unsavedPlacements(), transforms: unsavedTransforms() }).finally(() => setSaving(false));
-  };
   // The worker queues files one at a time and times each parse itself, so queueing doesn't skew `ms`.
   const onParseAll = () => {
     for (const s of sheets) if (s.type === 'dwg' && !s.missing && !parsed[s.file]) void parse(s.file);
@@ -35,12 +28,6 @@ export function SheetList() {
 
   return (
     <>
-      <div className="save-bar">
-        <button type="button" onClick={onSave} disabled={saving || !!loadError}>
-          {t.save}
-        </button>{' '}
-        <span className={dirty ? 'error' : 'muted'}>{dirty ? t.unsaved : t.saved}</span>
-      </div>
       <div className="save-bar">
         <button type="button" onClick={onParseAll}>
           {t.parseAll}
@@ -54,11 +41,6 @@ export function SheetList() {
       {loadError && (
         <p className="error">
           {t.loadError}: {loadError}
-        </p>
-      )}
-      {saveError && (
-        <p className="error">
-          {t.saveError}: {saveError}
         </p>
       )}
       <ReferenceLine />
@@ -253,10 +235,19 @@ function AlignLine({ row, sheet }: { row: SheetRow; sheet?: NormalizedSheet }) {
 /** `±0.00 = 355.40 m n.p.m. (4 arkusze)`, or why heights are relative only. */
 function ReferenceLine() {
   const r = useLevelReference();
+  const lift = useHouseLift();
+  const setLift = useProject((s) => s.setHouseLift);
   if (r.ok)
     return (
       <div className="save-bar">
-        ±0.00 = <strong>{r.value.toFixed(2)} m n.p.m.</strong> <span className="muted">({t.reference.sheets(r.sheets)})</span>
+        ±0.00 = <strong>{(r.value + lift).toFixed(2)} m n.p.m.</strong>{' '}
+        <span className="muted">
+          ({lift === 0 ? t.reference.sheets(r.sheets) : t.reference.asBuilt(r.value.toFixed(2), t.reference.sheets(r.sheets))})
+        </span>
+        <br />
+        <label title={t.reference.liftTitle}>
+          {t.reference.lift} <ZInput value={lift} onChange={setLift} accept={(v) => Math.abs(v) <= MAX_LIFT} /> m
+        </label>
       </div>
     );
   return (

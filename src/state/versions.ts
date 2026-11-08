@@ -4,11 +4,16 @@
 import { create } from 'zustand';
 import { listFiles, readFile, removeFile, versionsDir, writeFile } from '../project/folder';
 import type { HeightGrid } from '../terrain/grid';
-import { replay, withValue, type Edit, DEFAULT_SLOPE, type Draft, type Edges, type EditVolume, type Side, type Tool } from '../versions/edits';
+import { replay, shiftEdit, withValue, type Edit, DEFAULT_SLOPE, type Draft, type Edges, type EditVolume, type Side, type Tool } from '../versions/edits';
 import { packGrid, parseVersionFile, serializeVersionFile, unpackGrid, type VersionFile } from '../versions/file';
+import { useProject } from './store';
 import { useTerrain, type Terrain } from './terrain';
 
-export type Version = { id: string; name: string; created: string; grid: HeightGrid; edits: Edit[]; fileVersion: VersionFile['version'] };
+/**
+ * `grid` and `edits` are relative to the current as-built ±0.00 (`lift` of the state); `lift` here is the one of the
+ * files (ADR 0007), so they are shifted on read and back on write.
+ */
+export type Version = { id: string; name: string; created: string; grid: HeightGrid; edits: Edit[]; fileVersion: VersionFile['version']; lift: number };
 /** A version file that couldn't be read: listed with the reason, never deleted or overwritten. */
 export type BrokenVersion = { file: string; error: string };
 export type Active = 'preview' | string;
@@ -19,6 +24,8 @@ type VersionsState = {
   dir?: FileSystemDirectoryHandle;
   versions: Version[];
   broken: BrokenVersion[];
+  /** The house lift (m) the versions' heights in memory are relative to: the project's, kept in sync below. */
+  lift: number;
   active: Active;
   /** Edit tool armed in the active version (none in Podgląd). */
   tool?: Tool;
@@ -42,8 +49,11 @@ type VersionsState = {
   saveError?: string;
   /** Loads the versions of a freshly opened project folder; Podgląd is shown. */
   load(dir: FileSystemDirectoryHandle): Promise<void>;
-  /** "Nowa wersja": snapshot of `grid`, written to the folder, then opened. */
-  create(grid: HeightGrid): Promise<void>;
+  /**
+   * "Nowa wersja", written to the folder, then opened: a copy of the active version (its frozen base and edits) or,
+   * from Podgląd, a snapshot of `live` (the generated terrain).
+   */
+  create(live: HeightGrid | undefined): Promise<void>;
   rename(id: string, name: string): Promise<void>;
   /** Removes both files; Podgląd is shown if it was the active version. */
   remove(id: string): Promise<void>;
@@ -71,13 +81,41 @@ type VersionsState = {
 const errText = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
 /** Rewrites keep the file version the .bin was written with (the .bin is never rewritten). */
-const toFile = (v: Version): VersionFile => ({
-  version: v.fileVersion,
-  id: v.id,
-  name: v.name,
-  created: v.created,
-  grid: { cell: v.grid.cell, origin: v.grid.origin, cols: v.grid.cols, rows: v.grid.rows },
-  edits: v.edits,
+const toFile = (v: Version): VersionFile => {
+  const d = useVersions.getState().lift - v.lift;
+  return {
+    version: v.fileVersion,
+    id: v.id,
+    name: v.name,
+    created: v.created,
+    grid: { cell: v.grid.cell, origin: v.grid.origin, cols: v.grid.cols, rows: v.grid.rows },
+    edits: d === 0 ? v.edits : v.edits.map((e) => shiftEdit(e, d)),
+    ...(v.lift !== 0 && { lift: v.lift }),
+  };
+};
+
+/** A grid with every height moved by `d` m (a new base; the outside mask is shared). */
+function shiftGrid(g: HeightGrid, d: number): HeightGrid {
+  if (d === 0) return g;
+  const base = g.base.slice();
+  for (let k = 0; k < base.length; k++) base[k]! += d;
+  return { ...g, base };
+}
+
+/** The project's house lift changed: move every loaded version's heights so their absolute heights stay (ADR 0007). */
+useProject.subscribe((s) => {
+  const lift = s.house.lift ?? 0;
+  const st = useVersions.getState();
+  if (lift === st.lift) return;
+  const d = st.lift - lift;
+  const shift = (edits: Edit[]) => edits.map((e) => shiftEdit(e, d));
+  useVersions.setState({
+    lift,
+    versions: st.versions.map((v) => ({ ...v, grid: shiftGrid(v.grid, d), edits: shift(v.edits) })),
+    history: Object.fromEntries(Object.entries(st.history).map(([id, h]) => [id, { undo: h.undo.map(shift), redo: h.redo.map(shift) }])),
+    draft: undefined,
+    preview: undefined,
+  });
 });
 
 /** "Wersja n": one more than the highest n in use. */
@@ -90,12 +128,23 @@ async function readVersion(dir: FileSystemDirectoryHandle, file: string): Promis
   const f = parseVersionFile(await (await readFile(dir, file)).text());
   if (`${f.id}.json` !== file) throw new Error(`id "${f.id}" doesn't match the filename`);
   const grid = unpackGrid(await (await readFile(dir, `${f.id}.bin`)).arrayBuffer(), f.grid, f.version);
-  return { id: f.id, name: f.name, created: f.created, grid, edits: f.edits, fileVersion: f.version };
+  const lift = f.lift ?? 0;
+  const d = lift - useVersions.getState().lift;
+  return {
+    id: f.id,
+    name: f.name,
+    created: f.created,
+    grid: shiftGrid(grid, d),
+    edits: d === 0 ? f.edits : f.edits.map((e) => shiftEdit(e, d)),
+    fileVersion: f.version,
+    lift,
+  };
 }
 
 export const useVersions = create<VersionsState>()((set, get) => ({
   versions: [],
   broken: [],
+  lift: useProject.getState().house.lift ?? 0,
   active: 'preview',
   unsaved: [],
   history: {},
@@ -125,17 +174,21 @@ export const useVersions = create<VersionsState>()((set, get) => ({
   },
 
   async create(live) {
-    const { dir, versions } = get();
-    if (!dir) return;
+    const { dir, versions, active } = get();
+    const from = versions.find((x) => x.id === active);
+    const src = from?.grid ?? live;
+    if (!dir || !src) return;
     const created = new Date().toISOString();
     const id = `v${Date.now().toString(36)}`;
     const grid: HeightGrid = {
-      ...live,
-      origin: { ...live.origin },
-      base: live.base.slice(),
-      ...(live.outside && { outside: live.outside.slice() }),
+      ...src,
+      origin: { ...src.origin },
+      base: src.base.slice(),
+      ...(src.outside && { outside: src.outside.slice() }),
     };
-    const v: Version = { id, name: nextName(versions), created, grid, edits: [], fileVersion: 2 };
+    // Heights in memory are already relative to the current lift, so the copy is written with it.
+    const edits = from ? structuredClone(from.edits) : [];
+    const v: Version = { id, name: nextName(versions), created, grid, edits, fileVersion: 2, lift: get().lift };
     try {
       const vdir = (await versionsDir(dir, true))!;
       // The .bin first: a version is listed by its JSON, so a failed export leaves no half version behind.

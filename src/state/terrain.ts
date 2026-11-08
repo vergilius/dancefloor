@@ -4,6 +4,7 @@ import { sheetToWorld } from '../scene/coords';
 import { grow, heightGrid, offsetOutline, outsideMask, segmentsBox, type Box, type HeightGrid } from '../terrain/grid';
 import { connectedSegments, profileSeeds, type Seeds } from '../terrain/seeds';
 import { useDrawnSheets, type DrawnSheet } from './drawn';
+import { useHouseLift } from './levels';
 
 export const PLOT_LAYER = 'PZT_ZAKRES';
 /**
@@ -19,12 +20,15 @@ export type Terrain = { seeds: Seeds; grid?: HeightGrid; extent: 'plot' | 'seeds
 
 export function useTerrain(): Terrain {
   const drawn = useDrawnSheets();
+  const lift = useHouseLift();
   return useMemo(() => {
     const hit = cache.get(drawn);
-    if (hit) return hit;
+    if (hit?.lift === lift) return hit.out;
     const seeds = profileSeeds(
       drawn.flatMap((d) => (d.placement.type === 'vertical' ? [{ file: d.file, placement: d.placement, sheet: d.sheet }] : [])),
     );
+    // The profiles are drawn against the drawings' ±0.00; the as-built one is `lift` higher (ADR 0007).
+    if (lift !== 0) for (let i = 2; i < seeds.points.length; i += 3) seeds.points[i]! -= lift;
     const plot = plotOutline(drawn);
     const plotBox = plot && segmentsBox(plot, (x, y) => [x, y]);
     const area = plot && offsetOutline(plot, PLOT_MARGIN);
@@ -33,13 +37,13 @@ export function useTerrain(): Terrain {
     const raw = box && heightGrid(seeds.points, box);
     const grid = raw && area ? { ...raw, outside: outsideMask(raw, area) } : raw;
     const out: Terrain = { seeds, grid, extent: plotBox ? 'plot' : 'seeds', plot };
-    cache.set(drawn, out);
+    cache.set(drawn, { lift, out });
     return out;
-  }, [drawn]);
+  }, [drawn, lift]);
 }
 
 /** Keyed on the shared drawn-sheets array, so every caller (mesh, panel, version bar) gets the same grid, built once. */
-const cache = new WeakMap<DrawnSheet[], Terrain>();
+const cache = new WeakMap<DrawnSheet[], { lift: number; out: Terrain }>();
 
 /** `PZT_ZAKRES` of an aligned site sheet (one with a transform), in plan coords. Isolated lines (a legend sample) are left out. */
 function plotOutline(drawn: DrawnSheet[]): Float64Array | undefined {

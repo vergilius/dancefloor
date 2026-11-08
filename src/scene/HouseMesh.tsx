@@ -8,6 +8,7 @@ import { blockOutline, blockTriangles, polygonArea, roofTriangles, type Block, t
 import { hostsWalls } from '../house/walls';
 import { useHouse3D } from '../state/house';
 import { useProject } from '../state/store';
+import { useUi } from '../state/ui';
 import { DESIGN_LAYER, ENV_LAYER } from './split';
 
 /** Main body (gable), other blocks, and thin ones (posts, columns: footprint < 1 m²). */
@@ -22,12 +23,20 @@ const OPENING_COLOR = '#2b3036';
 const WALL_COLOR = '#f1eee8';
 const WALL_EDGE_COLOR = '#8a847a';
 const SLAB_COLOR = '#d8d2c6';
+/**
+ * Faces drawn a little behind their depth, so the edge lines on top of them always win the depth test instead of
+ * flickering in and out (z-fighting), most visible on large sloped faces like the roof.
+ */
+export const FACE_OFFSET = { polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 } as const;
+/** Clean view (showcase): plaster walls, a dark roof, concrete slabs, stone garden walls; no edge lines. */
+export const CLEAN_COLORS = { plaster: '#f4efe6', roof: '#4b4f56', slab: '#bdb8ae', flat: '#d9d3c8', thin: '#6f6a62', stone: '#b9ad99' };
 
 export function HouseMesh() {
   const show = useProject((s) => s.showHouse);
   const blocks = useProject((s) => s.house.blocks);
   const house = useHouse3D();
   const showOpenings = useProject((s) => s.showOpenings);
+  const clean = useUi((s) => s.clean);
   // With walls from the plans, the main body and the annex are drawn hollow (M5b): walls, fills, slabs, roof.
   const hollow = house.walls.length > 0;
   const footprints = useMemo(() => {
@@ -45,10 +54,11 @@ export function HouseMesh() {
   return (
     <group>
       {blocks.map((b, i) => (
-        <BlockSolid key={i} block={b} hollow={hollow && (b.kind === 'gable' || hostsWalls(b, house.groundZ))} roofHoles={house.roofHoles} />
+        <BlockSolid key={i} block={b} hollow={hollow && (b.kind === 'gable' || hostsWalls(b, house.groundZ))} roofHoles={house.roofHoles} clean={clean} />
       ))}
-      {hollow && <WallFaces triangles={house.walls} color={WALL_COLOR} />}
-      {hollow && <WallFaces triangles={house.slabs} color={SLAB_COLOR} />}
+      {hollow && <WallFaces triangles={house.walls} color={clean ? CLEAN_COLORS.plaster : WALL_COLOR} clean={clean} />}
+      {/* Slabs span the outer outline: their sides lie on the outer wall faces, so they draw behind the walls. */}
+      {hollow && <WallFaces triangles={house.slabs} color={clean ? CLEAN_COLORS.slab : SLAB_COLOR} clean={clean} offset={4} />}
       {showOpenings && <Openings elevations={house.openings} />}
       <lineSegments layers={DESIGN_LAYER}>
         <bufferGeometry>
@@ -77,24 +87,26 @@ function sceneGeometry(world: ArrayLike<number>): BufferGeometry {
 /** Hollow main body: its roof planes (with the roof windows); a hollow annex: nothing of its own. */
 const hollowTriangles = (b: Block, holes: RoofHole[]): number[] => (b.kind === 'gable' ? roofTriangles(b, holes) : []);
 
-function WallFaces({ triangles, color }: { triangles: number[]; color: string }) {
+function WallFaces({ triangles, color, clean, offset = 1 }: { triangles: number[]; color: string; clean: boolean; offset?: number }) {
   const geo = useMemo(() => sceneGeometry(triangles), [triangles]);
   const edges = useMemo(() => new EdgesGeometry(geo, EDGE_ANGLE), [geo]);
   useEffect(() => () => geo.dispose(), [geo]);
   useEffect(() => () => edges.dispose(), [edges]);
   return (
     <>
-      <mesh layers={ENV_LAYER} geometry={geo}>
-        <meshLambertMaterial color={color} side={DoubleSide} />
+      <mesh layers={ENV_LAYER} geometry={geo} castShadow receiveShadow>
+        <meshLambertMaterial color={color} side={DoubleSide} polygonOffset polygonOffsetFactor={offset} polygonOffsetUnits={offset} />
       </mesh>
-      <lineSegments layers={ENV_LAYER} geometry={edges}>
-        <lineBasicMaterial color={WALL_EDGE_COLOR} />
-      </lineSegments>
+      {!clean && (
+        <lineSegments layers={ENV_LAYER} geometry={edges}>
+          <lineBasicMaterial color={WALL_EDGE_COLOR} />
+        </lineSegments>
+      )}
     </>
   );
 }
 
-function BlockSolid({ block, hollow, roofHoles }: { block: Block; hollow: boolean; roofHoles: RoofHole[] }) {
+function BlockSolid({ block, hollow, roofHoles, clean }: { block: Block; hollow: boolean; roofHoles: RoofHole[]; clean: boolean }) {
   // Design keeps the full block's edges (compared with the underlays); Environment shows the hollow parts.
   const full = useMemo(() => sceneGeometry(blockTriangles(block)), [block]);
   const fullEdges = useMemo(() => new EdgesGeometry(full, EDGE_ANGLE), [full]);
@@ -104,17 +116,26 @@ function BlockSolid({ block, hollow, roofHoles }: { block: Block; hollow: boolea
   useEffect(() => () => fullEdges.dispose(), [fullEdges]);
   useEffect(() => () => part?.dispose(), [part]);
   useEffect(() => () => partEdges?.dispose(), [partEdges]);
-  const color = block.kind === 'gable' ? COLORS.gable : polygonArea(block.polygon) < THIN_AREA ? COLORS.thin : COLORS.flat;
-  // Flat blocks often share a face with the main body's wall: push them back so the wall wins instead of flickering.
-  const behind = block.kind === 'flat';
+  const thin = block.kind === 'flat' && polygonArea(block.polygon) < THIN_AREA;
+  // A hollow main body is its roof only: dark in both views. A solid one is plaster (clean) / its shade.
+  const color = block.kind === 'gable' && part
+    ? CLEAN_COLORS.roof
+    : clean
+      ? block.kind === 'gable' ? CLEAN_COLORS.plaster : thin ? CLEAN_COLORS.thin : CLEAN_COLORS.flat
+      : block.kind === 'gable' ? COLORS.gable : thin ? COLORS.thin : COLORS.flat;
+  // Flat blocks often share a face with the main body's wall: push them back so the wall wins. The main body (its
+  // roof) stays at its depth: pushed back, the wall tops just under it showed through at grazing angles.
+  const offset = block.kind === 'flat' ? 2 : 0;
   return (
     <>
-      <mesh layers={ENV_LAYER} geometry={part ?? full}>
-        <meshLambertMaterial color={color} flatShading side={DoubleSide} polygonOffset={behind} polygonOffsetFactor={1} polygonOffsetUnits={1} />
+      <mesh layers={ENV_LAYER} geometry={part ?? full} castShadow receiveShadow>
+        <meshLambertMaterial color={color} flatShading side={DoubleSide} polygonOffset={offset > 0} polygonOffsetFactor={offset} polygonOffsetUnits={offset} />
       </mesh>
-      <lineSegments layers={ENV_LAYER} geometry={partEdges ?? fullEdges}>
-        <lineBasicMaterial color={ENV_EDGE_COLOR} />
-      </lineSegments>
+      {!clean && (
+        <lineSegments layers={ENV_LAYER} geometry={partEdges ?? fullEdges}>
+          <lineBasicMaterial color={ENV_EDGE_COLOR} />
+        </lineSegments>
+      )}
       <lineSegments layers={DESIGN_LAYER} geometry={fullEdges}>
         <lineBasicMaterial color={DESIGN_EDGE_COLOR} />
       </lineSegments>

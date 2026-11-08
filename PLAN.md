@@ -42,7 +42,7 @@ All AC1021, mm, pure 2D, parse in 0.1–0.5 s each.
 
 | Fact | Source | Consequence |
 |---|---|---|
-| **±0.00 = +355.40 m a.s.l.** | elevations, MTEXT `0,00= +355.40 m npm` | Absolute reference solved — no manual input needed |
+| **±0.00 = +355.40 m a.s.l.** | elevations, MTEXT `0,00= +355.40 m npm` | Absolute reference solved — no manual input needed. As built: house 0.20 m higher, `house.lift` (ADR 0007) |
 | Designed terrain spot heights `Tp= 355,08` etc. (7 labels, 353.48–355.20) | PZT-01, layer `G-ANNO-TEXT-4` (MTEXT + circle/hatch symbol) | Parse value + insertion point → designed-terrain points in plan coords |
 | Existing/designed terrain at façade corners `Ti=…`, `Tp=…`, `Tp=Ti=…` (352.65–355.70 m) | elevations, `G-ANNO-DIMS` | ~3 m fall across the house footprint — **sloped plot, garden levels matter** |
 | Existing terrain profile lines | `PZT_TEREN ISTNIEJĄCY` (LINEs) in every elevation (8–12) and PZT-01 (60) | In elevations: vertical profile along each façade (x = along façade, y = height). In PZT: outline only, no heights |
@@ -320,7 +320,7 @@ Requirements:
   sheets through `origin + x·dir` (M1b). Sheets without a placement or transform show no markers.
 - **Sheet list:** per sheet with absolute labels, `Rzędne: 7/8 z punktem`.
 - **3D markers** for the resolved points: a small dot at (plan x, y, rel height) with a short label
-  (`Tp 355.08 (−0.32)`). One toggle (default on, view setting, not saved). The markers are the browser check.
+  (`Tp 355.08 (−0.32)`). One toggle (default on, view setting, not saved); a second one shows them in Environment too (default off). The markers are the browser check.
 - **Rel + abs wherever we show a height:** one formatter, e.g. `+3.29 (358.69 m n.p.m.)`, used by the sheet list
   (plan z), the markers and the measure readout. The drawn sheet texts stay as drawn.
 - **Measure tool "Pomiar"** (any view, Design viewport): click A, then B. Each click hits the plane of a drawn sheet under the
@@ -416,8 +416,9 @@ volumes update live) closes with M4b.
 
 Requirements:
 - **Preview vs version (Environment view bar):** a selector "Podgląd" | the versions by name. Podgląd shows the
-  generated model live (as in M3), read-only, no edit tools. Buttons: **"Nowa wersja"** (snapshot of the current
-  generated terrain, named "Wersja n", opened right away), **"Zmień nazwę"**, **"Usuń"** (confirm). The Design
+  generated model live (as in M3), read-only, no edit tools. Buttons: **"Nowa wersja"** (from Podgląd: snapshot of the
+  current generated terrain; with a version active: a copy of that version, its frozen base and edits; named
+  "Wersja n", opened right away), **"Zmień nazwę"**, **"Usuń"** (confirm). The Design
   viewport is unchanged in every mode.
 - **A version** = frozen `base` + outside mask + grid geometry (copied at export, never regenerated) + an ordered
   list of **edits**. Its surface = edits applied in order over its frozen base. Changing the DWGs later doesn't touch
@@ -476,6 +477,11 @@ Requirements:
   release), one undo step per drag. A click (no drag) near an edge of the selected edit cycles it Skarpa → Uskok →
   Esc cancels a drag or clears the selection. The bar's 1:n acts on the selected edit (and is the default for the
   next). Skarpa works the same on a ramp (top = the ramp's height along the edge).
+- **Quick wins (user 2026-11-08):** Shift+drag an edge of the selected edit = resize it (its snap: 0.5 m, Mur 5 cm),
+  Shift+drag inside = move it. Lift / tilt drags snap within 6 px to ±0.00, the drawings' level marks, the other
+  edits' heights (and edge heights of ramps) and the drag's start; the bar shows "= <target>"; Alt = free.
+  **Bilansuj** (Inspector, Wyrównaj): bisects the edit's z (1 cm) so its own cut = fill (slopes included), against the
+  surface before it; one undo step.
 - **Skarpa (pure, in `replay`):** the rect is the flat top (or bottom) you dragged; the slope goes **outside** it until
   it meets the surface (daylight). For a grid corner outside the rect, p = the nearest rect-edge corner, d = distance
   to p (m), top = h(p) after the edit. Fill side (top above the corner): h = max(h, top − d/n); cut side: h =

@@ -1,7 +1,6 @@
 # M4b task list (done 2026-11-08)
 
-Next: M4b done and merged (user 2026-11-08: "all good"). Next milestone M4c (PLAN.md §5): sharpen the spec with `spec-driven-development`, then a new task list. Later: left sidebar UI/UX rework.
-Later (user 2026-11-08): the left sidebar is poor UI/UX (the version panel sits below the long sheet list); address after M4b.
+Next: (branch `house-lift`, off `level-quickwins`) as-built house lift (ADR 0007, "Dom wyżej o" in Rysunki) awaiting the user's browser check. Before it: (branch `level-quickwins`, off `ui-shell`) leveling quick wins (Shift resize / move, height snapping, Bilansuj) awaiting the user's browser check. Then: M4b done and merged (user 2026-11-08: "all good"). Next milestone M4c (PLAN.md §5): sharpen the spec with `spec-driven-development`, then a new task list. Editor shell UI rework on branch `ui-shell` (2026-11-08): awaiting browser check, then merge.
 Plot margin now 5 m (user 2026-11-08): only Podgląd and new versions; existing versions keep their frozen grid.
 Bundle: index 1495 kB of the 1500 kB budget after T2; keep T3 small.
 Branch: m4b-spec (includes level-from-start-point). T3 note: scratchpad check (flat −0.32): 0.25 × 6 m wall → default top +0.18, 0.50 m high, 0.75 m³, terrain untouched; old `wall` edge mode reads as step. Bundle 1500 / 1500 kB after wall resize: the next addition needs the budget raised (ask the user, CONSTRAINTS.md); keep the wall mesh code small, ask before raising the budget.
