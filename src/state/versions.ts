@@ -26,9 +26,10 @@ type VersionsState = {
   draft?: Draft;
   /** Edit of the active version selected in the list (outlined in the view). View state. */
   selected?: string;
-  /** Edges and 1:n for the next dragged edit (the last ones chosen in the bar). View state, default Skarpa 1:2. */
-  newEdges: Edges;
+  /** 1:n for the next dragged edit (the last one set in the bar). View state, default 2. */
   newSlope: number;
+  /** Wyrównaj's height phase: the edit being placed, drawn on the surface but not in the list yet. View state. */
+  preview?: Edit;
   /** Edge under the pointer in the edge controls: outlined on the selected edit. View state. */
   hoverSide?: Side;
   /** Undo / redo per version: edit lists before each command. Not saved; cleared on folder load. */
@@ -57,7 +58,8 @@ type VersionsState = {
   setEditShape(id: string, shape: { edges?: Edges; slope?: number }): void;
   deleteEdit(id: string): void;
   select(id: string | undefined): void;
-  setNewShape(shape: { edges?: Edges; slope?: number }): void;
+  setNewSlope(slope: number): void;
+  setPreview(edit: Edit | undefined): void;
   setHoverSide(side: Side | undefined): void;
   undo(): void;
   redo(): void;
@@ -96,7 +98,6 @@ export const useVersions = create<VersionsState>()((set, get) => ({
   unsaved: [],
   history: {},
   showDiff: false,
-  newEdges: { w: 'slope', e: 'slope', s: 'slope', n: 'slope' },
   newSlope: DEFAULT_SLOPE,
 
   async load(dir) {
@@ -179,11 +180,11 @@ export const useVersions = create<VersionsState>()((set, get) => ({
   },
 
   setActive(active) {
-    set({ active, tool: undefined, draft: undefined, selected: undefined });
+    set({ active, tool: undefined, draft: undefined, preview: undefined, selected: undefined });
   },
 
   setTool(tool) {
-    if (get().active !== 'preview') set({ tool, draft: undefined });
+    if (get().active !== 'preview') set({ tool, draft: undefined, preview: undefined });
   },
 
   setDraft(draft) {
@@ -224,8 +225,12 @@ export const useVersions = create<VersionsState>()((set, get) => ({
     set({ selected });
   },
 
-  setNewShape({ edges, slope }) {
-    set((st) => ({ newEdges: edges ?? st.newEdges, newSlope: slope ?? st.newSlope }));
+  setNewSlope(newSlope) {
+    set({ newSlope });
+  },
+
+  setPreview(preview) {
+    set({ preview });
   },
 
   setHoverSide(hoverSide) {
@@ -337,5 +342,16 @@ const surfaces = new WeakMap<Edit[], { base: HeightGrid; grid: HeightGrid; volum
 export function useEnvSurface(): { grid?: HeightGrid; live?: HeightGrid; plot?: Terrain['plot']; version?: Version } {
   const { grid: live, plot } = useTerrain();
   const version = useActiveVersion();
-  return { grid: version ? versionSurface(version).grid : live, live, plot, version };
+  const preview = useVersions((s) => s.preview);
+  const grid = version && (preview ? previewSurface(version, preview) : versionSurface(version).grid);
+  return { grid: grid ?? live, live, plot, version };
 }
+
+/** The version's surface with the edit being placed on top. One entry: the preview changes on every mouse move. */
+function previewSurface(v: Version, preview: Edit): HeightGrid {
+  if (last?.edits !== v.edits || last.preview !== preview || last.base !== v.grid) {
+    last = { edits: v.edits, preview, base: v.grid, grid: { ...v.grid, base: replay(v.grid, [...v.edits, preview]).h } };
+  }
+  return last.grid;
+}
+let last: { edits: Edit[]; preview: Edit; base: HeightGrid; grid: HeightGrid } | undefined;

@@ -4,7 +4,7 @@ import { Line } from '@react-three/drei';
 import { useMemo } from 'react';
 import { BufferAttribute, BufferGeometry, Color, DoubleSide } from 'three';
 import { useProject } from '../state/store';
-import { useEnvSurface, useVersions } from '../state/versions';
+import { useEnvSurface, useVersions, versionSurface } from '../state/versions';
 import { contours, type Contour } from '../terrain/contours';
 import { cellOutside, isOutside, sampleGrid, type HeightGrid } from '../terrain/grid';
 import { ENV_LAYER } from './split';
@@ -30,7 +30,10 @@ export function TerrainMesh() {
   const diffBase = showDiff ? version?.grid : undefined;
   const geo = useMemo(() => grid && terrainGeometry(grid, diffBase), [grid, diffBase]);
   const outline = useMemo(() => grid && plot && drapedOutline(grid, plot), [grid, plot]);
-  const lines = useMemo(() => grid && contourLines(contours(grid)), [grid]);
+  // Contours are the slow part: while Wyrównaj previews a height they follow the committed surface (update on commit).
+  const previewing = useVersions((s) => s.preview !== undefined);
+  const contourGrid = previewing && version ? versionSurface(version).grid : grid;
+  const lines = useMemo(() => contourGrid && contourLines(contours(contourGrid)), [contourGrid]);
   if (!show || !geo) return null;
   return (
     <group>

@@ -467,8 +467,12 @@ Requirements:
   ratio **1:n** per edit (n = horizontal per 1 m vertical, default 2, n > 0) for all its sloped edges. Saved in the edit
   as optional `edges: { w, e, s, n: 'step' | 'slope' | 'wall' }` and `slope: number`; missing = all Uskok, so M4a
   files load unchanged (still `version: 2`).
-- **New edits** take the edge mode chosen in the view bar next to the tools ("Krawędzie: Uskok | Skarpa 1:n | Mur",
-  remembered, default Skarpa 1:2) on all 4 edges. Change any edge later in the edit list.
+- **Sim-builder interaction (user 2026-11-08; replaces edge selects in the bar):** Wyrównaj = drag the area, release,
+  then move the mouse up / down to set the height (1 cm per screen pixel, starting at the drag's start height, shown
+  live in the bar with the slopes previewed on the surface; contours update on commit); click commits, Esc or right
+  click cancels. Podnieś / Obniż commit on release as in M4a. New edits get Skarpa on all 4 edges with the bar's 1:n
+  (default 2) and are selected. On the selected edit, hovering near an edge (≤ 0.3 m) outlines it and a click cycles it
+  Skarpa → Uskok → Mur (undoable). The bar's 1:n field acts on the selected edit (and is the default for the next).
 - **Skarpa (pure, in `replay`):** the rect is the flat top (or bottom) you dragged; the slope goes **outside** it until
   it meets the surface (daylight). For a grid corner outside the rect, p = the nearest rect-edge corner, d = distance
   to p (m), top = h(p) after the edit. Fill side (top above the corner): h = max(h, top − d/n); cut side: h =
@@ -480,8 +484,8 @@ Requirements:
   **high side** with its face on the edge line, thickness 0.25 m, top = the high side's surface along the edge, bottom
   = the low side's surface (visible part only, no footing). The panel shows per wall its length, height min–max and
   volume (m³ = length × 0.25 × mean height). Walls are not in cut / fill.
-- **Edit list:** per edit 4 edge selects (← → ↑ ↓), the 1:n field (when an edge is Skarpa) and its walls. Hovering an
-  edge select outlines that edge in the view. Edge and ratio changes go through undo / redo like value changes.
+- **Edit list:** per edit 4 edge selects (← → ↑ ↓, a precise fallback), the 1:n field (when an edge is Skarpa) and its
+  walls. Hovering an edge select outlines that edge in the view. Edge and ratio changes go through undo / redo like value changes.
 
 Out of M4b: slopes or walls along drawn lines (only rect edges); per-edge ratios; wall footings, drainage, parapets
 above the high side; stairs; materials (M4c); moving or resizing a rect.
