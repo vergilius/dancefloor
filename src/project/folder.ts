@@ -65,3 +65,50 @@ export async function listSourceFiles(dir: FileSystemDirectoryHandle): Promise<S
   }
   return files.sort((a, b) => a.name.localeCompare(b.name, 'pl', { numeric: true }));
 }
+
+/** Edit versions live in this subfolder of the project folder (PLAN.md §5 M4a). */
+export const VERSIONS_DIR = 'dancefloor-versions';
+
+const isNotFound = (err: unknown) => err instanceof DOMException && err.name === 'NotFoundError';
+
+/** The versions subfolder; undefined if it doesn't exist and `create` is false. */
+export async function versionsDir(dir: FileSystemDirectoryHandle, create: boolean): Promise<FileSystemDirectoryHandle | undefined> {
+  try {
+    return await dir.getDirectoryHandle(VERSIONS_DIR, { create });
+  } catch (err) {
+    if (!create && isNotFound(err)) return undefined;
+    throw err;
+  }
+}
+
+/** Names of the files directly in `dir` ending in `ext`, sorted. */
+export async function listFiles(dir: FileSystemDirectoryHandle, ext: string): Promise<string[]> {
+  const out: string[] = [];
+  for await (const entry of dir.values()) if (entry.kind === 'file' && entry.name.endsWith(ext)) out.push(entry.name);
+  return out.sort();
+}
+
+/** Writes the whole file; on failure the previous file is kept (the write is aborted, not committed). */
+export async function writeFile(dir: FileSystemDirectoryHandle, name: string, data: string | ArrayBuffer): Promise<void> {
+  const out = await (await dir.getFileHandle(name, { create: true })).createWritable();
+  try {
+    await out.write(data);
+  } catch (err) {
+    await out.abort();
+    throw err;
+  }
+  await out.close();
+}
+
+export async function readFile(dir: FileSystemDirectoryHandle, name: string): Promise<File> {
+  return (await dir.getFileHandle(name)).getFile();
+}
+
+/** Removes a file; a file that is already gone is fine. */
+export async function removeFile(dir: FileSystemDirectoryHandle, name: string): Promise<void> {
+  try {
+    await dir.removeEntry(name);
+  } catch (err) {
+    if (!isNotFound(err)) throw err;
+  }
+}

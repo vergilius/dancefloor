@@ -15,6 +15,8 @@ import { AlignTool } from './AlignTool';
 import { LevelMarkers } from './LevelMarkers';
 import { TerrainMesh } from './TerrainMesh';
 import { MeasureReadout, MeasureTool } from './MeasureTool';
+import { VersionBar } from '../ui/VersionBar';
+import { EditTool } from './EditTool';
 import { ENV_LAYER, inBothViewports, splitEvents, useSplitRender, type Half } from './split';
 import type { SheetRow } from '../state/store';
 import type { PdfRender } from '../pdf/render';
@@ -132,6 +134,7 @@ function Scene({ project }: { project?: string }) {
         <MeasureToggle disabled={aligning} />
         <AlignPrompt />
       </div>
+      {project && <VersionBar />}
       <div className="viewports" ref={container}>
       <Canvas eventSource={container as RefObject<HTMLElement>} events={splitEvents}>
         {top ? (
@@ -159,6 +162,7 @@ function Scene({ project }: { project?: string }) {
         <LevelMarkers drawn={drawn} />
         <AlignTool drawn={drawn} />
         <MeasureTool drawn={drawn} />
+        <EditTool />
         <CameraControls makeDefault domElement={(half === 'env' ? envEl : designEl) ?? undefined} {...orthoLimits(ortho)} />
         <CameraSync view={view} ortho={ortho} project={project} />
         <FrameOnSheets sheets={drawn} ortho={ortho} auto={!saved} tick={fitTick} />

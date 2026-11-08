@@ -1,13 +1,17 @@
 // Existing terrain derived from the drawn sheets (PLAN.md §5 M3, ADR 0002: generated, never saved).
 import { useMemo } from 'react';
 import { sheetToWorld } from '../scene/coords';
-import { grow, heightGrid, segmentsBox, type Box, type HeightGrid } from '../terrain/grid';
+import { grow, heightGrid, offsetOutline, outsideMask, segmentsBox, type Box, type HeightGrid } from '../terrain/grid';
 import { connectedSegments, profileSeeds, type Seeds } from '../terrain/seeds';
 import { useDrawnSheets, type DrawnSheet } from './drawn';
 
 export const PLOT_LAYER = 'PZT_ZAKRES';
-/** Grid extent = plot bbox grown by this per side (m), or the seed bbox grown by SEED_MARGIN without an aligned plot. */
-const PLOT_MARGIN = 1;
+/**
+ * Modelled area = the plot outline grown by this (m) with sharp corners, the plot boundary being the reference (user,
+ * 2026-11-08): the grid covers its bbox, corners beyond it are masked out. If the outline isn't one closed loop: its
+ * bbox grown by this, no mask. Without an aligned plot: the seed bbox + SEED_MARGIN, no mask.
+ */
+export const PLOT_MARGIN = 2;
 const SEED_MARGIN = 2.5;
 
 /** `plot` = the `PZT_ZAKRES` outline in plan coords, segments [x1, y1, x2, y2, …] (m). */
@@ -16,16 +20,26 @@ export type Terrain = { seeds: Seeds; grid?: HeightGrid; extent: 'plot' | 'seeds
 export function useTerrain(): Terrain {
   const drawn = useDrawnSheets();
   return useMemo(() => {
+    const hit = cache.get(drawn);
+    if (hit) return hit;
     const seeds = profileSeeds(
       drawn.flatMap((d) => (d.placement.type === 'vertical' ? [{ file: d.file, placement: d.placement, sheet: d.sheet }] : [])),
     );
     const plot = plotOutline(drawn);
     const plotBox = plot && segmentsBox(plot, (x, y) => [x, y]);
-    const box = plotBox ? grow(plotBox, PLOT_MARGIN) : seedBox(seeds.points);
-    const grid = box && heightGrid(seeds.points, box);
-    return { seeds, grid, extent: plotBox ? 'plot' : 'seeds', plot };
+    const area = plot && offsetOutline(plot, PLOT_MARGIN);
+    const areaBox = area && segmentsBox(area, (x, y) => [x, y]);
+    const box = areaBox ?? (plotBox ? grow(plotBox, PLOT_MARGIN) : seedBox(seeds.points));
+    const raw = box && heightGrid(seeds.points, box);
+    const grid = raw && area ? { ...raw, outside: outsideMask(raw, area) } : raw;
+    const out: Terrain = { seeds, grid, extent: plotBox ? 'plot' : 'seeds', plot };
+    cache.set(drawn, out);
+    return out;
   }, [drawn]);
 }
+
+/** Keyed on the shared drawn-sheets array, so every caller (mesh, panel, version bar) gets the same grid, built once. */
+const cache = new WeakMap<DrawnSheet[], Terrain>();
 
 /** `PZT_ZAKRES` of an aligned site sheet (one with a transform), in plan coords. Isolated lines (a legend sample) are left out. */
 function plotOutline(drawn: DrawnSheet[]): Float64Array | undefined {

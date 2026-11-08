@@ -16,6 +16,11 @@ html, body, #root { height: 100%; margin: 0; }
 .view-bar { position: absolute; top: 12px; right: 12px; z-index: 1; display: flex; gap: 8px; }
 .view-bar button { font: inherit; padding: 6px 12px; border: 1px solid #8c959f; border-radius: 6px; background: #f6f8fa; cursor: pointer; }
 .view-bar button[aria-pressed='true'] { background: #ddf4ff; border-color: #0969da; }
+/* Environment half (ADR 0001): outside the canvas event container, so clicks here don't reach the controls. */
+.env-bar { position: absolute; top: 56px; left: calc(50% + 12px); right: 12px; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; }
+.env-bar select, .env-bar button { font: inherit; padding: 5px 10px; border: 1px solid #8c959f; border-radius: 6px; background: #f6f8fa; cursor: pointer; }
+.env-bar button:disabled { cursor: default; opacity: 0.5; }
+.env-bar .status { padding: 4px 8px; border-radius: 6px; background: #fff; border: 1px solid #d0d7de; font-variant-numeric: tabular-nums; }
 .sidebar h2 { font-size: 14px; margin: 16px 0 8px; word-break: break-all; }
 .sidebar button { font: inherit; padding: 6px 12px; border: 1px solid #8c959f; border-radius: 6px; background: #f6f8fa; cursor: pointer; }
 .sidebar button:hover { background: #eaeef2; }
@@ -43,3 +48,7 @@ html, body, #root { height: 100%; margin: 0; }
 .align-cursor { transform: translate(12px, -28px); white-space: nowrap; font-size: 12px; padding: 2px 6px; background: #fff; border: 2px solid; border-radius: 4px; }
 .measure-readout { position: absolute; left: 12px; bottom: 36px; pointer-events: none; font-size: 13px; padding: 6px 10px; display: grid; gap: 2px; background: #fff; border: 1px solid #cf222e; border-radius: 6px; font-variant-numeric: tabular-nums; }
 .terrain-sheets { margin: 4px 0; padding-left: 16px; font-size: 12px; }
+.edit-list { margin: 4px 0; padding-left: 20px; font-size: 13px; display: grid; gap: 6px; }
+.edit-list li.selected { background: #fff8c5; border-radius: 4px; }
+.diff-legend { display: inline-flex; align-items: center; gap: 6px; }
+.diff-ramp { display: inline-block; width: 90px; height: 10px; border: 1px solid #d0d7de; border-radius: 2px; }

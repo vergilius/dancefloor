@@ -327,10 +327,17 @@ const parseNum = (text: string) => {
 /** Shown to the mm, so derived values don't print float noise. */
 const fmt = (v: number) => String(Number(v.toFixed(3)));
 
-/** Accepts a decimal comma or dot. Invalid text is shown in red and not committed. */
-function ZInput({ value, onChange }: { value: number; onChange: (z: number) => void }) {
+/** Accepts a decimal comma or dot. Invalid text (not a number, or failing `accept`) is shown in red and not committed. */
+export function ZInput({ value, onChange, accept = () => true }: { value: number; onChange: (z: number) => void; accept?: (v: number) => boolean }) {
   const [text, setText] = useState(() => fmt(value));
-  const valid = Number.isFinite(parseNum(text));
+  // Follow changes from outside (undo, reset), but not the value this field just committed while typing.
+  const [shown, setShown] = useState(value);
+  if (value !== shown) {
+    setShown(value);
+    if (parseNum(text) !== value) setText(fmt(value));
+  }
+  const ok = (v: number) => Number.isFinite(v) && accept(v);
+  const valid = ok(parseNum(text));
   return (
     <input
       className={`z-input${valid ? '' : ' invalid'}`}
@@ -339,7 +346,7 @@ function ZInput({ value, onChange }: { value: number; onChange: (z: number) => v
       onChange={(e) => {
         setText(e.target.value);
         const z = parseNum(e.target.value);
-        if (Number.isFinite(z)) onChange(z);
+        if (ok(z)) onChange(z);
       }}
       onBlur={() => valid && setText(fmt(value))}
     />
