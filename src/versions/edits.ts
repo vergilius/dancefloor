@@ -89,24 +89,22 @@ export function replay(g: HeightGrid, edits: readonly Edit[]): { h: Float32Array
   return { h, volumes };
 }
 
-/** Against the frozen base, each corner standing for one cell area. m³; `uncertainShare` = changed corners on uncertain terrain (0–1). */
-export type Totals = { cut: number; fill: number; net: number; changed: number; uncertainShare: number };
+/** Against the frozen base, each corner standing for one cell area. m³. */
+export type Totals = { cut: number; fill: number; net: number; changed: number };
 
 export function totals(g: HeightGrid, h: Float32Array): Totals {
   const a = g.cell * g.cell;
   let cut = 0;
   let fill = 0;
   let changed = 0;
-  let unsure = 0;
   for (let k = 0; k < h.length; k++) {
     const d = h[k]! - g.base[k]!;
     if (d === 0) continue;
     if (d > 0) fill += d * a;
     else cut -= d * a;
     changed++;
-    unsure += g.uncertain[k]!;
   }
-  return { cut, fill, net: fill - cut, changed, uncertainShare: changed ? unsure / changed : 0 };
+  return { cut, fill, net: fill - cut, changed };
 }
 
 const onLattice = (v: number) => Math.abs(v / LATTICE - Math.round(v / LATTICE)) < 1e-6;

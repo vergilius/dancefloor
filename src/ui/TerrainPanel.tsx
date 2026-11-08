@@ -47,16 +47,14 @@ function GridSummary({ grid, extent, refValue }: { grid: HeightGrid; extent: 'pl
   const stats = useMemo(() => {
     let min = Infinity;
     let max = -Infinity;
-    let unc = 0;
     let n = 0;
     for (let i = 0; i < grid.base.length; i++) {
       if (isOutside(grid, i)) continue;
       min = Math.min(min, grid.base[i]!);
       max = Math.max(max, grid.base[i]!);
-      unc += grid.uncertain[i]!;
       n++;
     }
-    return { min, max, uncertainPct: n ? (100 * unc) / n : 0, area: n * grid.cell * grid.cell };
+    return { min, max, area: n * grid.cell * grid.cell };
   }, [grid]);
   return (
     <>
@@ -69,8 +67,6 @@ function GridSummary({ grid, extent, refValue }: { grid: HeightGrid; extent: 'pl
         </span>
         <br />
         {t.terrain.range}: {formatHeight(stats.min, refValue)} … {formatHeight(stats.max, refValue)}
-        <br />
-        {t.terrain.uncertain(stats.uncertainPct)}
       </p>
       <TiCheck grid={grid} refValue={refValue} />
     </>

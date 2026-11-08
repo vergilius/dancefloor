@@ -152,7 +152,6 @@ export const t = {
     extent: { plot: 'zakres: obrys działki PZT_ZAKRES + 2 m', seeds: 'zakres: punkty profili + 2,5 m (PZT-01 niewyrównany)' },
     range: 'Wysokości',
     area: (m2: number) => `obszar ≈ ${Math.round(m2).toLocaleString('pl-PL')} m²`,
-    uncertain: (pct: number) => `Poza profilami (wysokość przedłużona, niepewna): ${pct.toFixed(0)} % węzłów`,
     noGrid: 'Za mało punktów, by zbudować siatkę',
     tiTitle: 'Kontrola Ti (rzędna z opisu vs siatka)',
     tiNone: 'Brak punktów Ti / Tp=Ti z położeniem',
@@ -186,8 +185,7 @@ export const t = {
     panelTitle: 'Wersja terenu',
     totals: (cut: number, fill: number, net: number) =>
       `wykop ${cut.toFixed(2)} m³ · nasyp ${fill.toFixed(2)} m³ · bilans ${net >= 0 ? '+' : '−'}${Math.abs(net).toFixed(2)} m³`,
-    changed: (n: number, uncertainPct: number) =>
-      `zmienione węzły: ${n.toLocaleString('pl-PL')}, w tym ${uncertainPct.toFixed(0)} % na terenie niepewnym`,
+    changed: (n: number) => `zmienione węzły: ${n.toLocaleString('pl-PL')}`,
     editsTitle: 'Zmiany (w kolejności, późniejsza wygrywa)',
     zLabel: 'z',
     dzLabel: 'dz',

@@ -8,7 +8,7 @@ import { replay, withValue, type Edit, type EditVolume, type Rect, type Tool } f
 import { packGrid, parseVersionFile, serializeVersionFile, unpackGrid, type VersionFile } from '../versions/file';
 import { useTerrain, type Terrain } from './terrain';
 
-export type Version = { id: string; name: string; created: string; grid: HeightGrid; edits: Edit[] };
+export type Version = { id: string; name: string; created: string; grid: HeightGrid; edits: Edit[]; fileVersion: VersionFile['version'] };
 /** A version file that couldn't be read: listed with the reason, never deleted or overwritten. */
 export type BrokenVersion = { file: string; error: string };
 export type Active = 'preview' | string;
@@ -50,8 +50,9 @@ type VersionsState = {
 
 const errText = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
+/** Rewrites keep the file version the .bin was written with (the .bin is never rewritten). */
 const toFile = (v: Version): VersionFile => ({
-  version: 1,
+  version: v.fileVersion,
   id: v.id,
   name: v.name,
   created: v.created,
@@ -68,8 +69,8 @@ function nextName(versions: Version[]): string {
 async function readVersion(dir: FileSystemDirectoryHandle, file: string): Promise<Version> {
   const f = parseVersionFile(await (await readFile(dir, file)).text());
   if (`${f.id}.json` !== file) throw new Error(`id "${f.id}" doesn't match the filename`);
-  const grid = unpackGrid(await (await readFile(dir, `${f.id}.bin`)).arrayBuffer(), f.grid);
-  return { id: f.id, name: f.name, created: f.created, grid, edits: f.edits };
+  const grid = unpackGrid(await (await readFile(dir, `${f.id}.bin`)).arrayBuffer(), f.grid, f.version);
+  return { id: f.id, name: f.name, created: f.created, grid, edits: f.edits, fileVersion: f.version };
 }
 
 export const useVersions = create<VersionsState>()((set, get) => ({
@@ -108,10 +109,9 @@ export const useVersions = create<VersionsState>()((set, get) => ({
       ...live,
       origin: { ...live.origin },
       base: live.base.slice(),
-      uncertain: live.uncertain.slice(),
       ...(live.outside && { outside: live.outside.slice() }),
     };
-    const v: Version = { id, name: nextName(versions), created, grid, edits: [] };
+    const v: Version = { id, name: nextName(versions), created, grid, edits: [], fileVersion: 2 };
     try {
       const vdir = (await versionsDir(dir, true))!;
       // The .bin first: a version is listed by its JSON, so a failed export leaves no half version behind.

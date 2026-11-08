@@ -3,6 +3,8 @@ import Delaunator from 'delaunator';
 
 /** Grid cell size (m). */
 export const CELL = 0.1;
+/** Outside the hull: hull boundary sampled every this (m) for the inverse-distance average. */
+const HULL_STEP = 0.5;
 /** Seeds closer than this (m, in plan) are merged (heights averaged). */
 const MERGE = 0.01;
 
@@ -10,7 +12,7 @@ export type Box = { minX: number; minY: number; maxX: number; maxY: number };
 
 /**
  * `cols` × `rows` cells; heights at the (cols + 1) × (rows + 1) cell corners, row-major from `origin` (min x, min y).
- * Heights in m rel ±0.00. `uncertain` = 1 where a corner lies outside the seeds' hull (flat extrapolation).
+ * Heights in m rel ±0.00. Outside the seeds' hull the heights are an inverse-distance average of the hull boundary.
  */
 export type HeightGrid = {
   cell: number;
@@ -18,7 +20,6 @@ export type HeightGrid = {
   cols: number;
   rows: number;
   base: Float32Array;
-  uncertain: Uint8Array;
   /** 1 = corner outside the modelled area (plot outline + margin): not drawn, not edited, not counted. None = all inside. */
   outside?: Uint8Array;
 };
@@ -111,9 +112,23 @@ export function heightGrid(seeds: Float64Array, box: Box, cell = CELL): HeightGr
     }
   }
 
-  // Outside: the height of the nearest point on the hull boundary, flagged uncertain.
+  // Outside: inverse-distance (1/d²) average of the hull boundary, plus the nearest boundary point, so the surface
+  // meets the hull without a step and evens out towards the average of the boundary farther away (user, 2026-11-08).
   const hull = d.hull;
-  const uncertain = new Uint8Array(base.length);
+  const samples: number[] = [];
+  for (let e = 0; e < hull.length; e++) {
+    const p = hull[e]!;
+    const q = hull[(e + 1) % hull.length]!;
+    const n = Math.max(1, Math.ceil(Math.hypot(xy[2 * q]! - xy[2 * p]!, xy[2 * q + 1]! - xy[2 * p + 1]!) / HULL_STEP));
+    for (let k = 0; k < n; k++) {
+      const s = k / n;
+      samples.push(
+        xy[2 * p]! + s * (xy[2 * q]! - xy[2 * p]!),
+        xy[2 * p + 1]! + s * (xy[2 * q + 1]! - xy[2 * p + 1]!),
+        pts[3 * p + 2]! + s * (pts[3 * q + 2]! - pts[3 * p + 2]!),
+      );
+    }
+  }
   for (let j = 0; j <= rows; j++) {
     const y = oy + j * cell;
     for (let i = 0; i <= cols; i++) {
@@ -136,11 +151,18 @@ export function heightGrid(seeds: Float64Array, box: Box, cell = CELL): HeightGr
           h = pts[3 * p + 2]! + s * (pts[3 * q + 2]! - pts[3 * p + 2]!);
         }
       }
-      base[idx] = h;
-      uncertain[idx] = 1;
+      const d0 = Math.max(best, 1e-12);
+      let num = h / d0;
+      let den = 1 / d0;
+      for (let k = 0; k < samples.length; k += 3) {
+        const d2 = Math.max((samples[k]! - x) ** 2 + (samples[k + 1]! - y) ** 2, 1e-12);
+        num += samples[k + 2]! / d2;
+        den += 1 / d2;
+      }
+      base[idx] = num / den;
     }
   }
-  return { cell, origin: { x: ox, y: oy }, cols, rows, base, uncertain };
+  return { cell, origin: { x: ox, y: oy }, cols, rows, base };
 }
 
 /** Bilinear height at plan (x, y); clamped to the grid's extent. */

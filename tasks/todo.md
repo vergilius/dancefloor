@@ -1,6 +1,6 @@
 # M4a task list
 
-Next: T4 (undo/redo and the Δh map). Terrain is now the plot outline + 2 m (mask, `outsideMask`), waiting for the user's check; versions made before it have no mask. Volumes count edge corners: 4 × 6 m at +0.10 m → +2.50 m³, 1 × 1 m → 0.121 m³ (user OK). After M4a: M5 house massing, then M4b–M4d (ADR 0004).
+Next: T4 (undo/redo and the Δh map). Terrain changed 2026-11-08: plot outline + 2 m mask, no "uncertain" area (IDW of the hull boundary outside the profiles); waiting for the user's check. Version files are now v2 (.bin without uncertain), v1 still loads.
 Plan: `tasks/plan.md`. Spec: PLAN.md §5 M4a, ADR 0003. M3 task notes are in git history (`tasks/todo.md` at c477be0).
 
 Commands: `pnpm dev`, `pnpm check` (build + lint + guards). No automated tests (CLAUDE.md).

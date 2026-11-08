@@ -23,7 +23,7 @@ export function VersionPanel() {
       <p>
         {t.versions.totals(sum.cut, sum.fill, sum.net)}
         <br />
-        <span className="muted">{t.versions.changed(sum.changed, sum.uncertainShare * 100)}</span>
+        <span className="muted">{t.versions.changed(sum.changed)}</span>
       </p>
       {version.edits.length === 0 ? (
         <p className="muted">{t.versions.noEdits}</p>

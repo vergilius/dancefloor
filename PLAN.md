@@ -371,26 +371,28 @@ Requirements:
   coords through the sheet's vertical placement (origin + x·dir, height = sheet y). Elevations go on their façade
   plane as placed in M1b. Unplaced sheets give no seeds.
 - **Existing terrain = `terrain.base`** (pure `src/terrain/grid.ts`): delaunator over all seeds (duplicates within
-  1 cm merged), linear interpolation inside the hull. Outside the hull: the height of the nearest point on the hull
-  boundary (continuous, flat outward), and the cell is flagged **uncertain**. Grid: 0.10 m cells over the bbox of the
+  1 cm merged), linear interpolation inside the hull. Outside the hull: an inverse-distance (1/d²) average of the hull
+  boundary (sampled every 0.5 m) plus its nearest point, so the surface meets the hull without a step and evens out
+  towards the boundary average out to the edge (user, 2026-11-08: no "uncertain" area; was flat nearest-hull height,
+  flagged uncertain and drawn lighter). Grid: 0.10 m cells over the bbox of the
   plot outline (`PZT_ZAKRES` through PZT-01's transform) grown by 2 m; corners farther than 2 m outside the outline are
   masked out (not drawn, edited or counted; the plot boundary is the reference, user 2026-11-08, was bbox + 1 m). Without an aligned PZT-01: seed bbox + 5 m (2.5 m per side).
 - **Not saved (ADR 0002):** `terrain.base` is generated from the DWGs on load (no change to `dancefloor.json`). The
   environment editor (M4 on) edits a copy of the generated model; only the copy's edits are saved.
 - **Tp:** no Tp surface in M3. The Tp points stay as M2 markers, for reference in M4 (user, 2026-11-08).
 - **Survey points deferred** (user, 2026-11-08): no spot-height tool and no survey import in M3. Parts of the plot are
-  outside the profile hull and show as uncertain until then.
-- **Environment viewport:** the terrain mesh (one vertex per cell corner, height-tinted), uncertain cells drawn
-  lighter (opaque since 2026-11-08: semi-transparent read as a missing piece), contour lines every 0.25 m (marching squares, every 1 m thicker), and the plot
+  outside the profile hull; their heights are only the averaged extension until then.
+- **Environment viewport:** the terrain mesh (one vertex per cell corner, height-tinted, one look
+  everywhere), contour lines every 0.25 m (marching squares, every 1 m thicker), and the plot
   outline. Toggle "Teren" (view setting, default on, not saved). Design is unchanged.
 - **Visible checks (one panel line + Ti list):** seeds used / segments dropped, grid size, height range (rel + abs),
-  uncertain share; the **Ti check**: for every resolved Ti / Tp=Ti marker the grid height at its point vs the label
+  modelled area (m²); the **Ti check**: for every resolved Ti / Tp=Ti marker the grid height at its point vs the label
   value, and the max |Δ|.
 - **Best available, not exact** (user, 2026-11-08): the terrain will mostly be reshaped in the later editor, so
   M3 keeps the simplest approach that works. No conflict resolution between sources, no crossing analysis.
 
 ✅ Ti check: all Ti / Tp=Ti points within 2 cm, except the PAB-09 353.48 drawing conflict (see facts). Legend segments, the PAB-08 stub and the PAB-10 piece are dropped (6 in all). Contours every
-0.25 m; uncertain area visibly different; orbiting the Environment view stays smooth (60 fps).
+0.25 m over the whole modelled area; orbiting the Environment view stays smooth (60 fps).
 
 **M4 — Terrain editing (core value)**, four sub-milestones (capability map, user 2026-11-08):
 
@@ -417,12 +419,13 @@ Requirements:
   generated model live (as in M3), read-only, no edit tools. Buttons: **"Nowa wersja"** (snapshot of the current
   generated terrain, named "Wersja n", opened right away), **"Zmień nazwę"**, **"Usuń"** (confirm). The Design
   viewport is unchanged in every mode.
-- **A version** = frozen `base` + `uncertain` + grid geometry (copied at export, never regenerated) + an ordered
+- **A version** = frozen `base` + outside mask + grid geometry (copied at export, never regenerated) + an ordered
   list of **edits**. Its surface = edits applied in order over its frozen base. Changing the DWGs later doesn't touch
   existing versions. Without a generated terrain (no seeds), "Nowa wersja" is disabled.
 - **Storage (pure `src/versions/file.ts` + folder I/O):** subfolder `dancefloor-versions/` in the project folder;
-  per version `<id>.json` (`{ version: 1, id, name, created, grid: { cell, origin, cols, rows }, edits: [...] }`,
-  parsed strictly) and `<id>.bin` (base Float32 + uncertain Uint8, ≈ 0.7 MB). Listed on folder load (unreadable
+  per version `<id>.json` (`{ version: 2, id, name, created, grid: { cell, origin, cols, rows }, edits: [...] }`,
+  parsed strictly) and `<id>.bin` (base Float32 + outside mask Uint8, ≈ 0.7 MB; version 1 files also had an uncertain
+  Uint8 section, skipped on read). Listed on folder load (unreadable
   files flagged, not deleted). **Autosave:** the JSON is written 1 s after the last change; the .bin only at export.
   A save error shows in the bar. Versions are not in `dancefloor.json`.
 - **Edits** (pure `src/versions/edits.ts`): `{ id, tool, rect: { x0, y0, x1, y1 } /* plan m, on the 0.5 m lattice */,
@@ -437,8 +440,8 @@ Requirements:
   before it). Select = rect outlined in the view; change dz / z numerically; delete. Undo / redo (Ctrl+Z /
   Ctrl+Shift+Z, and buttons) over add, change and delete, per version, not saved (cleared on folder load).
 - **Volumes:** each grid corner stands for one cell area (0.10 × 0.10 m). Version totals against its frozen base:
-  **cut** = Σ max(0, base − h) × a, **fill** = Σ max(0, h − base) × a, net = fill − cut, m³ to 0.01. Share of changed
-  corners on uncertain terrain shown with the totals.
+  **cut** = Σ max(0, base − h) × a, **fill** = Σ max(0, h − base) × a, net = fill − cut, m³ to 0.01, plus the number of changed
+  corners.
 - **View in a version:** mesh and contours show the version's surface (contours may update on release). Toggle
   **"Różnice"**: colours by Δh = surface − frozen base, red = cut, blue = fill, white = 0, saturated at ±1.0 m, with
   a small legend. The step at an edit's edge is a one-cell-wide steep strip until M4b's bevel.
