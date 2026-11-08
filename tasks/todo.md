@@ -1,6 +1,6 @@
 # M5 task list
 
-Next: Task 3 (openings from the elevations). T1, T2 and checkpoint A verified by the user 2026-11-08.
+Next: M5b spec (PLAN.md §5 M5b, ADR 0006) awaiting the user's approval + 2 open questions; then re-plan (T3, M5b tasks, T4). T1, T2, checkpoint A verified 2026-11-08.
 T2 note: "Z rzutu parteru" (ADR 0005 amendment) builds the annex, the terrace slab (L, 31.90 m²), the deck (52.20 m²), 2 posts, 1 pier and 7 S-COLS columns from PAB-01, heights read from the elevations/section (annex +3.59, slab +2.635…+3.22, posts −0.02…+2.635, columns −0.02…+2.63).
 T2 note: the slab carries the awning opening as `holes` (6.93 × 2.14 m, net 17.07 m²).
 Real-file checks without the browser: Node 24 runs `src/` TS directly with a resolver hook adding `.ts` to extensionless imports; load a DWG via `@mlightcad/libredwg-web` + `normalize()` in a scratchpad script (never in the repo, never commit `dwg/`).

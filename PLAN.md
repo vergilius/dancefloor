@@ -528,6 +528,62 @@ posts drawn the same way. Openings: PAB-10 shows its 6 on the south face (terrac
 merged PAB-08 box can be hidden, and hiding survives a reload. A Wyrównaj +0.30 next to the south façade meets the
 wall without a gap. Reload → the house is back. Podgląd, versions, Design unchanged; orbiting stays smooth.
 
+**M5b — Hollow house** (spec drafted 2026-11-08 on the real files, **awaiting approval**; ADR 0006). User,
+2026-11-08: "żeby bryła domu i garażu była dziurawa w środku … kamera wjedzie do domu … zobaczyć wszystkie ściany i
+dziury z okien i drzwi", option 1 (all walls, exterior and partitions, real openings). Built after M5 T3 (the
+elevation openings are its input); M5 T4 (hiding openings) stays.
+
+Facts (PAB-01, PAB-02, PAB-04, PAB-05; plan coords m, heights rel ±0.00):
+- **Wall layers** (both plans): `I-WALL` = exterior walls, both faces 0.47–0.48 m apart, with jamb lines across the
+  wall at the openings; `I-WALL-1` = a layer line inside the exterior walls; `A-WALL-1` = partitions 0.12 / 0.25 m;
+  `A-WALL` = the outer face, more partition faces, posts and piers. PAB-01: 98 / 69 / 109 / 246 segments, PAB-02:
+  75 / 119 / 71 / 312.
+- **No closed pieces:** PAB-01 `I-WALL` 40 pieces, 0 closed, 81 open ends; `A-WALL-1` 18 pieces, 1 closed. Walls
+  can't be found as solids; each line becomes a vertical face (a wall drawn with two lines gets two faces, so it reads
+  as thick from inside). Plan gaps = openings.
+- **Levels** (PAB-05 B-B): ground floor 0.00 (slab down to −0.45), ceiling `A-FLOR-2` +2.82, floor build-up to
+  +3.22, attic plan at +3.29. Garage (PAB-04 A-A): floor +0.30, ceiling `A-FLOR-2` +2.82, parapet +3.59.
+- Interior doors are not on the elevations; their heads aren't known from the files read so far.
+
+Requirements:
+- **Storeys** = horizontal plan sheets with wall layers, by z (PAB-01 at 0.00, PAB-02 at +3.29). A storey's wall
+  lines (`I-WALL`, `I-WALL-1`, `A-WALL`, `A-WALL-1`; segments < 2 cm and duplicates of another layer's line dropped)
+  are extruded as double-sided vertical faces from its z to the next storey's z; on the top storey up to the gable
+  roof surface (each face's top follows the roof planes, split at the ridge). Exterior walls (`I-WALL`, `A-WALL`
+  outside the partitions) on the ground storey start at the block bottom (−1.40), so they meet the terrain.
+- Lines inside the annex rectangle belong to the annex: floor → its top (+3.59). Lines in no house block are skipped
+  (posts, piers, deck: already blocks).
+- **Slabs:** between storeys one slab over the main body rectangle, from the ceiling to the next storey's z; ceiling
+  = the highest `A-FLOR-2` line below the slab top on a placed section crossing the block (+2.82); annex roof from its
+  ceiling (+2.82) to its top. Ground slab 0.00 … −0.45 under the main body and the annex (−0.45 = lowest `A-FLOR-2`
+  line). No stair opening (out of M5b).
+- **Exterior openings** (from M5 T3: each elevation rect placed on the first wall face behind it): the plan gap is
+  already there; a sill fill (storey floor or block bottom → sill) and a head fill (head → storey top) close the
+  rest, the rect's width × the wall thickness (the `I-WALL` face distance at that point). Doors: head fill only.
+  Openings that land on no plan gap: still drawn as dark quads (counted).
+- **Interior doors:** plan gaps in partitions stay full height (floor → ceiling slot) — simplification, see open
+  question 1.
+- **Main body and annex** are no longer drawn as solids in Environment: their walls, slabs and roof are. Their
+  blocks stay (data, roof, opening placement). Other blocks (slab, deck, posts, columns, pier) unchanged.
+- **Looking inside:** double-click on a surface in Environment orbits around that point (`setOrbitPoint`), so the
+  camera can be put into a room by zooming; near plane 0.1 m.
+- **Panel:** per storey: wall faces, total length, skipped segments; slabs with heights and source sheet; openings
+  filled / not on a gap.
+
+Out of M5b: stairs and the stair opening, furniture, interior door heads (until question 1), wall materials, caps on
+wall tops, the attic floor's own outline (the main rectangle is used), cutting the roof for roof windows.
+
+✅ Zoomed into the living room from the south terrace door: the partitions of PAB-01 stand where the plan shows them
+(Design top view, < 1 cm), the south windows are holes with sill and head as on PAB-10, the ceiling at +2.82 and the
+attic floor at +3.29 are there; in the attic the gable walls reach the ridge and the knee walls meet the roof
+planes; the garage has its door hole (PAB-08) and its ceiling at +2.82. From outside the house still matches the
+renders. Orbiting stays smooth.
+
+Open questions:
+1. Interior door heads: full-height slots (as specified) or a head fill at a fixed height (e.g. +2.05 above the
+   floor, flagged as assumed)?
+2. Attic floor: +3.29 (the placed PAB-02) or +3.22 (the `A-FLOR-1` finish line on PAB-05)?
+
 **M6 — Output**
 - Save/load project JSON; screenshot; glTF export (`GLTFExporter`).
 - Optional: export designed contours as DXF for the architect (simple R12 writer).
