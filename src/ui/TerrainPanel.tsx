@@ -5,7 +5,7 @@ import { useLevelMarkers } from '../scene/LevelMarkers';
 import { useDrawnSheets } from '../state/drawn';
 import { useRefValue } from '../state/levels';
 import { useTerrain } from '../state/terrain';
-import { sampleGrid, type HeightGrid } from '../terrain/grid';
+import { isOutside, sampleGrid, type HeightGrid } from '../terrain/grid';
 import { t } from './strings';
 
 const m = (v: number) => v.toFixed(2);
@@ -48,19 +48,25 @@ function GridSummary({ grid, extent, refValue }: { grid: HeightGrid; extent: 'pl
     let min = Infinity;
     let max = -Infinity;
     let unc = 0;
+    let n = 0;
     for (let i = 0; i < grid.base.length; i++) {
+      if (isOutside(grid, i)) continue;
       min = Math.min(min, grid.base[i]!);
       max = Math.max(max, grid.base[i]!);
       unc += grid.uncertain[i]!;
+      n++;
     }
-    return { min, max, uncertainPct: (100 * unc) / grid.base.length };
+    return { min, max, uncertainPct: n ? (100 * unc) / n : 0, area: n * grid.cell * grid.cell };
   }, [grid]);
   return (
     <>
       <p>
         {t.terrain.grid(grid.cols, grid.rows, grid.cell)}
         <br />
-        <span className="muted">{t.terrain.extent[extent]}</span>
+        <span className="muted">
+          {t.terrain.extent[extent]}
+          {grid.outside && <> · {t.terrain.area(stats.area)}</>}
+        </span>
         <br />
         {t.terrain.range}: {formatHeight(stats.min, refValue)} … {formatHeight(stats.max, refValue)}
         <br />

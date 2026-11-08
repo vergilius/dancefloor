@@ -8,7 +8,7 @@ import { BufferAttribute, BufferGeometry, Color, DoubleSide } from 'three';
 import { useProject } from '../state/store';
 import { useEnvSurface } from '../state/versions';
 import { contours, type Contour } from '../terrain/contours';
-import { sampleGrid, type HeightGrid } from '../terrain/grid';
+import { cellOutside, isOutside, sampleGrid, type HeightGrid } from '../terrain/grid';
 import { ENV_LAYER } from './split';
 
 /** Height ramp low → high. */
@@ -74,6 +74,7 @@ function terrainGeometry(g: HeightGrid): { certain: BufferGeometry; uncertain: B
   let min = Infinity;
   let max = -Infinity;
   for (let k = 0; k < n; k++) {
+    if (isOutside(g, k)) continue;
     min = Math.min(min, g.base[k]!);
     max = Math.max(max, g.base[k]!);
   }
@@ -101,6 +102,7 @@ function terrainGeometry(g: HeightGrid): { certain: BufferGeometry; uncertain: B
       const b = a + 1;
       const d = a + w;
       const e = d + 1;
+      if (cellOutside(g, a)) continue; // beyond the plot + margin: not drawn
       const out = g.uncertain[a]! | g.uncertain[b]! | g.uncertain[d]! | g.uncertain[e]!;
       // Counter-clockwise in plan (east, then north), so the normals point up.
       (out ? unsure : sure).push(a, b, d, b, e, d);

@@ -1,5 +1,5 @@
 // Contour lines on the height grid (PLAN.md §5 M3): marching squares over the cell corners. Pure.
-import type { HeightGrid } from './grid';
+import { cellOutside, isOutside, type HeightGrid } from './grid';
 
 /** Contour interval (m); every MAJOR_EVERY-th level (a whole metre) is a major contour. */
 export const CONTOUR_STEP = 0.25;
@@ -17,7 +17,7 @@ export function contours(g: HeightGrid, step = CONTOUR_STEP): Contour[] {
   let min = Infinity;
   let max = -Infinity;
   for (let k = 0; k < g.base.length; k++) {
-    if (g.uncertain[k]) continue;
+    if (g.uncertain[k] || isOutside(g, k)) continue;
     min = Math.min(min, g.base[k]!);
     max = Math.max(max, g.base[k]!);
   }
@@ -33,7 +33,7 @@ export function contours(g: HeightGrid, step = CONTOUR_STEP): Contour[] {
         const b = a + 1; //     SE
         const d = a + w; //     NW
         const e = d + 1; //     NE
-        if (g.uncertain[a]! | g.uncertain[b]! | g.uncertain[d]! | g.uncertain[e]!) continue;
+        if (g.uncertain[a]! | g.uncertain[b]! | g.uncertain[d]! | g.uncertain[e]! || cellOutside(g, a)) continue;
         const ha = g.base[a]!, hb = g.base[b]!, hd = g.base[d]!, he = g.base[e]!;
         // Corner "above" = h ≥ level; a corner exactly on the level counts as above (no double crossings).
         const code = (ha >= h ? 1 : 0) | (hb >= h ? 2 : 0) | (he >= h ? 4 : 0) | (hd >= h ? 8 : 0);

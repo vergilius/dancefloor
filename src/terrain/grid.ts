@@ -19,7 +19,48 @@ export type HeightGrid = {
   rows: number;
   base: Float32Array;
   uncertain: Uint8Array;
+  /** 1 = corner outside the modelled area (plot outline + margin): not drawn, not edited, not counted. None = all inside. */
+  outside?: Uint8Array;
 };
+
+/** Is corner k outside the modelled area? */
+export const isOutside = (g: HeightGrid, k: number) => g.outside?.[k] === 1;
+
+/** Does a cell (SW corner index `a`) touch the outside? Such cells aren't drawn. */
+export function cellOutside(g: HeightGrid, a: number): boolean {
+  if (!g.outside) return false;
+  const w = g.cols + 1;
+  return (g.outside[a]! | g.outside[a + 1]! | g.outside[a + w]! | g.outside[a + w + 1]!) === 1;
+}
+
+/**
+ * Corners farther than `margin` (m) outside a closed outline (segments [x1, y1, x2, y2, …], any order) → 1.
+ * Inside = even-odd crossings of a ray towards +x.
+ */
+export function outsideMask(g: HeightGrid, s: Float64Array, margin: number): Uint8Array {
+  const w = g.cols + 1;
+  const out = new Uint8Array(w * (g.rows + 1));
+  const m2 = margin * margin;
+  for (let j = 0, k = 0; j <= g.rows; j++) {
+    const y = g.origin.y + j * g.cell;
+    for (let i = 0; i < w; i++, k++) {
+      const x = g.origin.x + i * g.cell;
+      let inside = false;
+      let near = false;
+      for (let q = 0; q < s.length; q += 4) {
+        const x1 = s[q]!, y1 = s[q + 1]!, x2 = s[q + 2]!, y2 = s[q + 3]!;
+        if (y1 > y !== y2 > y && x < x1 + ((y - y1) * (x2 - x1)) / (y2 - y1)) inside = !inside;
+        const dx = x2 - x1, dy = y2 - y1;
+        const len2 = dx * dx + dy * dy;
+        const t = len2 > 0 ? Math.min(1, Math.max(0, ((x - x1) * dx + (y - y1) * dy) / len2)) : 0;
+        const ex = x1 + t * dx - x, ey = y1 + t * dy - y;
+        if (ex * ex + ey * ey <= m2) near = true;
+      }
+      out[k] = inside || near ? 0 : 1;
+    }
+  }
+  return out;
+}
 
 /** Seeds [x, y, h, …] → grid over `box` (snapped outward to the cell). Undefined if the seeds don't span an area. */
 export function heightGrid(seeds: Float64Array, box: Box, cell = CELL): HeightGrid | undefined {

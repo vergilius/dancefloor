@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useThree } from '@react-three/fiber';
 import { Raycaster, Vector2 } from 'three';
 import { useEnvSurface, useVersions } from '../state/versions';
-import { rayGrid, sampleGrid, type HeightGrid } from '../terrain/grid';
+import { isOutside, rayGrid, sampleGrid, type HeightGrid } from '../terrain/grid';
 import { DEFAULT_DZ, meanUnder, snapRect, type Edit, type Rect } from '../versions/edits';
 import { ENV_LAYER, halfAt } from './split';
 
@@ -36,7 +36,11 @@ export function EditTool() {
     const { origin: o, direction: d } = raycaster.ray;
     // Scene (x, z, −y) → plan (x, y, height), see coords.ts.
     const hit = rayGrid(g, [o.x, -o.z, o.y], [d.x, -d.z, d.y]);
-    return hit && [hit[0], hit[1]];
+    if (!hit) return undefined;
+    // The grid goes on under the hidden part beyond the plot + margin; a hit there doesn't count.
+    const i = Math.round((hit[0] - g.origin.x) / g.cell);
+    const j = Math.round((hit[1] - g.origin.y) / g.cell);
+    return isOutside(g, j * (g.cols + 1) + i) ? undefined : [hit[0], hit[1]];
   };
   const pickRef = useRef(pick);
   useEffect(() => {

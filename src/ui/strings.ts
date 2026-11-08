@@ -149,8 +149,9 @@ export const t = {
     none: 'Brak profili terenu (warstwa PZT_TEREN ISTNIEJĄCY) na umieszczonych elewacjach i przekrojach',
     grid: (cols: number, rows: number, cell: number) =>
       `Siatka ${cols} × ${rows} = ${(cols * rows).toLocaleString('pl-PL')} oczek po ${cell.toFixed(2)} m`,
-    extent: { plot: 'zakres: działka PZT_ZAKRES + 1 m', seeds: 'zakres: punkty profili + 2,5 m (PZT-01 niewyrównany)' },
+    extent: { plot: 'zakres: obrys działki PZT_ZAKRES + 2 m', seeds: 'zakres: punkty profili + 2,5 m (PZT-01 niewyrównany)' },
     range: 'Wysokości',
+    area: (m2: number) => `obszar ≈ ${Math.round(m2).toLocaleString('pl-PL')} m²`,
     uncertain: (pct: number) => `Poza profilami (wysokość przedłużona, niepewna): ${pct.toFixed(0)} % węzłów`,
     noGrid: 'Za mało punktów, by zbudować siatkę',
     tiTitle: 'Kontrola Ti (rzędna z opisu vs siatka)',

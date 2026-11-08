@@ -104,7 +104,13 @@ export const useVersions = create<VersionsState>()((set, get) => ({
     if (!dir) return;
     const created = new Date().toISOString();
     const id = `v${Date.now().toString(36)}`;
-    const grid: HeightGrid = { ...live, origin: { ...live.origin }, base: live.base.slice(), uncertain: live.uncertain.slice() };
+    const grid: HeightGrid = {
+      ...live,
+      origin: { ...live.origin },
+      base: live.base.slice(),
+      uncertain: live.uncertain.slice(),
+      ...(live.outside && { outside: live.outside.slice() }),
+    };
     const v: Version = { id, name: nextName(versions), created, grid, edits: [] };
     try {
       const vdir = (await versionsDir(dir, true))!;

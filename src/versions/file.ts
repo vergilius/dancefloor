@@ -1,5 +1,6 @@
 // Edit version files (PLAN.md §5 M4a, ADR 0003): `<id>.json` (meta + edits, parsed strictly) and `<id>.bin`
-// (frozen grid: base Float32 little-endian, then uncertain Uint8, one entry per grid corner). Pure, no I/O.
+// (frozen grid: base Float32 little-endian, then uncertain Uint8, then outside Uint8 if the grid has a mask, one entry
+// per grid corner). Pure, no I/O.
 import type { HeightGrid } from '../terrain/grid';
 import { parseEdit, type Edit } from './edits';
 
@@ -48,20 +49,24 @@ export const serializeVersionFile = (f: VersionFile) => JSON.stringify(f, null, 
 
 export function packGrid(g: HeightGrid): ArrayBuffer {
   const n = corners(g);
-  const buf = new ArrayBuffer(5 * n);
+  const buf = new ArrayBuffer((g.outside ? 6 : 5) * n);
   const view = new DataView(buf);
   for (let k = 0; k < n; k++) view.setFloat32(4 * k, g.base[k]!, true);
-  new Uint8Array(buf, 4 * n).set(g.uncertain);
+  new Uint8Array(buf, 4 * n, n).set(g.uncertain);
+  if (g.outside) new Uint8Array(buf, 5 * n, n).set(g.outside);
   return buf;
 }
 
 /** `.bin` → grid of the JSON's geometry. Throws if the length doesn't match it. */
 export function unpackGrid(buf: ArrayBuffer, geo: GridGeometry): HeightGrid {
   const n = corners(geo);
-  if (buf.byteLength !== 5 * n) throw new Error(`.bin: ${buf.byteLength} bytes, expected ${5 * n} for ${geo.cols} × ${geo.rows} cells`);
+  if (buf.byteLength !== 5 * n && buf.byteLength !== 6 * n)
+    throw new Error(`.bin: ${buf.byteLength} bytes, expected ${5 * n} or ${6 * n} for ${geo.cols} × ${geo.rows} cells`);
   const view = new DataView(buf);
   const base = new Float32Array(n);
   for (let k = 0; k < n; k++) base[k] = view.getFloat32(4 * k, true);
-  const uncertain = new Uint8Array(buf.slice(4 * n));
-  return { ...geo, origin: { ...geo.origin }, base, uncertain };
+  const uncertain = new Uint8Array(buf.slice(4 * n, 5 * n));
+  const grid: HeightGrid = { ...geo, origin: { ...geo.origin }, base, uncertain };
+  if (buf.byteLength === 6 * n) grid.outside = new Uint8Array(buf.slice(5 * n));
+  return grid;
 }

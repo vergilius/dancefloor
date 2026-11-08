@@ -372,8 +372,9 @@ Requirements:
   plane as placed in M1b. Unplaced sheets give no seeds.
 - **Existing terrain = `terrain.base`** (pure `src/terrain/grid.ts`): delaunator over all seeds (duplicates within
   1 cm merged), linear interpolation inside the hull. Outside the hull: the height of the nearest point on the hull
-  boundary (continuous, flat outward), and the cell is flagged **uncertain**. Grid: 0.10 m cells over the plot bbox
-  + 2 m (1 m per side; `PZT_ZAKRES` through PZT-01's transform). Without an aligned PZT-01: seed bbox + 5 m (2.5 m per side).
+  boundary (continuous, flat outward), and the cell is flagged **uncertain**. Grid: 0.10 m cells over the bbox of the
+  plot outline (`PZT_ZAKRES` through PZT-01's transform) grown by 2 m; corners farther than 2 m outside the outline are
+  masked out (not drawn, edited or counted; the plot boundary is the reference, user 2026-11-08, was bbox + 1 m). Without an aligned PZT-01: seed bbox + 5 m (2.5 m per side).
 - **Not saved (ADR 0002):** `terrain.base` is generated from the DWGs on load (no change to `dancefloor.json`). The
   environment editor (M4 on) edits a copy of the generated model; only the copy's edits are saved.
 - **Tp:** no Tp surface in M3. The Tp points stay as M2 markers, for reference in M4 (user, 2026-11-08).
