@@ -1,7 +1,10 @@
 # M3 task list
 
-Next: T3 (terrain mesh in Environment). T2 done 2026-11-08: grid 314 × 426 (`PZT_ZAKRES` had a stray legend LINE,
-now ignored), Ti max |Δ| ≤ 1.1 cm except PAB-09 353.48 (+6.9 cm, drawing conflict, PLAN.md §5 M3 facts).
+Next: T4 (contour lines, draw them in `src/scene/TerrainMesh.tsx`). T3 done 2026-11-08: mesh = two indexed geometries
+(certain / uncertain cells) sharing positions + normals; "Teren" toggle sits in the view bar (not LayerPanel); a
+directional light on ENV_LAYER only; the env ground Grid is hidden while the terrain is shown. `useTerrain()` also
+returns `plot` (PZT_ZAKRES segments in plan coords). Known: `useTerrain()` computes per caller (panel + mesh), fine so far.
+T2 (2026-11-08): grid 314 × 426, Ti max |Δ| ≤ 1.1 cm except PAB-09 353.48 (+6.9 cm, drawing conflict, PLAN.md §5 M3 facts).
 `useTerrain()` (seeds + grid) replaced `useTerrainSeeds()`; `connectedSegments()` in `src/terrain/seeds.ts`.
 Note (T1): `useDrawnSheets` is in `src/state/drawn.ts` (memoized); `useTerrainSeeds()` in `src/state/terrain.ts`. Plan: `tasks/plan.md`. Spec: PLAN.md §5 M3, ADR 0002.
 M2 task notes are in git history (`tasks/todo.md` at 48b5a42).
@@ -47,8 +50,8 @@ marker's label value vs the grid height at its point, Δ, and max |Δ|.
 height-tinted vertex colours, uncertain cells lighter and semi-transparent. Plot outline (`PZT_ZAKRES`) on the
 environment layer. Toggle "Teren" (store view setting, default on, not saved).
 **Acceptance criteria:**
-- [ ] Environment shows the terrain under the markers (Ti markers on the surface); Design shows no terrain
-- [ ] Uncertain area visibly different; toggle hides/shows terrain and outline
+- [x] Environment shows the terrain under the markers (Ti markers on the surface); Design shows no terrain
+- [x] Uncertain area visibly different; toggle hides/shows terrain and outline
 **Verification:** `pnpm check`; user orbits Environment and toggles.
 **Dependencies:** T2
 **Files:** `src/scene/TerrainMesh.tsx`, `src/scene/Viewport.tsx`, `src/state/store.ts`, `src/ui/LayerPanel.tsx`, `src/ui/strings.ts`
