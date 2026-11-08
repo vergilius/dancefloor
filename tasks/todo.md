@@ -1,6 +1,6 @@
 # M5 task list
 
-Next: user's browser check of (a) the simplified hollow house (shell + paired partitions + roof holes, ADR 0006 amendment; user reported "nie ma poddasza" before it — re-check the attic) and (b) T4 hide/show (panel "Lista otworów" per elevation; hidden = not cut, no quad, no roof hole; keys in `house.hiddenOpenings`). Then T4 docs (PLAN.md M5 ✅, CLAUDE.md status) and Checkpoint B.
+Next: M5 done (user check 2026-11-08: "looking good"). Next milestone M4b (PLAN.md §5): sharpen the spec with `spec-driven-development`, then a new task list.
 T4 note: hidden openings still count in "znalezione", not in "bez ściany"; stale keys (rect moved > 1 cm in the DWG) are kept in the file but match nothing.
 T3 note: pieces are joined where their boxes touch (the garage door's panel lines end mid-frame); counts 6/8/7/1 as specified. Rays start 0.3 m in front of the elevation plane (PAB-08's plane is 1 cm inside the gable).
 T6 note: openings cut the wall lines (plans draw lines across some openings: garage door, podcień doors) and get sill/head fills; a cut needs a wall face within 0.25 m of where the opening was placed (roof windows stay dark quads). West recess (0.60 m, under the terrace roof) found too; soffits via `soffitFrom`.
@@ -53,8 +53,8 @@ pieces joined within 5 mm, bboxes ≥ 0.3 × 0.3 m, overlapping ones merged; map
 moved along the view direction to the first block triangle hit by a ray through the centre (≤ 20 m, else "not
 placed"). Drawn in Environment as dark quads 1 cm proud of the face. Panel line per elevation: found / drawn / not placed.
 **Acceptance criteria:**
-- [ ] PAB-10: 6 openings on the south face (terrace door under the terrace roof); PAB-09 8, PAB-08 7, PAB-07 1 found
-- [ ] Openings sit on recessed faces too (annex vs main body), none floating in front
+- [x] PAB-10: 6 openings on the south face (terrace door under the terrace roof); PAB-09 8, PAB-08 7, PAB-07 1 found
+- [x] Openings sit on recessed faces too (annex vs main body), none floating in front
 **Verification:** `pnpm check`; user orbits round the house and reads the counts.
 **Dependencies:** T2
 **Files:** `src/house/openings.ts`, `src/scene/HouseMesh.tsx`, `src/ui/HousePanel.tsx`, `src/ui/strings.ts`
@@ -67,8 +67,8 @@ to the next storey's z; top storey up to the gable roof planes (split at the rid
 storey from the block bottom; lines in the annex up to its top; lines in no house block skipped. Environment draws
 the walls instead of the main body / annex solids (roof planes kept). Panel: per storey faces, length, skipped.
 **Acceptance criteria:**
-- [ ] Zoomed in, PAB-01 partitions and the east podcień wall stand where the plan draws them; attic gable walls reach the ridge, knee walls meet the roof
-- [ ] From outside the house still matches the renders
+- [x] Zoomed in, PAB-01 partitions and the east podcień wall stand where the plan draws them; attic gable walls reach the ridge, knee walls meet the roof
+- [x] From outside the house still matches the renders
 **Verification:** `pnpm check`; real-file counts by script; user zooms in.
 **Dependencies:** T3 (shares the Environment drawing), T2
 **Files:** `src/house/walls.ts`, `src/scene/HouseMesh.tsx`, `src/ui/HousePanel.tsx`, `src/ui/strings.ts`
@@ -79,8 +79,8 @@ the walls instead of the main body / annex solids (roof planes kept). Panel: per
 (+2.82 → top), ground slab (0.00 → −0.45). Each T3 opening on a plan gap gets sill/head fills through the wall
 thickness. Double-click in Environment sets the orbit point.
 **Acceptance criteria:**
-- [ ] South windows are holes with sill and head as on PAB-10; the garage door hole as on PAB-08; ceilings at +2.82
-- [ ] Double-click on a wall inside → orbiting around it
+- [x] South windows are holes with sill and head as on PAB-10; the garage door hole as on PAB-08; ceilings at +2.82
+- [x] Double-click on a wall inside → orbiting around it
 **Verification:** `pnpm check`; user walks through living room, attic, garage.
 **Dependencies:** T5
 **Files:** `src/house/walls.ts`, `src/house/openings.ts`, `src/scene/HouseMesh.tsx`, `src/scene/Viewport.tsx`, `src/ui/HousePanel.tsx`
@@ -90,11 +90,11 @@ thickness. Double-click in Environment sets the orbit point.
 **Description:** Opening list in the panel (per elevation, size, hide/show); hidden keys (sheet + rect to 1 cm) saved
 in `house.hiddenOpenings`. PLAN.md M5 done, CLAUDE.md status, this list.
 **Acceptance criteria:**
-- [ ] The merged PAB-08 box can be hidden; hiding survives Zapisz + reload; the hidden count shows
+- [x] The merged PAB-08 box can be hidden; hiding survives Zapisz + reload; the hidden count shows
 **Verification:** `pnpm check`; user hides, saves, reloads.
 **Dependencies:** T3
 **Files:** `src/ui/HousePanel.tsx`, `src/state/store.ts`, `src/project/projectFile.ts`, `src/scene/HouseMesh.tsx`, `PLAN.md`, `CLAUDE.md`
 **Scope:** S–M
 
 ### Checkpoint B (after T3–T4)
-- [ ] `pnpm check` green; the M5 ✅ in PLAN.md verified by the user; PLAN.md/CLAUDE.md status updated; merge
+- [x] `pnpm check` green; the M5 ✅ in PLAN.md verified by the user; PLAN.md/CLAUDE.md status updated; merge
