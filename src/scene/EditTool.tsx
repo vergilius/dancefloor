@@ -9,7 +9,8 @@ import { useThree } from '@react-three/fiber';
 import { Raycaster, Vector2 } from 'three';
 import { useEnvSurface, useVersions, versionSurface } from '../state/versions';
 import { isOutside, rayGrid, sampleGrid, type HeightGrid } from '../terrain/grid';
-import { DEFAULT_DZ, edgeHeights, edgesOf, heightAt, snapRect, withEdgeHeight, type EdgeMode, type Edges, type Edit, type Rect, type Side } from '../versions/edits';
+import { DEFAULT_DZ, edgeHeights, edgesOf, editValue, heightAt, snapOf, snapRect, withEdgeHeight, withValue, type EdgeMode, type Edges, type Edit, type Rect, type Side } from '../versions/edits';
+import { groundUnder, NEW_WALL_ABOVE } from '../versions/walls';
 import { ENV_LAYER, halfAt } from './split';
 
 const COLOR = '#0969da';
@@ -27,10 +28,13 @@ const CLICK_PX = 3;
 const EDGE_HIT = 0.3;
 /** New edits: Skarpa on all 4 edges (the bar's 1:n). */
 const NEW_EDGES: Edges = { w: 'slope', e: 'slope', s: 'slope', n: 'slope' };
-const NEXT_MODE: Record<EdgeMode, EdgeMode> = { slope: 'step', step: 'wall', wall: 'slope' };
+const NEXT_MODE: Record<EdgeMode, EdgeMode> = { slope: 'step', step: 'slope' };
 
 let seq = 0;
 const newId = () => `e${Date.now().toString(36)}${(seq++).toString(36)}`;
+
+/** Dragged up / down from its middle: Wyrównaj (z) and Mur (top). */
+const liftable = (e: Edit) => e.tool === 'level' || e.tool === 'wall';
 
 /** The side of `r` within EDGE_HIT of plan point p (the nearest), if any. */
 function nearSide(r: Rect, [x, y]: [number, number]): Side | undefined {
@@ -90,7 +94,7 @@ export function EditTool() {
      */
     type Drag =
       | { kind: 'area'; start: [number, number]; rect: Rect; z0: number }
-      | { kind: 'lift'; edit: Edit & { tool: 'level' }; y0: number; moved: boolean }
+      | { kind: 'lift'; edit: Edit; y0: number; moved: boolean }
       | { kind: 'edge'; edit: Edit; side: Side; y0: number; moved: boolean };
     let drag: Drag | undefined;
     let placing: Edit | undefined;
@@ -127,22 +131,25 @@ export function EditTool() {
         const sel = selectedEdit();
         const p = sel && pickRef.current(grid, e.clientX, e.clientY);
         if (!sel || !p) return setOver(undefined);
-        const side = nearSide(sel.rect, p);
-        const inside = p[0] > sel.rect.x0 && p[0] < sel.rect.x1 && p[1] > sel.rect.y0 && p[1] < sel.rect.y1;
-        return setOver(side ?? (inside && sel.tool === 'level' ? 'inside' : undefined));
+        // A wall has no edges to grab (it's thin): anywhere on it lifts its top.
+        const side = sel.tool === 'wall' ? undefined : nearSide(sel.rect, p);
+        const pad = sel.tool === 'wall' ? EDGE_HIT : 0;
+        const r = sel.rect;
+        const inside = p[0] > r.x0 - pad && p[0] < r.x1 + pad && p[1] > r.y0 - pad && p[1] < r.y1 + pad;
+        return setOver(side ?? (inside && liftable(sel) ? 'inside' : undefined));
       }
       if (drag.kind === 'area') {
         const p = pickRef.current(grid, e.clientX, e.clientY);
         if (!p) return;
-        drag.rect = snapRect(drag.start[0], drag.start[1], p[0], p[1]);
+        drag.rect = snapRect(drag.start[0], drag.start[1], p[0], p[1], snapOf(st().tool ?? 'level'));
         setDraft({ ...drag.rect, z: st().tool === 'level' ? drag.z0 : undefined });
         return;
       }
       if (Math.abs(e.clientY - drag.y0) > CLICK_PX) drag.moved = true;
       if (!drag.moved) return;
       if (drag.kind === 'lift') {
-        const z = cm(drag.edit.z + dz(drag.y0, e.clientY));
-        show({ ...drag.edit, z }, z);
+        const z = cm(editValue(drag.edit) + dz(drag.y0, e.clientY));
+        show(withValue(drag.edit, z), z);
       } else if (drag.edit.tool === 'level') {
         const h = cm(edgeHeights(drag.edit)[drag.side] + dz(drag.y0, e.clientY));
         show(withEdgeHeight(drag.edit, drag.side, h), h);
@@ -157,7 +164,13 @@ export function EditTool() {
         const t = st().tool;
         const base = { id: newId(), rect: d.rect, edges: NEW_EDGES, slope: st().newSlope };
         const edit: Edit | undefined =
-          t === 'level' ? { ...base, tool: t, z: d.z0 } : t === 'raise' || t === 'lower' ? { ...base, tool: t, dz: DEFAULT_DZ } : undefined;
+          t === 'level'
+            ? { ...base, tool: t, z: d.z0 }
+            : t === 'raise' || t === 'lower'
+              ? { ...base, tool: t, dz: DEFAULT_DZ }
+              : t === 'wall'
+                ? { id: base.id, rect: d.rect, tool: t, top: cm(groundUnder(grid, d.rect).max + NEW_WALL_ABOVE) }
+                : undefined;
         if (!edit) return;
         addEdit(edit);
         select(edit.id); // now lift it from the middle or tilt it by an edge
@@ -181,7 +194,7 @@ export function EditTool() {
         drag = { kind: 'edge', edit: sel, side: over, y0: e.clientY, moved: false };
         return;
       }
-      if (sel && over === 'inside' && sel.tool === 'level') {
+      if (sel && over === 'inside' && liftable(sel)) {
         grab();
         drag = { kind: 'lift', edit: sel, y0: e.clientY, moved: false };
         return;
@@ -192,7 +205,7 @@ export function EditTool() {
       grab();
       setOver(undefined);
       const z0 = heightAt(grid, p[0], p[1]);
-      drag = { kind: 'area', start: p, rect: snapRect(p[0], p[1], p[0], p[1]), z0 };
+      drag = { kind: 'area', start: p, rect: snapRect(p[0], p[1], p[0], p[1], snapOf(st().tool ?? 'level')), z0 };
       setDraft({ ...drag.rect, z: st().tool === 'level' ? z0 : undefined });
     };
     const onKey = (e: KeyboardEvent) => {

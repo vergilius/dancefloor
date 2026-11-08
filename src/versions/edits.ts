@@ -1,9 +1,13 @@
-// Terrain edits of a version (PLAN.md §5 M4a): rects on a 0.5 m lattice applied in order over the frozen base.
+// Edits of a version (PLAN.md §5 M4a, M4b): terrain rects on a 0.5 m lattice applied in order over the frozen base,
+// and Mur walls (rects on a 5 cm snap; drawn solids, they don't change the terrain).
 // Pure: no React, no three, no I/O. Heights in m rel ±0.00, plan coords in m.
 import { isOutside, sampleGrid, type HeightGrid } from '../terrain/grid';
 
 /** Tile lattice (m), anchored at plan (0, 0) = the S-GRID-1 origin. */
 export const LATTICE = 0.5;
+/** Mur rects snap to this (m), so a 0.25 m wall can be drawn. */
+export const WALL_SNAP = 0.05;
+export const snapOf = (tool: Tool) => (tool === 'wall' ? WALL_SNAP : LATTICE);
 /** Grid-corner tolerance (in cells) when a rect edge falls on a corner: edges included. */
 const EPS = 1e-6;
 
@@ -13,20 +17,21 @@ export type Rect = { x0: number; y0: number; x1: number; y1: number };
 export type Draft = Rect & { z?: number };
 /**
  * Corners inside the rect: Wyrównaj (`level`) sets them to `z`; Podnieś / Obniż (`raise` / `lower`) move them up /
- * down by `dz` > 0.
+ * down by `dz` > 0. Mur (`wall`): a solid over the rect from the lowest surface under it up to `top`; no terrain change.
  */
 export type Edit = { id: string; rect: Rect; edges?: Edges; slope?: number } & (
   | { tool: 'level'; z: number; tilt?: Tilt }
   | { tool: 'raise' | 'lower'; dz: number }
+  | { tool: 'wall'; top: number }
 );
 export type Tool = Edit['tool'];
-export const TOOLS: readonly Tool[] = ['level', 'raise', 'lower'];
+export const TOOLS: readonly Tool[] = ['level', 'raise', 'lower', 'wall'];
 /** Rect edges (PLAN.md §5 M4b): w = x0, e = x1, s = y0, n = y1 (←, →, ↓, ↑ in the Design top view). */
 export type Side = 'w' | 'e' | 's' | 'n';
 export const SIDES: readonly Side[] = ['w', 'e', 's', 'n'];
-/** Uskok (step, as M4a), Skarpa (slope 1:n outside the rect), Mur (step + a wall drawn on the high side). */
-export type EdgeMode = 'step' | 'slope' | 'wall';
-export const EDGE_MODES: readonly EdgeMode[] = ['step', 'slope', 'wall'];
+/** Uskok (step, as M4a) or Skarpa (slope 1:n outside the rect). Walls are drawn as their own edits (Mur). */
+export type EdgeMode = 'step' | 'slope';
+export const EDGE_MODES: readonly EdgeMode[] = ['step', 'slope'];
 export type Edges = Record<Side, EdgeMode>;
 export const ALL_STEP: Edges = { w: 'step', e: 'step', s: 'step', n: 'step' };
 /** Skarpa 1:n default: n m horizontal per 1 m vertical. */
@@ -61,14 +66,16 @@ export function withEdgeHeight(e: Edit & { tool: 'level' }, side: Side, h: numbe
 /** Podnieś / Obniż default step (m). */
 export const DEFAULT_DZ = 0.1;
 
-/** The edit's number: z for Wyrównaj, dz for the others. */
-export const editValue = (e: Edit) => (e.tool === 'level' ? e.z : e.dz);
-export const withValue = (e: Edit, v: number): Edit => (e.tool === 'level' ? { ...e, z: v } : { ...e, dz: v });
+/** The edit's number: z for Wyrównaj, top for Mur, dz for the others. */
+export const editValue = (e: Edit) => (e.tool === 'level' ? e.z : e.tool === 'wall' ? e.top : e.dz);
+export const withValue = (e: Edit, v: number): Edit =>
+  e.tool === 'level' ? { ...e, z: v } : e.tool === 'wall' ? { ...e, top: v } : { ...e, dz: v };
 
-/** The lattice tiles touched by two plan points (a click gives one tile). */
-export function snapRect(ax: number, ay: number, bx: number, by: number): Rect {
-  const lo = (v: number) => Math.floor(v / LATTICE) * LATTICE;
-  const hi = (v: number) => (Math.floor(v / LATTICE) + 1) * LATTICE;
+/** The snap tiles (`step` m, default the 0.5 m lattice) touched by two plan points (a click gives one tile). */
+export function snapRect(ax: number, ay: number, bx: number, by: number, step = LATTICE): Rect {
+  const r = (v: number) => Math.round(v * 1000) / 1000;
+  const lo = (v: number) => r(Math.floor(v / step) * step);
+  const hi = (v: number) => r((Math.floor(v / step) + 1) * step);
   return { x0: lo(Math.min(ax, bx)), y0: lo(Math.min(ay, by)), x1: hi(Math.max(ax, bx)), y1: hi(Math.max(ay, by)) };
 }
 
@@ -100,7 +107,7 @@ export function replay(g: HeightGrid, edits: readonly Edit[]): { h: Float32Array
   const volumes = edits.map((e): EditVolume => {
     const c = cornerRange(g, e.rect);
     const v = { cut: 0, fill: 0 };
-    if (!c) return v;
+    if (!c || e.tool === 'wall') return v; // a wall doesn't change the terrain
     const set = (k: number, after: number) => {
       const before = h[k]!;
       h[k] = after;
@@ -201,28 +208,30 @@ export function totals(g: HeightGrid, h: Float32Array): Totals {
   return { cut, fill, net: fill - cut, changed };
 }
 
-const onLattice = (v: number) => Math.abs(v / LATTICE - Math.round(v / LATTICE)) < 1e-6;
+const onLattice = (v: number, step: number) => Math.abs(v / step - Math.round(v / step)) < 1e-6;
 
 /** Strict parse of one saved edit; throws with the field at fault. */
 export function parseEdit(v: unknown, where: string): Edit {
   if (typeof v !== 'object' || v === null || Array.isArray(v)) throw new Error(`${where}: not an object`);
-  const { id, tool, rect, z, dz, edges, slope, tilt } = v as Record<string, unknown>;
+  const { id, tool, rect, z, dz, edges, slope, tilt, top } = v as Record<string, unknown>;
   if (typeof id !== 'string' || !id) throw new Error(`${where}.id: expected a string`);
   const r = rect as Record<string, unknown> | null;
   const ok =
     typeof r === 'object' &&
     r !== null &&
-    [r.x0, r.y0, r.x1, r.y1].every((c) => Number.isFinite(c) && onLattice(c as number)) &&
+    [r.x0, r.y0, r.x1, r.y1].every((c) => Number.isFinite(c) && onLattice(c as number, tool === 'wall' ? WALL_SNAP : LATTICE)) &&
     (r.x0 as number) < (r.x1 as number) &&
     (r.y0 as number) < (r.y1 as number);
-  if (!ok) throw new Error(`${where}.rect: expected { x0 < x1, y0 < y1 } on the ${LATTICE} m lattice`);
+  if (!ok) throw new Error(`${where}.rect: expected { x0 < x1, y0 < y1 } on the ${tool === 'wall' ? WALL_SNAP : LATTICE} m snap`);
   const box = { x0: r.x0 as number, y0: r.y0 as number, x1: r.x1 as number, y1: r.y1 as number };
   const shape: { edges?: Edges; slope?: number } = {};
   if (edges !== undefined) {
     const ed = edges as Record<string, unknown> | null;
-    if (typeof ed !== 'object' || ed === null || !SIDES.every((k) => EDGE_MODES.includes(ed[k] as EdgeMode)))
+    // 'wall' was an edge mode during M4b development (walls are their own edits now): read as Uskok.
+    const mode = (m: unknown) => (m === 'wall' ? 'step' : m) as EdgeMode;
+    if (typeof ed !== 'object' || ed === null || !SIDES.every((k) => EDGE_MODES.includes(mode(ed[k]))))
       throw new Error(`${where}.edges: expected { w, e, s, n } of ${EDGE_MODES.join(' | ')}`);
-    shape.edges = { w: ed.w, e: ed.e, s: ed.s, n: ed.n } as Edges;
+    shape.edges = { w: mode(ed.w), e: mode(ed.e), s: mode(ed.s), n: mode(ed.n) };
   }
   if (slope !== undefined) {
     if (!(Number.isFinite(slope) && (slope as number) > 0)) throw new Error(`${where}.slope: expected a number > 0`);
@@ -235,6 +244,10 @@ export function parseEdit(v: unknown, where: string): Edit {
     if (typeof tl !== 'object' || tl === null || !Number.isFinite(tl.x) || !Number.isFinite(tl.y))
       throw new Error(`${where}.tilt: expected { x, y } numbers`);
     return { id, tool, rect: box, ...shape, z: z as number, tilt: { x: tl.x as number, y: tl.y as number } };
+  }
+  if (tool === 'wall') {
+    if (!Number.isFinite(top)) throw new Error(`${where}.top: expected a number`);
+    return { id, tool, rect: box, top: top as number };
   }
   if (tool === 'raise' || tool === 'lower') {
     if (!(Number.isFinite(dz) && (dz as number) > 0)) throw new Error(`${where}.dz: expected a number > 0`);

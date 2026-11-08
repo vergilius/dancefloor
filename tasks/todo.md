@@ -1,10 +1,10 @@
 # M4b task list
 
-Next: Task 3 (Mur) implemented, waiting for the browser check (Checkpoint B = M4b ✅); then PLAN.md / CLAUDE.md status, merge. Spec PLAN.md §5 M4b; plan `tasks/plan.md`.
+Next: Task 3 (Mur as drawn rectangles) implemented, waiting for the browser check (Checkpoint B = M4b ✅); then PLAN.md / CLAUDE.md status, merge. Spec PLAN.md §5 M4b; plan `tasks/plan.md`.
 Later (user 2026-11-08): the left sidebar is poor UI/UX (the version panel sits below the long sheet list); address after M4b.
 Plot margin now 5 m (user 2026-11-08): only Podgląd and new versions; existing versions keep their frozen grid.
 Bundle: index 1495 kB of the 1500 kB budget after T2; keep T3 small.
-Branch: m4b-spec (includes level-from-start-point). T3 note: scratchpad check (flat −0.32): +0.30 terrace, Mur east → 6.00 m, 0.62 m, 0.93 m³, wall x 3.85…4.10 (platform side); pit −1.00 → wall outside (4.00…4.25), 0.68 m. Bundle 1497 / 1500 kB after T3; keep the wall mesh code small, ask before raising the budget.
+Branch: m4b-spec (includes level-from-start-point). T3 note: scratchpad check (flat −0.32): 0.25 × 6 m wall → default top +0.18, 0.50 m high, 0.75 m³, terrain untouched; old `wall` edge mode reads as step. Bundle 1497 / 1500 kB after T3; keep the wall mesh code small, ask before raising the budget.
 Drawings have no slopes or walls (checked PZT, PAB-11, PAB-12): all M4b geometry is the user's design.
 T1 note: scratchpad check on a flat −0.32 grid: 4 × 6 m to +0.30, 1:2 → slope 1.20 m wide (last corner above ground; 1.24 exact), 1:3 → 1.80 m; no edges = M4a fill to 4 decimals; 10 sloped edits (Δ 1.5 m, n = 3) replay in ~14 ms warm (36 ms first run).
 Real-file checks without the browser: Node 24 runs `src/` TS directly with a resolver hook adding `.ts` to extensionless imports; load a DWG via `@mlightcad/libredwg-web` + `normalize()` in a scratchpad script (never in the repo, never commit `dwg/`).
@@ -44,17 +44,16 @@ Skarpa → Uskok → Mur. Live preview via `preview` in the store (replaces the 
 ### Checkpoint A: slopes
 - [x] `pnpm check` green; user browser check of T1 + T2; tick boxes, update `Next:`, commit, safe to /clear
 
-### Task 3: Mur
-**Description:** Pure `src/versions/walls.ts`: for each Mur edge of each edit, sample the version surface on both sides
-of the edge (per grid corner along it), high side = top, low side = bottom; wall 0.25 m thick on the high side, face on
-the edge line → triangles + { length, hMin, hMax, m³ }. `src/scene/WallMesh.tsx` draws them in Environment (versions
-only). Edit list: one line per wall (side, length, height min–max, m³).
+### Task 3: Mur (redone 2026-11-08: user draws walls as rectangles, house colour; Mur edge mode dropped)
+**Description:** Tool "Mur": drag a rect (5 cm snap) → `{ tool: 'wall', rect, top }` edit, box from the lowest surface
+under it to `top` (default highest + 0.50 m) in the house colour (`src/scene/WallMesh.tsx`, pure `src/versions/walls.ts`);
+drag it up / down or type top; list shows height above terrain and m³. No terrain change.
 **Acceptance criteria:**
-- [ ] Switching the terrace's east edge to Mur removes its slope and shows a 0.25 m wall ~0.62 m high, length 6.00 m, ~0.93 m³ in the list
-- [ ] The wall sits on the platform side with its face on the edge; Design, Podgląd and cut / fill are unchanged by walls
+- [ ] Draw a 0.25 × 6 m wall along the terrace edge: house-coloured box, list shows 0.25 × 6.00 m, height and m³
+- [ ] Drag it up / down (one undo step), type an exact top; terrain, cut / fill and Design unchanged; reload keeps it
 **Verification:** `pnpm check`; user browser check.
-**Dependencies:** Task 1
-**Files:** `src/versions/walls.ts`, `src/scene/WallMesh.tsx`, `src/scene/Viewport.tsx`, `src/ui/VersionPanel.tsx`, `src/ui/strings.ts`
+**Dependencies:** Task 2
+**Files:** `src/versions/edits.ts`, `src/versions/walls.ts`, `src/scene/WallMesh.tsx`, `src/scene/EditTool.tsx`, `src/ui/VersionPanel.tsx`, `src/ui/VersionBar.tsx`, `src/ui/strings.ts`
 **Scope:** M
 
 ### Checkpoint B: M4b done

@@ -474,8 +474,8 @@ Requirements:
   the opposite edge kept, so the platform becomes a ramp (saved as `tilt: { x, y }` = east − west and north − south
   height difference, `z` = centre height; missing = flat). 1 cm per screen pixel, previewed live (contours on
   release), one undo step per drag. A click (no drag) near an edge of the selected edit cycles it Skarpa → Uskok →
-  Mur. Esc cancels a drag or clears the selection. The bar's 1:n acts on the selected edit (and is the default for the
-  next). Skarpa / Mur work the same on a ramp (top = the ramp's height along the edge).
+  Esc cancels a drag or clears the selection. The bar's 1:n acts on the selected edit (and is the default for the
+  next). Skarpa works the same on a ramp (top = the ramp's height along the edge).
 - **Skarpa (pure, in `replay`):** the rect is the flat top (or bottom) you dragged; the slope goes **outside** it until
   it meets the surface (daylight). For a grid corner outside the rect, p = the nearest rect-edge corner, d = distance
   to p (m), top = h(p) after the edit. Fill side (top above the corner): h = max(h, top − d/n); cut side: h =
@@ -483,13 +483,13 @@ Requirements:
   slope only if both edges are Skarpa, otherwise nothing there. The slope is part of the edit: it is in the edit's
   cut / fill, in the totals and in Różnice; a later edit still wins over it; corners outside the modelled area are
   never changed. Replay of all edits stays < 30 ms.
-- **Mur:** the terrain keeps the step (as Uskok). A wall solid is drawn along the edge in Environment in its own colour
-  (slate grey, user 2026-11-08), standing on the **high side** (the side higher on average along the edge), thickness
-  0.25 m, its face on the low side's grid-corner line (one cell outside the rect for a raised platform, on the edge
-  for a pit), so the terrain's one-cell step strip lies inside the wall. Top = the high side's surface along the edge
-  (+ 2 cm drawn only, against z-fighting), bottom = the low side's surface (visible part only, no footing). The panel
-  shows per wall its length, height min–max and volume (m³ = length × 0.25 × mean height). Walls are not in cut /
-  fill; they follow a lift / tilt drag live.
+- **Mur (user 2026-11-08: a wall is something drawn by hand, not an edge mode):** a fourth tool next to Wyrównaj /
+  Podnieś / Obniż. Drag a rect on the terrain, snapped to 5 cm (so a 0.25 m wall can be drawn); saved as an edit
+  `{ tool: 'wall', rect, top }` in the version (same list, undo, autosave). Drawn as a box in the house's colour from the
+  lowest surface under it up to `top`; a new wall's top = highest surface under it + 0.50 m, then dragged up / down
+  (anywhere on it) or typed. Doesn't change the terrain or cut / fill; the list shows its height above the terrain
+  (min–max) and volume (footprint × (top − mean surface)). Edge modes are Skarpa / Uskok only (a saved `wall` edge mode
+  from development reads as Uskok).
 - **Edit list:** per edit 4 edge selects (← → ↑ ↓, a precise fallback), the 1:n field (when an edge is Skarpa) and its
   walls. Hovering an edge select outlines that edge in the view. Edge and ratio changes go through undo / redo like value changes.
 

@@ -77,7 +77,7 @@ export function VersionBar() {
             {t.versions.tools[k]}
           </button>
         ))}
-      {version && (
+      {version && sel?.tool !== 'wall' && tool !== 'wall' && (
         <span className="status" title={sel ? t.versions.slopeSelectedTitle : t.versions.slopeNewTitle}>
           <span className="muted">{sel ? t.versions.slopeSelected(version.edits.indexOf(sel) + 1) : t.versions.slopeNew}</span> 1:
           <ZInput key={sel?.id ?? 'new'} value={sel ? slopeOf(sel) : newSlope} accept={(v) => v > 0} onChange={onSlope} />
@@ -112,7 +112,7 @@ export function VersionBar() {
         {preview && <span className="status muted">{t.versions.heightHint}</span>}
         </>
       ) : (
-        (tool || sel) && <span className="status muted">{sel ? t.versions.edgeHint : tool === 'level' ? t.versions.levelHint : t.versions.dragHint}</span>
+        (tool || sel) && <span className="status muted">{sel ? (sel.tool === 'wall' ? t.versions.wallHint : t.versions.edgeHint) : tool === 'level' ? t.versions.levelHint : t.versions.dragHint}</span>
       )}
       <span className="status">
         {version ? (
