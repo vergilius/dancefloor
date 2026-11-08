@@ -1,6 +1,6 @@
 # M1c task list
 
-Next: Task 6 (2-point tool) implemented, awaiting the user's browser check; then tick it and do Task 7. T1–T5 and Checkpoint A verified 2026-11-08.
+Next: Task 7 (M1c acceptance). T1–T6 and Checkpoint A verified in browser 2026-11-08 (T6 incl. reference-first order and the PDF opacity slider).
 Note (T6): tool state is `align` in the store (picks: A plan, A′ sheet, B plan, B′ sheet; user order 2026-11-08). A′ shifts the sheet at once, B′ applies the full transform, Esc restores `align.before`. Top view is forced while it runs. r3f fires onClick after drags too, so picks with `e.delta` > 4 px are ignored (`src/scene/AlignTool.tsx`).
 Note (T5): pdfjs-dist 6.x: `isEvalSupported` is gone and teardown is `loadingTask.destroy()`. pdfjs is a lazy chunk (`src/pdf/render.ts`), render state is `pdfs` in the store (not `parsed`).
 Note (T4): obstacle colour = `OBSTACLE_COLOR` via `layerColor()` in `src/project/layerGroups.ts` (lines and texts). Groups are
@@ -83,9 +83,9 @@ a quad at z −0.02 through the PDF's transform (placeholder 1:500 sheet coords)
 B → B′. Endpoint snapping (source: the sheet's own endpoints, target: other visible horizontal sheets), snapped point
 shown, Esc cancels. `fromTwoPairs` gives the transform, applied live, project marked dirty.
 **Acceptance criteria:**
-- [ ] On PZT-01, two wall corners → rotation −11.275° (±0.01°), scale 1.000, translation within 1 cm of auto
-- [ ] On the PDF, two house corners → the PDF house outline visibly matches PZT-01; scale shown
-- [ ] Esc cancels without changing the transform
+- [x] On PZT-01, two wall corners → rotation −11.275° (±0.01°), scale 1.000, translation within 1 cm of auto
+- [x] On the PDF, two house corners → the PDF house outline visibly matches PZT-01; scale shown
+- [x] Esc cancels without changing the transform
 **Verification:** `pnpm check`; user runs the tool on both sheets.
 **Dependencies:** T3, T5
 **Files:** `src/scene/AlignTool.tsx`, `src/scene/snap.ts`, `src/state/store.ts`, `src/ui/SheetList.tsx`, `src/ui/strings.ts`
