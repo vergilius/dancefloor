@@ -49,8 +49,11 @@ type VersionsState = {
   saveError?: string;
   /** Loads the versions of a freshly opened project folder; Podgląd is shown. */
   load(dir: FileSystemDirectoryHandle): Promise<void>;
-  /** "Nowa wersja": snapshot of `grid`, written to the folder, then opened. */
-  create(grid: HeightGrid): Promise<void>;
+  /**
+   * "Nowa wersja", written to the folder, then opened: a copy of the active version (its frozen base and edits) or,
+   * from Podgląd, a snapshot of `live` (the generated terrain).
+   */
+  create(live: HeightGrid | undefined): Promise<void>;
   rename(id: string, name: string): Promise<void>;
   /** Removes both files; Podgląd is shown if it was the active version. */
   remove(id: string): Promise<void>;
@@ -171,17 +174,21 @@ export const useVersions = create<VersionsState>()((set, get) => ({
   },
 
   async create(live) {
-    const { dir, versions } = get();
-    if (!dir) return;
+    const { dir, versions, active } = get();
+    const from = versions.find((x) => x.id === active);
+    const src = from?.grid ?? live;
+    if (!dir || !src) return;
     const created = new Date().toISOString();
     const id = `v${Date.now().toString(36)}`;
     const grid: HeightGrid = {
-      ...live,
-      origin: { ...live.origin },
-      base: live.base.slice(),
-      ...(live.outside && { outside: live.outside.slice() }),
+      ...src,
+      origin: { ...src.origin },
+      base: src.base.slice(),
+      ...(src.outside && { outside: src.outside.slice() }),
     };
-    const v: Version = { id, name: nextName(versions), created, grid, edits: [], fileVersion: 2, lift: get().lift };
+    // Heights in memory are already relative to the current lift, so the copy is written with it.
+    const edits = from ? structuredClone(from.edits) : [];
+    const v: Version = { id, name: nextName(versions), created, grid, edits, fileVersion: 2, lift: get().lift };
     try {
       const vdir = (await versionsDir(dir, true))!;
       // The .bin first: a version is listed by its JSON, so a failed export leaves no half version behind.

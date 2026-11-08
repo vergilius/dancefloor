@@ -416,8 +416,9 @@ volumes update live) closes with M4b.
 
 Requirements:
 - **Preview vs version (Environment view bar):** a selector "Podgląd" | the versions by name. Podgląd shows the
-  generated model live (as in M3), read-only, no edit tools. Buttons: **"Nowa wersja"** (snapshot of the current
-  generated terrain, named "Wersja n", opened right away), **"Zmień nazwę"**, **"Usuń"** (confirm). The Design
+  generated model live (as in M3), read-only, no edit tools. Buttons: **"Nowa wersja"** (from Podgląd: snapshot of the
+  current generated terrain; with a version active: a copy of that version, its frozen base and edits; named
+  "Wersja n", opened right away), **"Zmień nazwę"**, **"Usuń"** (confirm). The Design
   viewport is unchanged in every mode.
 - **A version** = frozen `base` + outside mask + grid geometry (copied at export, never regenerated) + an ordered
   list of **edits**. Its surface = edits applied in order over its frozen base. Changing the DWGs later doesn't touch

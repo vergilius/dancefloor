@@ -199,6 +199,7 @@ export const t = {
     preview: 'Podgląd (z rysunków)',
     create: 'Nowa wersja',
     createTitle: 'Zamroź obecny teren z rysunków jako nową wersję do edycji (pliki w dancefloor-versions/)',
+    copyTitle: (name: string) => `Kopia wersji „${name}” (jej teren i edycje) jako nowa wersja`,
     noTerrain: 'Brak terenu z rysunków: nie ma czego zamrozić',
     rename: 'Zmień nazwę',
     renamePrompt: 'Nowa nazwa wersji:',

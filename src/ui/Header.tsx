@@ -154,7 +154,13 @@ function VersionPicker() {
           ))}
         </select>
       </label>
-      <button type="button" className="tb icon" disabled={!live} title={live ? `${t.versions.create}: ${t.versions.createTitle}` : t.versions.noTerrain} onClick={() => live && void create(live)}>
+      <button
+        type="button"
+        className="tb icon"
+        disabled={!version && !live}
+        title={version ? `${t.versions.create}: ${t.versions.copyTitle(version.name)}` : live ? `${t.versions.create}: ${t.versions.createTitle}` : t.versions.noTerrain}
+        onClick={() => void create(live)}
+      >
         <Plus size={16} />
       </button>
       <button type="button" className="tb icon" disabled={!version} title={t.versions.rename} onClick={onRename}>
