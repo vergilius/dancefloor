@@ -2,6 +2,7 @@
 import type { NormalizedSheet } from '../dwg/types';
 import { apply, invert, type Vec2 } from '../project/align';
 import { sheetToWorld, type HorizontalPlacement, type SheetPlacement } from './coords';
+import type { VerticalPlacement } from '../project/vertical';
 
 /** Segment endpoints of a horizontal sheet's visible layers: sheet coords and plan coords, [x, y, …] each. */
 export type Endpoints = { sheet: Float64Array; world: Float64Array };
@@ -76,6 +77,34 @@ export function hitHorizontal(ray: Ray, placement: HorizontalPlacement, extents:
   if (s.x < extents.minX || s.x > extents.maxX || s.y < extents.minY || s.y > extents.maxY) return undefined;
   return { t, world };
 }
+
+/**
+ * Ray (scene coords) against a vertical sheet's plane (through origin, spanned by dir and up), inside the sheet's
+ * extents (sheet x along dir, sheet y = height). Returns the distance along the ray and the world point, or undefined.
+ */
+export function hitVertical(ray: Ray, placement: VerticalPlacement, extents: Extents): { t: number; world: Vec3 } | undefined {
+  // Scene (x, y, z) → world (x, −z, y), see coords.ts.
+  const [wx, wy] = [ray.origin[0], -ray.origin[2]];
+  const wz = ray.origin[1];
+  const [dx, dy, dz] = [ray.dir[0], -ray.dir[2], ray.dir[1]];
+  const { origin: o, dir: u } = placement;
+  // Plane normal (horizontal, perpendicular to dir).
+  const nx = -u.y;
+  const ny = u.x;
+  const denom = nx * dx + ny * dy;
+  if (Math.abs(denom) < 1e-9) return undefined;
+  const t = (nx * (o.x - wx) + ny * (o.y - wy)) / denom;
+  if (t < 0) return undefined;
+  const world: Vec3 = [wx + t * dx, wy + t * dy, wz + t * dz];
+  const sx = ((world[0] - o.x) * u.x + (world[1] - o.y) * u.y) / (u.x * u.x + u.y * u.y);
+  const sy = world[2];
+  if (sx < extents.minX || sx > extents.maxX || sy < extents.minY || sy > extents.maxY) return undefined;
+  return { t, world };
+}
+
+/** Ray against any placed sheet's plane, see `hitHorizontal` / `hitVertical`. */
+export const hitSheet = (ray: Ray, placement: SheetPlacement, extents: Extents) =>
+  placement.type === 'vertical' ? hitVertical(ray, placement, extents) : hitHorizontal(ray, placement, extents);
 
 /**
  * Nearest world point (sets of [x, y, z, …]) to the pointer on screen, within r px. `m` = projection × view matrix

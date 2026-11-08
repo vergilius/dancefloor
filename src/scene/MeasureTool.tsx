@@ -1,4 +1,5 @@
-// Measure tool "Pomiar" (PLAN.md §5 M2), Design viewport only: click A, then B, on the drawn horizontal sheets.
+// Measure tool "Pomiar" (PLAN.md §5 M2), Design viewport only: click A, then B, on the drawn sheets (plans, site,
+// elevations, sections); the nearest sheet plane along the ray wins.
 // Snaps to visible segment endpoints of the sheets under the cursor and to the level markers (screen px).
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useThree } from '@react-three/fiber';
@@ -14,7 +15,7 @@ import { t } from '../ui/strings';
 import { toScene, type SheetPlacement } from './coords';
 import { Dot } from './Dot';
 import { useLevelMarkers } from './LevelMarkers';
-import { CLICK_PX, hitHorizontal, nearestOnScreen, SNAP_PX, worldPoints, type Vec3 } from './snap';
+import { CLICK_PX, hitSheet, nearestOnScreen, SNAP_PX, worldPoints, type Vec3 } from './snap';
 import { designHtmlPosition, halfAt } from './split';
 
 type Drawn = { file: string; kind: SheetKind; placement: SheetPlacement; sheet: NormalizedSheet; layers?: LayerOverrides };
@@ -37,12 +38,12 @@ export function MeasureTool({ drawn }: { drawn: Drawn[] }) {
   const [hover, setHover] = useState<Pick>();
   const on = measure !== undefined;
 
-  // Horizontal sheets with their visible endpoints (world), only while the tool is on.
+  // Drawn sheets with their visible endpoints (world), only while the tool is on.
   const targets = useMemo(
     () =>
       on
         ? drawn.flatMap((d) =>
-            d.placement.type === 'horizontal' && d.sheet.extents
+            d.sheet.extents
               ? [{ placement: d.placement, extents: d.sheet.extents, points: worldPoints(d.sheet, d.placement, (l) => layerVisible(groups, d.layers, l)) }]
               : [],
           )
@@ -62,7 +63,7 @@ export function MeasureTool({ drawn }: { drawn: Drawn[] }) {
     const ray = { origin: origin.toArray() as Vec3, dir: direction.toArray() as Vec3 };
     const hits = targets
       .flatMap((tg) => {
-        const h = hitHorizontal(ray, tg.placement, tg.extents);
+        const h = hitSheet(ray, tg.placement, tg.extents);
         return h ? [{ ...h, points: tg.points }] : [];
       })
       .sort((a, b) => a.t - b.t);
