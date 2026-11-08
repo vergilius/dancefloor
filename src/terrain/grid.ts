@@ -144,3 +144,48 @@ export function segmentsBox(s: Float64Array, f: (x: number, y: number) => [numbe
 }
 
 export const grow = (b: Box, m: number): Box => ({ minX: b.minX - m, minY: b.minY - m, maxX: b.maxX + m, maxY: b.maxY + m });
+
+/**
+ * First point where a ray (plan coords: x, y, height) meets the grid's surface, or undefined. Marches in half-cell
+ * steps over the grid's extent, then bisects. A ray straight down hits at its own (x, y).
+ */
+export function rayGrid(g: HeightGrid, o: [number, number, number], d: [number, number, number]): [number, number, number] | undefined {
+  const bx0 = g.origin.x, bx1 = bx0 + g.cols * g.cell;
+  const by0 = g.origin.y, by1 = by0 + g.rows * g.cell;
+  const flat = Math.hypot(d[0], d[1]);
+  if (flat < 1e-9) {
+    if (o[0] < bx0 || o[0] > bx1 || o[1] < by0 || o[1] > by1) return undefined;
+    return [o[0], o[1], sampleGrid(g, o[0], o[1])];
+  }
+  // Clip t to the grid's x/y slab.
+  let t0 = 0;
+  let t1 = Infinity;
+  for (const [p, v, lo, hi] of [[o[0], d[0], bx0, bx1], [o[1], d[1], by0, by1]] as const) {
+    if (Math.abs(v) < 1e-12) {
+      if (p < lo || p > hi) return undefined;
+      continue;
+    }
+    const a = (lo - p) / v, b = (hi - p) / v;
+    t0 = Math.max(t0, Math.min(a, b));
+    t1 = Math.min(t1, Math.max(a, b));
+  }
+  if (!(t1 > t0)) return undefined;
+  const above = (t: number) => o[2] + t * d[2] - sampleGrid(g, o[0] + t * d[0], o[1] + t * d[1]);
+  const dt = g.cell / 2 / flat;
+  let prev = t0;
+  if (above(prev) <= 0) return undefined; // starts under the surface
+  for (let t = t0 + dt; t <= t1 + dt; t += dt) {
+    const tt = Math.min(t, t1);
+    if (above(tt) <= 0) {
+      let lo = prev, hi = tt;
+      for (let k = 0; k < 30; k++) {
+        const mid = (lo + hi) / 2;
+        if (above(mid) > 0) lo = mid;
+        else hi = mid;
+      }
+      return [o[0] + hi * d[0], o[1] + hi * d[1], o[2] + hi * d[2]];
+    }
+    prev = tt;
+  }
+  return undefined;
+}

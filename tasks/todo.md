@@ -1,6 +1,6 @@
 # M4a task list
 
-Next: T2 (Wyrównaj by dragging a rect, totals, autosave). After M4a: M5 house massing, then M4b–M4d (ADR 0004).
+Next: T2 implemented, waiting for the user's browser check (4 × 6 m: 41 × 61 corners, so +0.10 m → +2.50 m³, edges included); then T3. After M4a: M5 house massing, then M4b–M4d (ADR 0004).
 Plan: `tasks/plan.md`. Spec: PLAN.md §5 M4a, ADR 0003. M3 task notes are in git history (`tasks/todo.md` at c477be0).
 
 Commands: `pnpm dev`, `pnpm check` (build + lint + guards). No automated tests (CLAUDE.md).
@@ -24,7 +24,7 @@ draws the active source via `useEnvSurface()`. Panel line for the active version
 **Scope:** M–L
 
 ### Task 2: Wyrównaj by dragging a rect, totals, autosave
-**Description:** Add `three-mesh-bvh`. Pure `src/versions/edits.ts`: lattice snap (0.5 m, anchored at plan 0, 0),
+**Description:** Pure `src/versions/edits.ts`: lattice snap (0.5 m, anchored at plan 0, 0),
 apply edits in order over the frozen base (corners inside the rect, edges included), totals cut / fill / net and
 uncertain share. `src/scene/EditTool.tsx`: with "Wyrównaj" active in a version, drag on the terrain → snapped rect
 draped on the surface with its size; release → edit with z = mean height under the rect (1 cm). Panel: totals line,

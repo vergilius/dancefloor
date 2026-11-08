@@ -1,11 +1,11 @@
 // Edit version files (PLAN.md §5 M4a, ADR 0003): `<id>.json` (meta + edits, parsed strictly) and `<id>.bin`
 // (frozen grid: base Float32 little-endian, then uncertain Uint8, one entry per grid corner). Pure, no I/O.
 import type { HeightGrid } from '../terrain/grid';
+import { parseEdit, type Edit } from './edits';
 
 export type GridGeometry = { cell: number; origin: { x: number; y: number }; cols: number; rows: number };
 
-/** Edits arrive in T2; until then a version's edit list is always empty. */
-export type VersionFile = { version: 1; id: string; name: string; created: string; grid: GridGeometry; edits: never[] };
+export type VersionFile = { version: 1; id: string; name: string; created: string; grid: GridGeometry; edits: Edit[] };
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isCount = (v: unknown): v is number => Number.isInteger(v) && (v as number) > 0;
@@ -34,14 +34,13 @@ export function parseVersionFile(text: string): VersionFile {
   )
     throw new Error('grid: expected { cell > 0, origin: { x, y }, cols, rows }');
   if (!Array.isArray(edits)) throw new Error('edits: expected an array');
-  if (edits.length > 0) throw new Error('edits: not supported by this build yet');
   return {
     version: 1,
     id,
     name,
     created,
     grid: { cell: grid.cell as number, origin: { x: grid.origin.x as number, y: grid.origin.y as number }, cols: grid.cols, rows: grid.rows },
-    edits: [],
+    edits: edits.map((e, i) => parseEdit(e, `edits[${i}]`)),
   };
 }
 

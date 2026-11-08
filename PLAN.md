@@ -429,7 +429,7 @@ Requirements:
   **Wyrównaj** (`z` rel ±0.00, default = mean height under the rect before the edit, rounded to 1 cm). A grid corner
   inside the rect (edges included) is changed; a later edit wins on top of an earlier one. Replayed from scratch on
   every change (target < 30 ms).
-- **Picking:** with a tool active, drag on the terrain (ray against the version's mesh, `three-mesh-bvh`); the rect
+- **Picking:** with a tool active, drag on the terrain (ray marched over the version's height grid, `rayGrid` in `src/terrain/grid.ts`; a heightfield needs no BVH, user OK 2026-11-08); the rect
   snaps to the 0.5 m lattice and shows its size (m × m) while dragging; release applies the edit. Esc cancels the drag.
   Tile lattice anchored at plan (0, 0) = the S-GRID-1 origin.
 - **Edit list (panel):** each edit with tool, size, dz or z (rel + abs), its cut / fill (m³, against the surface

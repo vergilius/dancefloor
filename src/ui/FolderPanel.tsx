@@ -5,6 +5,7 @@ import { useVersions } from '../state/versions';
 import { SheetList } from './SheetList';
 import { t } from './strings';
 import { TerrainPanel } from './TerrainPanel';
+import { VersionPanel } from './VersionPanel';
 
 type State =
   | { status: 'loading' }
@@ -81,6 +82,7 @@ export function FolderPanel() {
           </h2>
           {sheetCount === 0 && <p>{t.folderEmpty}</p>}
           <SheetList />
+          <VersionPanel />
           <TerrainPanel />
         </>
       )}

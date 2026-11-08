@@ -20,7 +20,8 @@ Volumes against the version's frozen base, Δh colour map, undo/redo.
 - **One surface hook:** `useEnvSurface()` returns the grid to draw: the generated one in Podgląd, or the active
   version's replayed surface (+ Δh). `TerrainMesh` and contours draw whatever it returns, so preview and versions
   share the M3 rendering. Edits apply on release (not during the drag), so geometry is rebuilt per edit, not per frame.
-- **Picking:** `three-mesh-bvh` (planned stack, PLAN.md §3) on the version's terrain mesh, Environment layer only.
+- **Picking:** a ray marched over the version's height grid (`rayGrid`, pure), Environment half only. No `three-mesh-bvh`:
+  the terrain is a heightfield, so the BVH isn't needed (keep it in mind for picking the house, M5).
   The drag rect preview is a line loop draped on the surface (like the plot outline).
 - **Undo/redo:** commands store the edit list before/after (edits are tiny), one command per add / change / delete.
 

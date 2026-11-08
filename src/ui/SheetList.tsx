@@ -328,7 +328,7 @@ const parseNum = (text: string) => {
 const fmt = (v: number) => String(Number(v.toFixed(3)));
 
 /** Accepts a decimal comma or dot. Invalid text is shown in red and not committed. */
-function ZInput({ value, onChange }: { value: number; onChange: (z: number) => void }) {
+export function ZInput({ value, onChange }: { value: number; onChange: (z: number) => void }) {
   const [text, setText] = useState(() => fmt(value));
   const valid = Number.isFinite(parseNum(text));
   return (

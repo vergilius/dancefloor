@@ -1,10 +1,11 @@
 // Environment view bar (PLAN.md §5 M4a): Podgląd or an edit version, plus Nowa wersja / Zmień nazwę / Usuń.
 import { useActiveVersion, useEnvSurface, useVersions } from '../state/versions';
+import { rectSize } from '../versions/edits';
 import { t } from './strings';
 
 export function VersionBar() {
   const { live } = useEnvSurface();
-  const { versions, broken, active, saveError, create, rename, remove, setActive } = useVersions();
+  const { versions, broken, active, saveError, unsaved, tool, draft, create, rename, remove, setActive, setTool } = useVersions();
   const version = useActiveVersion();
 
   const onRename = () => {
@@ -38,11 +39,23 @@ export function VersionBar() {
       <button type="button" disabled={!version} onClick={onRemove}>
         {t.versions.remove}
       </button>
+      {version && (
+        <button type="button" aria-pressed={tool === 'level'} title={t.versions.toolTitles.level} onClick={() => setTool(tool === 'level' ? undefined : 'level')}>
+          {t.versions.tools.level}
+        </button>
+      )}
+      {draft ? (
+        <span className="status">
+          <strong>{t.versions.rectSize(rectSize(draft).w, rectSize(draft).h, rectSize(draft).area)}</strong>
+        </span>
+      ) : (
+        tool && <span className="status muted">{t.versions.dragHint}</span>
+      )}
       <span className="status">
         {version ? (
           <>
             <strong>{version.name}</strong> · {t.versions.status(version.grid.cols, version.grid.rows, version.edits.length)}
-            {!saveError && <> · {t.versions.saved}</>}
+            {!saveError && <> · {unsaved.includes(version.id) ? t.versions.unsaved : t.versions.saved}</>}
           </>
         ) : (
           <span className="muted">{t.versions.previewNote}</span>

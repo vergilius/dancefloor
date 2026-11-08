@@ -172,7 +172,20 @@ export const t = {
     status: (cols: number, rows: number, edits: number) =>
       `siatka ${cols} × ${rows} · ${edits} ${plural(edits, 'zmiana', 'zmiany', 'zmian')}`,
     saved: 'zapisano',
+    unsaved: 'zapisywanie…',
     saveError: 'Błąd zapisu wersji',
+    tools: { level: 'Wyrównaj' },
+    toolTitles: { level: 'Przeciągnij po terenie: prostokąt (siatka 0,5 m) wyrównany do średniej wysokości pod nim' },
+    dragHint: 'przeciągnij po terenie · Esc anuluje',
+    rectSize: (w: number, h: number, area: number) => `${w.toFixed(1)} × ${h.toFixed(1)} m = ${area.toFixed(2)} m²`,
+    panelTitle: 'Wersja terenu',
+    totals: (cut: number, fill: number, net: number) =>
+      `wykop ${cut.toFixed(2)} m³ · nasyp ${fill.toFixed(2)} m³ · bilans ${net >= 0 ? '+' : '−'}${Math.abs(net).toFixed(2)} m³`,
+    changed: (n: number, uncertainPct: number) =>
+      `zmienione węzły: ${n.toLocaleString('pl-PL')}, w tym ${uncertainPct.toFixed(0)} % na terenie niepewnym`,
+    lastEdit: 'Ostatnia zmiana',
+    zLabel: 'z (wzgl. ±0.00, m)',
+    noEdits: 'Brak zmian. Wybierz narzędzie w pasku Otoczenia i przeciągnij po terenie.',
     broken: (n: number) => `${n} ${plural(n, 'nieczytelna wersja', 'nieczytelne wersje', 'nieczytelnych wersji')} (pliki zostawione)`,
   },
   fileCount: (n: number) => `${n} ${n === 1 ? 'plik' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'pliki' : 'plików'}`,

@@ -4,20 +4,30 @@
 import { create } from 'zustand';
 import { listFiles, readFile, removeFile, versionsDir, writeFile } from '../project/folder';
 import type { HeightGrid } from '../terrain/grid';
+import { applyEdits, type Edit, type Rect } from '../versions/edits';
 import { packGrid, parseVersionFile, serializeVersionFile, unpackGrid, type VersionFile } from '../versions/file';
 import { useTerrain, type Terrain } from './terrain';
 
-export type Version = { id: string; name: string; created: string; grid: HeightGrid; edits: never[] };
+export type Version = { id: string; name: string; created: string; grid: HeightGrid; edits: Edit[] };
 /** A version file that couldn't be read: listed with the reason, never deleted or overwritten. */
 export type BrokenVersion = { file: string; error: string };
 export type Active = 'preview' | string;
+export type Tool = Edit['tool'];
+/** The JSON is written this long after the last change (PLAN.md §5 M4a). */
+const AUTOSAVE_MS = 1000;
 
 type VersionsState = {
   dir?: FileSystemDirectoryHandle;
   versions: Version[];
   broken: BrokenVersion[];
   active: Active;
-  /** Last failed write (create / rename / delete). Cleared by the next successful one. */
+  /** Edit tool armed in the active version (none in Podgląd). */
+  tool?: Tool;
+  /** The rect being dragged with the tool (plan m, on the lattice), shown with its size. View state. */
+  draft?: Rect;
+  /** Versions with changes not written yet. */
+  unsaved: string[];
+  /** Last failed write (create / rename / delete / autosave). Cleared by the next successful one. */
   saveError?: string;
   /** Loads the versions of a freshly opened project folder; Podgląd is shown. */
   load(dir: FileSystemDirectoryHandle): Promise<void>;
@@ -27,6 +37,12 @@ type VersionsState = {
   /** Removes both files; Podgląd is shown if it was the active version. */
   remove(id: string): Promise<void>;
   setActive(active: Active): void;
+  setTool(tool: Tool | undefined): void;
+  setDraft(draft: Rect | undefined): void;
+  /** Appends an edit to the active version (autosaved). */
+  addEdit(edit: Edit): void;
+  /** Changes one edit of the active version (autosaved); later edits replay over it. */
+  changeEdit(id: string, change: Partial<Omit<Edit, 'id' | 'tool'>>): void;
 };
 
 const errText = (err: unknown) => (err instanceof Error ? err.message : String(err));
@@ -57,9 +73,11 @@ export const useVersions = create<VersionsState>()((set, get) => ({
   versions: [],
   broken: [],
   active: 'preview',
+  unsaved: [],
 
   async load(dir) {
-    set({ dir, versions: [], broken: [], active: 'preview', saveError: undefined });
+    cancelSaves();
+    set({ dir, versions: [], broken: [], active: 'preview', tool: undefined, unsaved: [], saveError: undefined });
     const versions: Version[] = [];
     const broken: BrokenVersion[] = [];
     try {
@@ -102,17 +120,14 @@ export const useVersions = create<VersionsState>()((set, get) => ({
     if (!dir || !v || !name.trim()) return;
     const next = { ...v, name: name.trim() };
     set((st) => ({ versions: st.versions.map((x) => (x.id === id ? next : x)) }));
-    try {
-      await writeFile((await versionsDir(dir, true))!, `${id}.json`, serializeVersionFile(toFile(next)));
-      set({ saveError: undefined });
-    } catch (err) {
-      set({ saveError: errText(err) });
-    }
+    await saveNow(id);
   },
 
   async remove(id) {
     const { dir } = get();
     if (!dir) return;
+    cancelSave(id);
+    await queues.get(id); // let a running write finish, so it can't recreate the JSON after the delete
     try {
       const vdir = await versionsDir(dir, false);
       if (vdir) {
@@ -126,24 +141,104 @@ export const useVersions = create<VersionsState>()((set, get) => ({
     set((st) => ({
       versions: st.versions.filter((x) => x.id !== id),
       active: st.active === id ? 'preview' : st.active,
+      tool: st.active === id ? undefined : st.tool,
+      unsaved: st.unsaved.filter((x) => x !== id),
       saveError: undefined,
     }));
   },
 
   setActive(active) {
-    set({ active });
+    set({ active, tool: undefined, draft: undefined });
+  },
+
+  setTool(tool) {
+    if (get().active !== 'preview') set({ tool, draft: undefined });
+  },
+
+  setDraft(draft) {
+    set({ draft });
+  },
+
+  addEdit(edit) {
+    updateActive((v) => ({ ...v, edits: [...v.edits, edit] }));
+  },
+
+  changeEdit(id, change) {
+    updateActive((v) => ({ ...v, edits: v.edits.map((e) => (e.id === id ? { ...e, ...change } : e)) }));
   },
 }));
+
+/** Replaces the active version and schedules its autosave. */
+function updateActive(f: (v: Version) => Version) {
+  const { active } = useVersions.getState();
+  useVersions.setState((st) => ({
+    versions: st.versions.map((v) => (v.id === active ? f(v) : v)),
+    unsaved: st.unsaved.includes(active) ? st.unsaved : [...st.unsaved, active],
+  }));
+  scheduleSave(active);
+}
+
+// Autosave: one pending timer and one write chain per version, so writes of a version never overlap.
+const timers = new Map<string, number>();
+const queues = new Map<string, Promise<void>>();
+
+function scheduleSave(id: string) {
+  window.clearTimeout(timers.get(id));
+  timers.set(id, window.setTimeout(() => void saveNow(id), AUTOSAVE_MS));
+}
+
+function cancelSave(id: string) {
+  window.clearTimeout(timers.get(id));
+  timers.delete(id);
+}
+
+function cancelSaves() {
+  for (const id of [...timers.keys()]) cancelSave(id);
+}
+
+/** Writes the version's JSON as it is when the write starts (after any write already running). */
+function saveNow(id: string): Promise<void> {
+  cancelSave(id);
+  const run = (queues.get(id) ?? Promise.resolve()).then(async () => {
+    const { dir, versions } = useVersions.getState();
+    const v = versions.find((x) => x.id === id);
+    if (!dir || !v) return;
+    try {
+      await writeFile((await versionsDir(dir, true))!, `${id}.json`, serializeVersionFile(toFile(v)));
+      // Still the same content? Then it's saved; a change during the write keeps it unsaved (its timer is pending).
+      useVersions.setState((st) =>
+        st.dir === dir && st.versions.find((x) => x.id === id) === v
+          ? { unsaved: st.unsaved.filter((x) => x !== id), saveError: undefined }
+          : {},
+      );
+    } catch (err) {
+      if (useVersions.getState().dir === dir) useVersions.setState({ saveError: errText(err) });
+    }
+  });
+  queues.set(id, run);
+  return run;
+}
 
 export const useActiveVersion = (): Version | undefined =>
   useVersions((s) => (s.active === 'preview' ? undefined : s.versions.find((v) => v.id === s.active)));
 
+/** The version's surface (edits replayed over its frozen base) as a grid; one per edit list, shared by all callers. */
+export function versionSurface(v: Version): HeightGrid {
+  let s = surfaces.get(v.edits);
+  if (!s || s.base !== v.grid) {
+    s = { base: v.grid, grid: { ...v.grid, base: applyEdits(v.grid, v.edits) } };
+    surfaces.set(v.edits, s);
+  }
+  return s.grid;
+}
+const surfaces = new WeakMap<Edit[], { base: HeightGrid; grid: HeightGrid }>();
+
 /**
- * What Environment draws: the live generated terrain in Podgląd, or the active version's surface (T1: its frozen
- * base). `live` = the generated terrain, for "Nowa wersja"; `plot` = the plot outline from the drawings.
+ * What Environment draws: the live generated terrain in Podgląd, or the active version's surface.
+ * `live` = the generated terrain, for "Nowa wersja"; `plot` = the plot outline from the drawings.
  */
-export function useEnvSurface(): { grid?: HeightGrid; live?: HeightGrid; plot?: Terrain['plot'] } {
+export function useEnvSurface(): { grid?: HeightGrid; live?: HeightGrid; plot?: Terrain['plot']; version?: Version } {
   const { grid: live, plot } = useTerrain();
   const version = useActiveVersion();
-  return { grid: version ? version.grid : live, live, plot };
+  return { grid: version ? versionSurface(version) : live, live, plot, version };
 }
