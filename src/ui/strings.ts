@@ -92,6 +92,11 @@ export const t = {
       lowShare: 'mniej niż 50 % końców ścian rzutu pasuje',
     },
   },
+  reference: {
+    sheets: (n: number) => `${n} ${n === 1 ? 'arkusz' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'arkusze' : 'arkuszy'}`,
+    none: 'Brak poziomu odniesienia ±0.00 (0,00= … m npm) na wczytanych arkuszach: wysokości tylko względne',
+    disagree: 'Poziomy odniesienia ±0.00 się różnią, wysokości tylko względne',
+  },
   levels: { title: 'Rzędne', withPoint: 'z punktem', without: 'bez punktu' },
   pdf: {
     rendering: 'Renderowanie PDF…',

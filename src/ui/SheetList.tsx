@@ -4,6 +4,8 @@ import type { NormalizedSheet, SheetLabels } from '../dwg/types';
 import { SHEET_KINDS, type SheetKind } from '../project/projectFile';
 import { useProject, type PdfState, type SheetRow } from '../state/store';
 import { planeValue, withPlane } from '../project/vertical';
+import { formatHeight } from '../project/levels';
+import { useLevelReference, useRefValue } from '../state/levels';
 import { deriveSite, unsavedTransforms } from '../state/site';
 import { deriveVertical, isVertical, placementFor, unsavedPlacements, useReference, type VerticalKind } from '../state/vertical';
 import type { ParseSummary } from '../worker/protocol';
@@ -59,6 +61,7 @@ export function SheetList() {
           {t.saveError}: {saveError}
         </p>
       )}
+      <ReferenceLine />
       <GroupToggles />
       <ul className="file-list">
         {sheets.map((s) => (
@@ -75,6 +78,7 @@ function SheetItem({ sheet: s }: { sheet: SheetRow }) {
   const parse = useProject((st) => st.parse);
   const setKind = useProject((st) => st.setKind);
   const setZ = useProject((st) => st.setZ);
+  const refValue = useRefValue();
 
   return (
     <li>
@@ -97,7 +101,8 @@ function SheetItem({ sheet: s }: { sheet: SheetRow }) {
         </select>
         {s.placement?.type === 'horizontal' && (
           <label>
-            z <ZInput value={s.placement.z} onChange={(z) => setZ(s.file, z)} /> m
+            z <ZInput value={s.placement.z} onChange={(z) => setZ(s.file, z)} /> m{' '}
+            <span className="muted">= {formatHeight(s.placement.z, refValue)}</span>
           </label>
         )}
         {s.source === 'suggested' && <span className="tag suggested">{t.suggested}</span>}
@@ -241,6 +246,24 @@ function AlignLine({ row, sheet }: { row: SheetRow; sheet?: NormalizedSheet }) {
         ({a?.ok ? `${t.align.auto} · ${t.align.share} ${pct(a.share)} = ${a.matched}/${a.total} · ${ref?.file}` : t.align.saved})
       </span>
       {tools}
+    </div>
+  );
+}
+
+/** `±0.00 = 355.40 m n.p.m. (4 arkusze)`, or why heights are relative only. */
+function ReferenceLine() {
+  const r = useLevelReference();
+  if (r.ok)
+    return (
+      <div className="save-bar">
+        ±0.00 = <strong>{r.value.toFixed(2)} m n.p.m.</strong> <span className="muted">({t.reference.sheets(r.sheets)})</span>
+      </div>
+    );
+  return (
+    <div className="save-bar error">
+      {r.reason === 'none'
+        ? t.reference.none
+        : `${t.reference.disagree}: ${r.values.map((v) => `${v.file} ${v.value.toFixed(2)}`).join(', ')}`}
     </div>
   );
 }
