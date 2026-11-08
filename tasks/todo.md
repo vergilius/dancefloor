@@ -1,6 +1,6 @@
 # M4a task list
 
-Next: T2 implemented, waiting for the user's browser check (4 × 6 m: 41 × 61 corners, so +0.10 m → +2.50 m³, edges included); then T3. After M4a: M5 house massing, then M4b–M4d (ADR 0004).
+Next: T3 (Podnieś / Obniż and the edit list). Volumes count edge corners: 4 × 6 m at +0.10 m → +2.50 m³, 1 × 1 m → 0.121 m³ (user OK). After M4a: M5 house massing, then M4b–M4d (ADR 0004).
 Plan: `tasks/plan.md`. Spec: PLAN.md §5 M4a, ADR 0003. M3 task notes are in git history (`tasks/todo.md` at c477be0).
 
 Commands: `pnpm dev`, `pnpm check` (build + lint + guards). No automated tests (CLAUDE.md).
@@ -30,15 +30,15 @@ uncertain share. `src/scene/EditTool.tsx`: with "Wyrównaj" active in a version,
 draped on the surface with its size; release → edit with z = mean height under the rect (1 cm). Panel: totals line,
 numeric z of the last edit. Autosave the JSON 1 s after a change; save errors in the bar.
 **Acceptance criteria:**
-- [ ] 4 × 6 m rect → 24.00 m²; z +0.30 → +0.40 grows net by ≈ 2.40 m³
-- [ ] Mesh and contours show the levelled area; a reload brings the edit back
+- [x] 4 × 6 m rect → 24.00 m²; z +0.30 → +0.40 grows net by 2.50 m³ (edge corners included)
+- [x] Mesh and contours show the levelled area; a reload brings the edit back
 **Verification:** `pnpm check`; user drags, reads totals, changes z, reloads.
 **Dependencies:** T1
 **Files:** `package.json`, `src/versions/edits.ts`, `src/scene/EditTool.tsx`, `src/state/versions.ts`, `src/ui/VersionPanel.tsx`, `src/ui/strings.ts`
 **Scope:** M–L
 
 ### Checkpoint A (after T1–T2)
-- [ ] `pnpm check` green; versions persist and the volume check holds (user check)
+- [x] `pnpm check` green; versions persist and the volume check holds (user check)
 
 ### Task 3: Podnieś / Obniż and the edit list
 **Description:** Tools Podnieś and Obniż (dz default 0.10 m). Panel list of the active version's edits: tool, size,

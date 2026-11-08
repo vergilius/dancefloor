@@ -446,7 +446,7 @@ Out of M4a: bevel, walls (M4b); paths, materials, build-up (M4c); obstacles (M4d
 (delete and redraw); duplicating a version; a Tp surface.
 
 ✅ "Nowa wersja" from Podgląd; Wyrównaj a 4 × 6 m rect next to the house to +0.30: the list shows 24.00 m² and the
-totals change. Change z to +0.40: net grows by ≈ 2.40 m³ (area × 0.10, a visible check of the maths). Podnieś a 1 × 1 m
+totals change. Change z to +0.40: net grows by 2.50 m³ (41 × 61 corners × 0.01 m² × 0.10: edge corners are included, user 2026-11-08). Podnieś a 1 × 1 m
 rect by 0.10 → net +0.10 m³ (± one cell row). Undo/redo restore the totals exactly. A second version edited
 differently keeps its own totals. Reload the app → both versions and their totals are back. Delete one → its files
 are gone. Podgląd and Design unchanged; orbiting stays smooth.
