@@ -1,12 +1,33 @@
 // Environment view bar (PLAN.md §5 M4a): Podgląd or an edit version, plus Nowa wersja / Zmień nazwę / Usuń.
+import { useEffect } from 'react';
+import { CUT_COLOR, DIFF_SATURATION, FILL_COLOR } from '../scene/TerrainMesh';
 import { useActiveVersion, useEnvSurface, useVersions } from '../state/versions';
 import { rectSize, TOOLS } from '../versions/edits';
 import { t } from './strings';
 
 export function VersionBar() {
   const { live } = useEnvSurface();
-  const { versions, broken, active, saveError, unsaved, tool, draft, create, rename, remove, setActive, setTool } = useVersions();
+  const { versions, broken, active, saveError, unsaved, tool, draft, history, showDiff, create, rename, remove, setActive, setTool, undo, redo, setShowDiff } =
+    useVersions();
   const version = useActiveVersion();
+
+  const h = version && history[version.id];
+
+  // Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z (and Ctrl+Y). Not while typing in a field: there the field's own undo applies.
+  useEffect(() => {
+    if (!version) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
+      const k = e.key.toLowerCase();
+      if (k === 'z' && !e.shiftKey) undo();
+      else if ((k === 'z' && e.shiftKey) || k === 'y') redo();
+      else return;
+      e.preventDefault();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [version, undo, redo]);
 
   const onRename = () => {
     if (!version) return;
@@ -45,6 +66,26 @@ export function VersionBar() {
             {t.versions.tools[k]}
           </button>
         ))}
+      {version && (
+        <>
+          <button type="button" disabled={!h?.undo.length} title={t.versions.undoTitle} onClick={undo}>
+            {t.versions.undo}
+          </button>
+          <button type="button" disabled={!h?.redo.length} title={t.versions.redoTitle} onClick={redo}>
+            {t.versions.redo}
+          </button>
+          <button type="button" aria-pressed={showDiff} title={t.versions.diffTitle} onClick={() => setShowDiff(!showDiff)}>
+            {t.versions.diff}
+          </button>
+          {showDiff && (
+            <span className="status diff-legend">
+              {t.versions.diffCut} −{DIFF_SATURATION.toFixed(1)} m
+              <span className="diff-ramp" style={{ background: `linear-gradient(to right, ${CUT_COLOR}, #fff, ${FILL_COLOR})` }} />+
+              {DIFF_SATURATION.toFixed(1)} m {t.versions.diffFill}
+            </span>
+          )}
+        </>
+      )}
       {draft ? (
         <span className="status">
           <strong>{t.versions.rectSize(rectSize(draft).w, rectSize(draft).h, rectSize(draft).area)}</strong>

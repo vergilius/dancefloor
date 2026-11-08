@@ -330,6 +330,12 @@ const fmt = (v: number) => String(Number(v.toFixed(3)));
 /** Accepts a decimal comma or dot. Invalid text (not a number, or failing `accept`) is shown in red and not committed. */
 export function ZInput({ value, onChange, accept = () => true }: { value: number; onChange: (z: number) => void; accept?: (v: number) => boolean }) {
   const [text, setText] = useState(() => fmt(value));
+  // Follow changes from outside (undo, reset), but not the value this field just committed while typing.
+  const [shown, setShown] = useState(value);
+  if (value !== shown) {
+    setShown(value);
+    if (parseNum(text) !== value) setText(fmt(value));
+  }
   const ok = (v: number) => Number.isFinite(v) && accept(v);
   const valid = ok(parseNum(text));
   return (

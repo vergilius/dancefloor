@@ -1,6 +1,6 @@
 # M4a task list
 
-Next: T4 (undo/redo and the Δh map). Terrain (2026-11-08, user-verified): plot outline + 2 m mask, no "uncertain" area (IDW of the hull boundary outside the profiles). Version files v2 (.bin = base + outside mask), v1 still loads.
+Next: T4 implemented, waiting for the user's browser check; then checkpoint B (PLAN.md/CLAUDE.md status, merge), then M5 house massing (ADR 0004).
 Plan: `tasks/plan.md`. Spec: PLAN.md §5 M4a, ADR 0003. M3 task notes are in git history (`tasks/todo.md` at c477be0).
 
 Commands: `pnpm dev`, `pnpm check` (build + lint + guards). No automated tests (CLAUDE.md).

@@ -4,7 +4,7 @@ import { Line } from '@react-three/drei';
 import { useMemo } from 'react';
 import { BufferAttribute, BufferGeometry, Color, DoubleSide } from 'three';
 import { useProject } from '../state/store';
-import { useEnvSurface } from '../state/versions';
+import { useEnvSurface, useVersions } from '../state/versions';
 import { contours, type Contour } from '../terrain/contours';
 import { cellOutside, isOutside, sampleGrid, type HeightGrid } from '../terrain/grid';
 import { ENV_LAYER } from './split';
@@ -24,8 +24,11 @@ const MAJOR_WIDTH = 2; // px
 export function TerrainMesh() {
   const show = useProject((s) => s.showTerrain);
   // Podgląd: the generated terrain; in an edit version: its own surface (M4a).
-  const { grid, plot } = useEnvSurface();
-  const geo = useMemo(() => grid && terrainGeometry(grid), [grid]);
+  const { grid, plot, version } = useEnvSurface();
+  // "Różnice" (M4a): colour by Δh against the version's frozen base instead of by height.
+  const showDiff = useVersions((s) => s.showDiff);
+  const diffBase = showDiff ? version?.grid : undefined;
+  const geo = useMemo(() => grid && terrainGeometry(grid, diffBase), [grid, diffBase]);
   const outline = useMemo(() => grid && plot && drapedOutline(grid, plot), [grid, plot]);
   const lines = useMemo(() => grid && contourLines(contours(grid)), [grid]);
   if (!show || !geo) return null;
@@ -58,8 +61,11 @@ export function TerrainMesh() {
   );
 }
 
-/** One vertex per grid corner (height-tinted); cells beyond the plot + margin are left out. */
-function terrainGeometry(g: HeightGrid): BufferGeometry {
+/**
+ * One vertex per grid corner, height-tinted, or with `diff` coloured by Δh = surface − diff (red cut, blue fill,
+ * white 0, saturated at ±DIFF_SATURATION). Cells beyond the plot + margin are left out.
+ */
+function terrainGeometry(g: HeightGrid, diff?: HeightGrid): BufferGeometry {
   const w = g.cols + 1;
   const n = w * (g.rows + 1);
   const pos = new Float32Array(3 * n);
@@ -80,7 +86,7 @@ function terrainGeometry(g: HeightGrid): BufferGeometry {
       pos[3 * k] = g.origin.x + i * g.cell;
       pos[3 * k + 1] = h;
       pos[3 * k + 2] = -(g.origin.y + j * g.cell);
-      ramp((h - min) / span, c).toArray(col, 3 * k);
+      (diff ? diffColor(h - diff.base[k]!, c) : ramp((h - min) / span, c)).toArray(col, 3 * k);
     }
   }
   const index: number[] = [];
@@ -101,6 +107,18 @@ function terrainGeometry(g: HeightGrid): BufferGeometry {
   geo.setIndex(new BufferAttribute(Uint32Array.from(index), 1));
   geo.computeVertexNormals();
   return geo;
+}
+
+/** Δh at which the diff colours are fully saturated (m). */
+export const DIFF_SATURATION = 1;
+export const CUT_COLOR = '#cf222e';
+export const FILL_COLOR = '#0969da';
+const CUT = new Color(CUT_COLOR);
+const FILL = new Color(FILL_COLOR);
+const WHITE = new Color('#ffffff');
+
+function diffColor(d: number, out: Color): Color {
+  return out.copy(WHITE).lerp(d < 0 ? CUT : FILL, Math.min(1, Math.abs(d) / DIFF_SATURATION));
 }
 
 function ramp(t: number, out: Color): Color {

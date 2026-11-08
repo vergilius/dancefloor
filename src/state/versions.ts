@@ -26,6 +26,10 @@ type VersionsState = {
   draft?: Rect;
   /** Edit of the active version selected in the list (outlined in the view). View state. */
   selected?: string;
+  /** Undo / redo per version: edit lists before each command. Not saved; cleared on folder load. */
+  history: Record<string, { undo: Edit[][]; redo: Edit[][] }>;
+  /** "Różnice": colour the version's surface by Δh against its frozen base. View state. */
+  showDiff: boolean;
   /** Versions with changes not written yet. */
   unsaved: string[];
   /** Last failed write (create / rename / delete / autosave). Cleared by the next successful one. */
@@ -46,6 +50,9 @@ type VersionsState = {
   setEditValue(id: string, value: number): void;
   deleteEdit(id: string): void;
   select(id: string | undefined): void;
+  undo(): void;
+  redo(): void;
+  setShowDiff(show: boolean): void;
 };
 
 const errText = (err: unknown) => (err instanceof Error ? err.message : String(err));
@@ -78,10 +85,13 @@ export const useVersions = create<VersionsState>()((set, get) => ({
   broken: [],
   active: 'preview',
   unsaved: [],
+  history: {},
+  showDiff: false,
 
   async load(dir) {
     cancelSaves();
-    set({ dir, versions: [], broken: [], active: 'preview', tool: undefined, selected: undefined, unsaved: [], saveError: undefined });
+    set({ dir, versions: [], broken: [], active: 'preview', tool: undefined, selected: undefined, unsaved: [], history: {}, saveError: undefined });
+    lastChange = undefined;
     const versions: Version[] = [];
     const broken: BrokenVersion[] = [];
     try {
@@ -170,16 +180,29 @@ export const useVersions = create<VersionsState>()((set, get) => ({
   },
 
   addEdit(edit) {
-    updateActive((v) => ({ ...v, edits: [...v.edits, edit] }));
+    command((edits) => [...edits, edit]);
   },
 
   setEditValue(id, value) {
-    updateActive((v) => ({ ...v, edits: v.edits.map((e) => (e.id === id ? withValue(e, value) : e)) }));
+    // Typing into the field changes the value per keystroke: one undo step per run of changes to the same edit.
+    command((edits) => edits.map((e) => (e.id === id ? withValue(e, value) : e)), id);
   },
 
   deleteEdit(id) {
-    updateActive((v) => ({ ...v, edits: v.edits.filter((e) => e.id !== id) }));
+    command((edits) => edits.filter((e) => e.id !== id));
     if (get().selected === id) set({ selected: undefined });
+  },
+
+  undo() {
+    step('undo', 'redo');
+  },
+
+  redo() {
+    step('redo', 'undo');
+  },
+
+  setShowDiff(showDiff) {
+    set({ showDiff });
   },
 
   select(selected) {
@@ -187,14 +210,42 @@ export const useVersions = create<VersionsState>()((set, get) => ({
   },
 }));
 
-/** Replaces the active version and schedules its autosave. */
-function updateActive(f: (v: Version) => Version) {
+/** Sets the active version's edit list and schedules its autosave. */
+function setEdits(edits: Edit[], history: { undo: Edit[][]; redo: Edit[][] }) {
   const { active } = useVersions.getState();
   useVersions.setState((st) => ({
-    versions: st.versions.map((v) => (v.id === active ? f(v) : v)),
+    versions: st.versions.map((v) => (v.id === active ? { ...v, edits } : v)),
+    history: { ...st.history, [active]: history },
     unsaved: st.unsaved.includes(active) ? st.unsaved : [...st.unsaved, active],
   }));
   scheduleSave(active);
+}
+
+/** The edit last changed by `setEditValue` (version + edit), so a run of changes to it merges into one undo step. */
+let lastChange: string | undefined;
+
+/** One undoable command on the active version: the list before it goes on the undo stack, redo is cleared. */
+function command(f: (edits: Edit[]) => Edit[], merge?: string) {
+  const { active, versions, history } = useVersions.getState();
+  const v = versions.find((x) => x.id === active);
+  if (!v) return;
+  const h = history[active] ?? { undo: [], redo: [] };
+  const key = merge && `${active}/${merge}`;
+  const undo = key && key === lastChange ? h.undo : [...h.undo, v.edits];
+  lastChange = key;
+  setEdits(f(v.edits), { undo, redo: [] });
+}
+
+/** Undo or redo: moves the active version's list between the stacks. */
+function step(from: 'undo' | 'redo', to: 'undo' | 'redo') {
+  const { active, versions, history, selected } = useVersions.getState();
+  const v = versions.find((x) => x.id === active);
+  const h = history[active];
+  const edits = h?.[from].at(-1);
+  if (!v || !h || !edits) return;
+  lastChange = undefined;
+  setEdits(edits, { [from]: h[from].slice(0, -1), [to]: [...h[to], v.edits] } as { undo: Edit[][]; redo: Edit[][] });
+  if (selected && !edits.some((e) => e.id === selected)) useVersions.setState({ selected: undefined });
 }
 
 // Autosave: one pending timer and one write chain per version, so writes of a version never overlap.
