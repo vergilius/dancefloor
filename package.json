@@ -17,6 +17,7 @@
     "@mlightcad/libredwg-web": "0.8.6",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.2",
+    "delaunator": "^5.1.0",
     "pdfjs-dist": "^6.5.438",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",

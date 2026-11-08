@@ -40,6 +40,8 @@ export type ProjectState = {
   pdfOpacity: Record<string, number>;
   /** 3D level markers on/off (M2). View setting: not saved, doesn't mark the project dirty. */
   showLevels: boolean;
+  /** Terrain mesh + plot outline in the Environment viewport (M3). View setting: not saved. */
+  showTerrain: boolean;
   align?: AlignTool;
   /** Measure tool (M2): on while set; 0–2 picked world points (x, y, z). View state: not saved. */
   measure?: { picks: [number, number, number][] };
@@ -75,6 +77,7 @@ export type ProjectState = {
   renderPdf(file: string): Promise<void>;
   setPdfOpacity(file: string, opacity: number): void;
   setShowLevels(show: boolean): void;
+  setShowTerrain(show: boolean): void;
 };
 
 export type Derived = { placements?: Record<string, VerticalPlacement>; transforms?: Record<string, Similarity2D> };
@@ -107,6 +110,7 @@ export const useProject = create<ProjectState>()((set, get) => ({
   pdfs: {},
   pdfOpacity: {},
   showLevels: true,
+  showTerrain: true,
   groups: DEFAULT_GROUPS,
 
   async open(dir) {
@@ -300,5 +304,9 @@ export const useProject = create<ProjectState>()((set, get) => ({
 
   setShowLevels(showLevels) {
     set({ showLevels });
+  },
+
+  setShowTerrain(showTerrain) {
+    set({ showTerrain });
   },
 }));

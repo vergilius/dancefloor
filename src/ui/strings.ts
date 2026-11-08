@@ -10,6 +10,8 @@ export const t = {
   fitView: 'Dopasuj widok',
   levelMarkers: 'Punkty rzędnych',
   levelMarkersTitle: 'Pokaż/ukryj punkty rzędnych Tp/Ti z arkuszy (w obu widokach)',
+  terrainToggle: 'Teren',
+  terrainToggleTitle: 'Pokaż/ukryj teren istniejący i granicę działki (w widoku Otoczenie)',
   measure: {
     button: 'Pomiar',
     title: 'Zmierz odległość i różnicę wysokości między dwoma punktami (w widoku Projekt)',
@@ -138,5 +140,29 @@ export const t = {
   },
   folderUnsupported:
     'Ta przeglądarka nie obsługuje dostępu do folderów (File System Access API). Użyj Chrome lub Edge.',
+  terrain: {
+    title: 'Teren istniejący',
+    seeds: (points: number, sheets: number, dropped: number) =>
+      `${points} ${plural(points, 'punkt', 'punkty', 'punktów')} z ${sheets} ${plural(sheets, 'arkusza', 'arkuszy', 'arkuszy')}, ${dropped} ${plural(dropped, 'odcinek pominięty', 'odcinki pominięte', 'odcinków pominiętych')}`,
+    sheet: (segments: number, points: number) => `${segments} ${plural(segments, 'odcinek', 'odcinki', 'odcinków')} → ${points} pkt`,
+    dropped: 'pominięte (bez sąsiada)',
+    none: 'Brak profili terenu (warstwa PZT_TEREN ISTNIEJĄCY) na umieszczonych elewacjach i przekrojach',
+    grid: (cols: number, rows: number, cell: number) =>
+      `Siatka ${cols} × ${rows} = ${(cols * rows).toLocaleString('pl-PL')} oczek po ${cell.toFixed(2)} m`,
+    extent: { plot: 'zakres: działka PZT_ZAKRES + 1 m', seeds: 'zakres: punkty profili + 2,5 m (PZT-01 niewyrównany)' },
+    range: 'Wysokości',
+    uncertain: (pct: number) => `Poza profilami (wysokość przedłużona, niepewna): ${pct.toFixed(0)} % węzłów`,
+    noGrid: 'Za mało punktów, by zbudować siatkę',
+    tiTitle: 'Kontrola Ti (rzędna z opisu vs siatka)',
+    tiNone: 'Brak punktów Ti / Tp=Ti z położeniem',
+    tiMax: (cm: number) => `max |Δ| = ${cm.toFixed(1)} cm`,
+    tiRow: (grid: string, deltaCm: string) => `siatka ${grid}, Δ ${deltaCm} cm`,
+  },
   fileCount: (n: number) => `${n} ${n === 1 ? 'plik' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'pliki' : 'plików'}`,
 } as const;
+
+/** Polish plural: 1 → one, 2–4 (not 12–14) → few, else many. */
+function plural(n: number, one: string, few: string, many: string): string {
+  if (n === 1) return one;
+  return n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? few : many;
+}
