@@ -206,6 +206,8 @@ export const t = {
   },
   house: {
     toggle: 'Dom',
+    openingsToggle: 'Otwory',
+    openingsToggleTitle: 'Pokaż/ukryj otwory okien i drzwi w domu (wyłączone: pełne ściany i dach)',
     toggleTitle: 'Pokaż/ukryj bryły domu (w widoku Otoczenie; krawędzie w widoku Projekt)',
     title: 'Dom',
     fromRoof: 'Z rzutu dachu',
@@ -269,6 +271,7 @@ export const t = {
     shell: (t: number) => `ściany zewnętrzne: obrys brył, grubość ${t.toFixed(3)} m (odstęp linii I-WALL)`,
     shellAssumed: '(nie zmierzono, przyjęto)',
     roofHoles: (n: number) => `${n} ${plural(n, 'otwór w dachu', 'otwory w dachu', 'otworów w dachu')}`,
+    openingsHidden: (found: number) => `znalezione ${found} (ukryte: przycisk „Otwory” wyłączony)`,
     openingsTitle: 'Okna i drzwi z elewacji',
     openingsLine: (found: number, holes: number, quads: number, missed: number) =>
       `znalezione ${found}: ${holes} ${plural(holes, 'otwór w ścianie', 'otwory w ścianach', 'otworów w ścianach')}, ${quads} na bryle (ciemne)` +

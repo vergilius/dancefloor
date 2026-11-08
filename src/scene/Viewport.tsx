@@ -134,6 +134,7 @@ function Scene({ project }: { project?: string }) {
         <LevelsToggle />
         <TerrainToggle />
         <HouseToggle />
+        <OpeningsToggle />
         <MeasureToggle disabled={aligning} />
         <AlignPrompt />
       </div>
@@ -251,6 +252,16 @@ function HouseToggle() {
   return (
     <button type="button" aria-pressed={show} title={t.house.toggleTitle} onClick={() => setShowHouse(!show)}>
       {t.house.toggle}
+    </button>
+  );
+}
+
+function OpeningsToggle() {
+  const show = useProject((s) => s.showOpenings);
+  const setShowOpenings = useProject((s) => s.setShowOpenings);
+  return (
+    <button type="button" aria-pressed={show} title={t.house.openingsToggleTitle} onClick={() => setShowOpenings(!show)}>
+      {t.house.openingsToggle}
     </button>
   );
 }

@@ -269,6 +269,7 @@ function WallsSummary() {
 /** Per placed elevation: openings found / drawn / not placed (T3). */
 function OpeningsSummary() {
   const elevations = useHouse3D().openings;
+  const shown = useProject((s) => s.showOpenings);
   if (elevations.length === 0) return null;
   return (
     <>
@@ -277,7 +278,9 @@ function OpeningsSummary() {
         {elevations.map((e) => (
           <li key={e.file}>
             {sheetName(e.file)}:{' '}
-            {t.house.openingsLine(e.found.length, e.placed.filter((o) => o.hole).length, e.placed.filter((o) => !o.hole).length, e.missed)}
+            {shown
+              ? t.house.openingsLine(e.found.length, e.placed.filter((o) => o.hole).length, e.placed.filter((o) => !o.hole).length, e.missed)
+              : t.house.openingsHidden(e.found.length)}
           </li>
         ))}
       </ul>

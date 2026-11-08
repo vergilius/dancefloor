@@ -27,6 +27,7 @@ export function HouseMesh() {
   const show = useProject((s) => s.showHouse);
   const blocks = useProject((s) => s.house.blocks);
   const house = useHouse3D();
+  const showOpenings = useProject((s) => s.showOpenings);
   // With walls from the plans, the main body and the annex are drawn hollow (M5b): walls, fills, slabs, roof.
   const hollow = house.walls.length > 0;
   const footprints = useMemo(() => {
@@ -48,7 +49,7 @@ export function HouseMesh() {
       ))}
       {hollow && <WallFaces triangles={house.walls} color={WALL_COLOR} />}
       {hollow && <WallFaces triangles={house.slabs} color={SLAB_COLOR} />}
-      <Openings elevations={house.openings} />
+      {showOpenings && <Openings elevations={house.openings} />}
       <lineSegments layers={DESIGN_LAYER}>
         <bufferGeometry>
           <bufferAttribute attach="attributes-position" args={[footprints, 3]} />

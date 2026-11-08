@@ -39,19 +39,21 @@ const EMPTY: House3D = { openings: [], walls: [], slabs: [], roofHoles: [], thic
 export function useHouse3D(): House3D {
   const drawn = useDrawnSheets();
   const blocks = useProject((s) => s.house.blocks);
-  return useMemo(() => shared(drawn, blocks), [drawn, blocks]);
+  const cut = useProject((s) => s.showOpenings);
+  return useMemo(() => shared(drawn, blocks, cut), [drawn, blocks, cut]);
 }
 
 type Blocks = ReturnType<typeof useProject.getState>['house']['blocks'];
-let last: { drawn: ReturnType<typeof useDrawnSheets>; blocks: Blocks; out: House3D } | undefined;
+let last: { drawn: ReturnType<typeof useDrawnSheets>; blocks: Blocks; cut: boolean; out: House3D } | undefined;
 
 /** One result for the mesh and the panel (the walls are built twice per change: uncut, then cut). */
-function shared(drawn: ReturnType<typeof useDrawnSheets>, blocks: Blocks): House3D {
-  if (last?.drawn !== drawn || last.blocks !== blocks) last = { drawn, blocks, out: build(drawn, blocks) };
+function shared(drawn: ReturnType<typeof useDrawnSheets>, blocks: Blocks, cut: boolean): House3D {
+  if (last?.drawn !== drawn || last.blocks !== blocks || last.cut !== cut) last = { drawn, blocks, cut, out: build(drawn, blocks, cut) };
   return last.out;
 }
 
-function build(drawn: ReturnType<typeof useDrawnSheets>, blocks: Blocks): House3D {
+/** `cut` false ("Otwory" off): closed walls and roof, no dark quads; the openings are still found and counted. */
+function build(drawn: ReturnType<typeof useDrawnSheets>, blocks: Blocks, cut: boolean): House3D {
   {
     if (blocks.length === 0) return EMPTY;
     const triangles = Float64Array.from(blocks.flatMap(blockTriangles));
@@ -79,10 +81,10 @@ function build(drawn: ReturnType<typeof useDrawnSheets>, blocks: Blocks): House3
       return { file, found, on };
     });
     const all = placed.flatMap((p) => p.on);
-    const walls = storeys.length ? hollowWalls(storeys, blocks, all) : undefined;
+    const walls = storeys.length ? hollowWalls(storeys, blocks, cut ? all : []) : undefined;
     const main = blocks.find((b): b is GableBlock => b.kind === 'gable');
     // Roof windows: every opening found on an elevation looking at a slope, placed or not.
-    const roofHoles = main && walls ? elevations.flatMap(({ sheet, e }) => findOpenings(sheet).flatMap((r) => roofHole(main, r, e) ?? [])) : [];
+    const roofHoles = cut && main && walls ? elevations.flatMap(({ sheet, e }) => findOpenings(sheet).flatMap((r) => roofHole(main, r, e) ?? [])) : [];
     const slabs = walls
       ? hollowSlabs(
           main,

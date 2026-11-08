@@ -52,6 +52,8 @@ export type ProjectState = {
   house: House;
   /** House solids in the Environment viewport (M5). View setting: not saved. */
   showHouse: boolean;
+  /** Window and door openings cut into the house (M5b). View setting: not saved. */
+  showOpenings: boolean;
   /** House draw tool (M5): plan corners picked so far; `redraw` = index of the flat block whose outline is replaced. */
   houseDraw?: { picks: Vec2[]; redraw?: number };
   open(dir: FileSystemDirectoryHandle): Promise<void>;
@@ -86,6 +88,7 @@ export type ProjectState = {
   setShowLevels(show: boolean): void;
   setShowTerrain(show: boolean): void;
   setShowHouse(show: boolean): void;
+  setShowOpenings(show: boolean): void;
   /** Replaces the block with the same name, or appends it. */
   putBlock(block: Block): void;
   /** Replaces block `index`; refused (false) if the new name is taken by another block. */
@@ -139,6 +142,7 @@ export const useProject = create<ProjectState>()((set, get) => ({
   showLevels: true,
   showTerrain: true,
   showHouse: true,
+  showOpenings: true,
   groups: DEFAULT_GROUPS,
   house: EMPTY_HOUSE,
 
@@ -346,6 +350,10 @@ export const useProject = create<ProjectState>()((set, get) => ({
 
   setShowHouse(showHouse) {
     set({ showHouse });
+  },
+
+  setShowOpenings(showOpenings) {
+    set({ showOpenings });
   },
 
   putBlock(block) {
