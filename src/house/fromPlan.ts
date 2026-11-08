@@ -250,3 +250,62 @@ export function blocksFromPlan(sheet: NormalizedSheet, main: GableBlock): PlanBl
   }
   return { annexes, posts, columns, slabs, slabOpenings, skippedLoops };
 }
+
+/** An elevation placed in 3D (M1b): sheet x = (plan point − origin) · dir, sheet y = height rel. ±0.00. */
+export type ElevationIn = { sheet: NormalizedSheet; origin: Vec2; dir: Vec2 };
+
+/** A line must reach this close (m) to the block's ends to count, and cover this share of its width. */
+const ELEV_END = 0.03; // PAB-07: the parapet line overhangs the plan walls by 1.01 cm per side
+const ELEV_SHARE = 0.5;
+const ELEV_MIN_LEN = 0.3;
+
+/**
+ * Heights (m, ascending, distinct to the mm) of the elevation's horizontal lines on `layer` that lie within the block's
+ * width as seen on that elevation and cover at least half of it. On PAB-10: the terrace slab → +2.635, +3.22.
+ */
+export function elevationHeights(polygon: Vec2[], e: ElevationIn, layer = WALL_LAYER): number[] {
+  const xs = polygon.map((p) => (p.x - e.origin.x) * e.dir.x + (p.y - e.origin.y) * e.dir.y);
+  const e0 = Math.min(...xs);
+  const e1 = Math.max(...xs);
+  const minLen = Math.max(ELEV_MIN_LEN, ELEV_SHARE * (e1 - e0));
+  const out = new Set<number>();
+  for (const [x1, y1, x2, y2] of segments(e.sheet, layer)) {
+    if (Math.abs(y1 - y2) > 0.002) continue;
+    const a = Math.min(x1, x2);
+    const b = Math.max(x1, x2);
+    if (b - a >= minLen && a >= e0 - ELEV_END && b <= e1 + ELEV_END) out.add(mm((y1 + y2) / 2));
+  }
+  return [...out].sort((p, q) => p - q);
+}
+
+/**
+ * Layers read for heights, in order: walls first; the paving/outline layer holds the annex parapet (+3.59 on PAB-07/08)
+ * but also a +3.29 finish line over the terrace, so it is only a fallback.
+ */
+export const HEIGHT_LAYERS = [WALL_LAYER, 'PZT_UTWARDZENIA'];
+
+/** Blocks this much (m) behind the main body's front still count as seen (they stand level with it). */
+const LEVEL_TOL = 0.05;
+
+/** Depth along the elevation's view direction (−dir.y, dir.x): larger = farther from the viewer. */
+const nearestDepth = (poly: Vec2[], e: ElevationIn) => Math.min(...poly.map((p) => (p.x - e.origin.x) * -e.dir.y + (p.y - e.origin.y) * e.dir.x));
+
+/**
+ * First layer, then first elevation, giving at least `need` heights for the block. Elevations on which the block
+ * stands behind the main body (`main`, e.g. the north annex on the south elevation) are skipped: what is drawn
+ * there at its width belongs to something in front.
+ */
+export function heightsFrom(
+  polygon: Vec2[],
+  elevations: (ElevationIn & { file: string })[],
+  need: number,
+  main: Vec2[],
+): { heights: number[]; file: string; layer: string } | undefined {
+  const seen = elevations.filter((e) => nearestDepth(polygon, e) <= nearestDepth(main, e) + LEVEL_TOL);
+  for (const layer of HEIGHT_LAYERS)
+    for (const e of seen) {
+      const heights = elevationHeights(polygon, e, layer);
+      if (heights.length >= need) return { heights, file: e.file, layer };
+    }
+  return undefined;
+}

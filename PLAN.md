@@ -492,8 +492,10 @@ Requirements:
 - **"Z rzutu parteru"** (button, ADR 0005 amendment): from the ground plan around the main body, builds or updates
   "Dobudówka <side>" (long `A-WALL` lines beyond one side, bbox closed to the main wall), "Płyta n" (`A-DETL-1` chain
   closed along the main rectangle), "Słup n" (small closed 4-sided `A-WALL` loops) and "Kolumna n" (closed 4-sided
-  `S-COLS*` loops, heights from the `S-COLS*` extent on a placed section/elevation: 7 × 0.20 × 0.03 m, −0.02…+2.63). Existing blocks with the same
-  name keep their heights; new ones get −1.40 / +3.00. Counts and skipped loops/openings shown. The height list also
+  `S-COLS*` loops, heights from the `S-COLS*` extent on a placed section/elevation: 7 × 0.20 × 0.03 m, −0.02…+2.63). Heights are read from the placed
+  elevations (horizontal `A-WALL`, then `PZT_UTWARDZENIA` lines across the block's width, elevations where it is
+  hidden behind the main body skipped; annex: top only) and the columns' from a section's `S-COLS`; each is listed
+  with its sheet. Blocks with nothing found keep their heights (new: −1.40 / +3.00, flagged). Counts and skipped loops/openings shown. The height list also
   offers the relative `+N.NN` labels of the elevations and sections.
 - **Drawing a flat block** (Design viewport, like the measure tool): "Dodaj blok" → click corners with endpoint
   snapping (`snap.ts`); click the first corner or press Enter to close; Esc cancels; Backspace removes the last

@@ -1,4 +1,6 @@
 // Polish UI strings (PLAN.md §2). Keep all user-visible text here.
+import { formatRel } from '../project/levels';
+
 export const t = {
   appTitle: 'DanceFloor',
   viewTop: 'Widok z góry',
@@ -226,7 +228,7 @@ export const t = {
     overhang: (m: number) => `okap ${m.toFixed(2)} m`,
     fromPlan: 'Z rzutu parteru',
     fromPlanTitle:
-      'Dobudówki (długie ściany A-WALL poza bryłą główną), płyty (obrys A-DETL-1 domknięty do ściany), słupy (małe zamknięte prostokąty A-WALL) i kolumny (prostokąty S-COLS, wysokość z przekroju). Bloki o tej samej nazwie zachowują wysokości.',
+      'Dobudówki (długie ściany A-WALL poza bryłą główną), płyty (obrys A-DETL-1 domknięty do ściany), słupy (małe zamknięte prostokąty A-WALL) i kolumny (prostokąty S-COLS). Wysokości z linii na elewacjach (A-WALL, potem PZT_UTWARDZENIA) i z przekroju (S-COLS); czego nie ma, zostaje jak było.',
     needsMain: '„Z rzutu parteru” wymaga bryły głównej',
     annexName: { north: 'Dobudówka północna', south: 'Dobudówka południowa', east: 'Dobudówka wschodnia', west: 'Dobudówka zachodnia' },
     slabName: (n: number) => `Płyta ${n}`,
@@ -234,11 +236,12 @@ export const t = {
     columnName: (n: number) => `Kolumna ${n}`,
     fromPlanResult: (sheet: string, annexes: number, slabs: number, posts: number, columns: number) =>
       `z arkusza ${sheet}: ${annexes} ${plural(annexes, 'dobudówka', 'dobudówki', 'dobudówek')}, ${slabs} ${plural(slabs, 'płyta', 'płyty', 'płyt')}, ${posts} ${plural(posts, 'słup', 'słupy', 'słupów')}, ${columns} ${plural(columns, 'kolumna', 'kolumny', 'kolumn')} (S-COLS)`,
-    columnsFrom: (sheet: string) => `wysokość kolumn z ${sheet} (zakres S-COLS)`,
-    columnsNoSection: 'brak S-COLS na umieszczonych elewacjach/przekrojach: kolumny −1.40 / +3.00, ustaw ręcznie',
+    columnsAll: (n: number) => `Kolumny 1–${n}`,
+    heightsRead: (name: string, bottom: number | undefined, top: number | undefined, from: string) =>
+      `${name}: ${[bottom !== undefined && `spód ${formatRel(bottom, 3)}`, top !== undefined && `góra ${formatRel(top, 3)}`].filter(Boolean).join(', ')} z ${from}`,
+    heightsUnset: (names: string) => `nie znaleziono wysokości na elewacjach: ${names} — ustaw z listy`,
     fromPlanSkipped: (openings: number, loops: number) =>
       `pominięte: ${openings} ${plural(openings, 'otwór w płycie', 'otwory w płycie', 'otworów w płycie')}, ${loops} ${plural(loops, 'nieprostokątny obrys', 'nieprostokątne obrysy', 'nieprostokątnych obrysów')} A-WALL`,
-    setHeights: 'Nowe dobudówki, płyty i słupy: spód −1.40, góra +3.00 — ustaw je z listy (rzędne z elewacji i przekrojów).',
     addBlock: 'Dodaj blok',
     addBlockTitle: 'Narysuj blok z płaskim dachem: klikaj narożniki na rzutach (w widoku Projekt, przyciąganie do końców linii)',
     drawing: 'Nowy blok',

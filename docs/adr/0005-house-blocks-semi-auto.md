@@ -43,6 +43,14 @@ simple, so "Z rzutu parteru" builds them from the ground plan (rules in `src/hou
   shorter way. PAB-01: an L of 31.90 m² (terrace x 0.034…8.124 to y −14.966, a 0.30 m strip along the west wall,
   a 0.50 m canopy over the south windows; PAB-09 confirms the band +2.635…+3.22 along the whole west side).
   Its inner closed loop (an opening) is counted, not modelled.
-- **Heights are not guessed**: new blocks get −1.40 / +3.00, set from the list, which now also holds the relative
-  `+N.NN` labels of the elevations and sections (+3.59, +3.22, +2.64, −0.02 …). Re-running keeps heights by block name.
+- **Heights from the elevations** (user, 2026-11-08, screenshot: the slab at the −1.40/+3.00 defaults filled the
+  whole terrace): per block, the horizontal lines of a placed elevation lying within the block's width there (ends
+  ± 3 cm) and covering ≥ half of it, `A-WALL` first, then `PZT_UTWARDZENIA`. Elevations on which the block stands
+  behind the main body are skipped (on PAB-10 the north annex would pick up the south canopy's +2.635). Slab and
+  posts: bottom = lowest, top = highest line; annex: top only (walls keep reaching the foundations). PAB-01 result:
+  annex top +3.59 (PAB-07 `PZT_UTWARDZENIA`, the parapet overhangs the plan walls by 1 cm), slab +2.635…+3.22 and
+  posts −0.02…+2.635 (PAB-10 `A-WALL`), columns −0.02…+2.63 (PAB-04 `S-COLS`). Each read height is listed with its
+  sheet and layer; blocks with nothing found keep their heights and are flagged. `A-WALL` goes first because
+  `PZT_UTWARDZENIA` also holds a +3.29 finish line over the terrace. The height list also offers the elevations'
+  relative `+N.NN` labels.
 Drawing by hand stays for anything the rules miss.
