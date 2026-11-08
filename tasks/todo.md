@@ -1,7 +1,9 @@
 # M5 task list
 
-Next: T2 + "Z rzutu parteru" implemented, awaiting the user's browser check (then tick T2 + checkpoint A, start T3).
+Next: Task 3 (openings from the elevations). T1, T2 and checkpoint A verified by the user 2026-11-08.
 T2 note: "Z rzutu parteru" (ADR 0005 amendment) builds the annex, the terrace slab (L, 31.90 m²), the deck (52.20 m²), 2 posts, 1 pier and 7 S-COLS columns from PAB-01, heights read from the elevations/section (annex +3.59, slab +2.635…+3.22, posts −0.02…+2.635, columns −0.02…+2.63).
+T2 note: the slab carries the awning opening as `holes` (6.93 × 2.14 m, net 17.07 m²).
+Real-file checks without the browser: Node 24 runs `src/` TS directly with a resolver hook adding `.ts` to extensionless imports; load a DWG via `@mlightcad/libredwg-web` + `normalize()` in a scratchpad script (never in the repo, never commit `dwg/`).
 T1 note: Design also shows the block edges (not solids), so they can be compared with the elevation underlays.
 Plan: `tasks/plan.md`. Spec: PLAN.md §5 M5, ADR 0005. M4a task notes are in git history (`tasks/todo.md` at e859430).
 
@@ -31,16 +33,16 @@ close by clicking the first corner or Enter, Esc cancels, Backspace drops the la
 drawing. New block "Blok n", bottom −1.40, top +3.00. Footprint outlines of all blocks in Design while the panel is
 open. Panel: rename, edit heights (datalist of M2 level values), "Rysuj ponownie" (keeps heights), delete.
 **Acceptance criteria:**
-- [ ] Annex drawn on PAB-01 `A-WALL` corners with top +3.59; terrace slab +2.635…+3.22 and two posts drawn the same way
-- [ ] Re-draw keeps heights; delete removes the block; changes survive Zapisz + reload
-- [ ] In a version, Wyrównaj +0.30 next to the south façade meets the wall without a gap
+- [x] Annex drawn on PAB-01 `A-WALL` corners with top +3.59; terrace slab +2.635…+3.22 and two posts drawn the same way
+- [x] Re-draw keeps heights; delete removes the block; changes survive Zapisz + reload
+- [x] In a version, Wyrównaj +0.30 next to the south façade meets the wall without a gap
 **Verification:** `pnpm check`; user draws the annex, terrace roof and posts, edits, re-draws, deletes one, reloads.
 **Dependencies:** T1
 **Files:** `src/scene/HouseDrawTool.tsx`, `src/scene/Viewport.tsx`, `src/state/store.ts`, `src/ui/HousePanel.tsx`, `src/ui/strings.ts`
 **Scope:** M
 
 ### Checkpoint A (after T1–T2)
-- [ ] `pnpm check` green; the massing is recognisable and aligned with the plans and elevations (user check)
+- [x] `pnpm check` green; the massing is recognisable and aligned with the plans and elevations (user check)
 
 ### Task 3: Openings from the elevations
 **Description:** Pure `src/house/openings.ts`: per placed elevation, `A-GLAZ*` + `A-DOOR*` (not the swing layer)
