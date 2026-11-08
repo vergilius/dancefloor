@@ -138,5 +138,19 @@ export const t = {
   },
   folderUnsupported:
     'Ta przeglądarka nie obsługuje dostępu do folderów (File System Access API). Użyj Chrome lub Edge.',
+  terrain: {
+    title: 'Teren istniejący',
+    seeds: (points: number, sheets: number, dropped: number) =>
+      `${points} ${plural(points, 'punkt', 'punkty', 'punktów')} z ${sheets} ${plural(sheets, 'arkusza', 'arkuszy', 'arkuszy')}, ${dropped} ${plural(dropped, 'odcinek pominięty', 'odcinki pominięte', 'odcinków pominiętych')}`,
+    sheet: (segments: number, points: number) => `${segments} ${plural(segments, 'odcinek', 'odcinki', 'odcinków')} → ${points} pkt`,
+    dropped: 'pominięte (bez sąsiada)',
+    none: 'Brak profili terenu (warstwa PZT_TEREN ISTNIEJĄCY) na umieszczonych elewacjach i przekrojach',
+  },
   fileCount: (n: number) => `${n} ${n === 1 ? 'plik' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'pliki' : 'plików'}`,
 } as const;
+
+/** Polish plural: 1 → one, 2–4 (not 12–14) → few, else many. */
+function plural(n: number, one: string, few: string, many: string): string {
+  if (n === 1) return one;
+  return n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? few : many;
+}

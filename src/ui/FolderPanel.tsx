@@ -3,6 +3,7 @@ import { ensurePermission, isFolderAccessSupported, loadRememberedFolder, pickFo
 import { useProject } from '../state/store';
 import { SheetList } from './SheetList';
 import { t } from './strings';
+import { TerrainPanel } from './TerrainPanel';
 
 type State =
   | { status: 'loading' }
@@ -78,6 +79,7 @@ export function FolderPanel() {
           </h2>
           {sheetCount === 0 && <p>{t.folderEmpty}</p>}
           <SheetList />
+          <TerrainPanel />
         </>
       )}
     </section>
