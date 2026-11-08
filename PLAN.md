@@ -406,7 +406,7 @@ simulation games, not on single cells and not on drawn polygons.
 | **M4c** Textured path | a path strip with width and material (paving with build-up T1 = 0.51 m, PAB-11; gravel), cross-fall open | M4a |
 | **M4d** Obstacles | utilities + tank (1.7 m + 0.2 m bed) with depth, warning when a cut reaches them, truck access fence → tank | M4a |
 
-Build order M4a → M4b → M4c → M4d. The original ✅ (terrace at +0.30 next to the house with a 1:2 slope to −0.32,
+Build order M4a → **M5** → M4b → M4c → M4d (ADR 0004: the house first, the other tools are judged against it). The original ✅ (terrace at +0.30 next to the house with a 1:2 slope to −0.32,
 volumes update live) closes with M4b.
 
 **M4a — Versions + editor core** (spec approved 2026-11-08)

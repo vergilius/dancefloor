@@ -1,6 +1,6 @@
 # M4a task list
 
-Next: T1 implemented (commit "M4a T1"), waiting for the user's browser check; then T2.
+Next: T2 (Wyrównaj by dragging a rect, totals, autosave). After M4a: M5 house massing, then M4b–M4d (ADR 0004).
 Plan: `tasks/plan.md`. Spec: PLAN.md §5 M4a, ADR 0003. M3 task notes are in git history (`tasks/todo.md` at c477be0).
 
 Commands: `pnpm dev`, `pnpm check` (build + lint + guards). No automated tests (CLAUDE.md).
@@ -15,9 +15,9 @@ and folder helpers for `dancefloor-versions/`. Store `src/state/versions.ts`: li
 (confirm, removes both files). Environment view bar: selector Podgląd | versions + the three buttons. `TerrainMesh`
 draws the active source via `useEnvSurface()`. Panel line for the active version: name, grid size, edits 0, saved.
 **Acceptance criteria:**
-- [ ] Nowa wersja → files appear in `dancefloor-versions/`; the version looks identical to Podgląd
-- [ ] Rename and delete work and persist across a reload; unreadable files are flagged, not deleted
-- [ ] Design and Podgląd unchanged
+- [x] Nowa wersja → files appear in `dancefloor-versions/`; the version looks identical to Podgląd
+- [x] Rename and delete work and persist across a reload; unreadable files are flagged, not deleted
+- [x] Design and Podgląd unchanged
 **Verification:** `pnpm check`; user creates, renames, deletes, reloads, and looks in the folder.
 **Dependencies:** none
 **Files:** `src/versions/file.ts`, `src/project/folder.ts`, `src/state/versions.ts`, `src/scene/Viewport.tsx`, `src/scene/TerrainMesh.tsx`, `src/ui/strings.ts`
