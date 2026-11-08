@@ -1,7 +1,7 @@
 # M2 task list
 
-Next: M2 done and merged 2026-11-08. Start M3 (terrain grid): sharpen PLAN.md §5 M3 with `spec-driven-development`,
-then a new task list. Note (T6): `hitSheet` (`src/scene/snap.ts`) dispatches to `hitHorizontal` / `hitVertical`.
+Next: M3 spec approved 2026-11-08 (PLAN.md §5 M3, ADR 0002). Break it into tasks with `planning-and-task-breakdown`
+(new M3 task list replaces this file; M2 list stays in git history at 48b5a42). Note (T6): `hitSheet` (`src/scene/snap.ts`) dispatches to `hitHorizontal` / `hitVertical`.
 Note (T5): `MeasureTool` (`src/scene/MeasureTool.tsx`) listens on the canvas container (DOM events, not r3f), hits
 sheet planes with `hitHorizontal` and snaps in screen px over all hit sheets + markers (`nearestOnScreen`,
 `src/scene/snap.ts`). T6 adds a `hitVertical` next to it; `worldPoints` already handles vertical placements.

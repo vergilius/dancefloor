@@ -89,6 +89,8 @@ placed in 3D. They supply parameters only.
 
 - **Web app**, local-only (no backend). Performance is a non-issue at this scale (<5k entities/sheet).
 - **DWG is a read-only underlay.** Never write DWG. Own JSON scene model for everything designed.
+- **Generated model, edited as a copy (ADR 0002):** DWG-derived 3D (terrain, massing) is generated on load and never
+  saved; the environment editor works on a copy, and only that copy is saved.
 - **Terrain = regular height grid** (default 10 cm cells), not a TIN. Platforms/slopes write into the
   grid; cut/fill = Σ(Δh × cell area). Avoids constrained triangulation and mesh booleans.
 - **GPL isolation:** run libredwg-web in a dedicated Web Worker (GPL-3.0); rest of app any license.
@@ -333,7 +335,7 @@ PZT's circles (e.g. the `Tp= 355,08` circle at sheet (18.565, −11.038) is at p
 tank rectangle on PZT-01 is 3.00 × 2.40 m (± 1 cm), PAB-01's `A-WALL` x-extent is 15.090 m (± 1 cm), and on
 PAB-08 Δh from ±0.00 to the ridge is 9.12 m (± 1 cm).
 
-**M3 — Terrain grid** (spec sharpened 2026-11-08 on the real files, awaiting approval)
+**M3 — Terrain grid** (spec sharpened 2026-11-08 on the real files, approved 2026-11-08)
 
 Facts (raw model-space LINEs on `PZT_TEREN ISTNIEJĄCY` / `PZT_TEREN PROJEKTOWANY`, sheet coords in m):
 - **Elevations** PAB-07..10: one existing-terrain profile each (8–12 LINEs, sheet x along the façade, y = height
@@ -365,8 +367,8 @@ Requirements:
   1 cm merged), linear interpolation inside the hull. Outside the hull: the height of the nearest point on the hull
   boundary (continuous, flat outward), and the cell is flagged **uncertain**. Grid: 0.10 m cells over the plot bbox
   + 2 m margin (`PZT_ZAKRES` through PZT-01's transform). Without an aligned PZT-01: seed bbox + 5 m.
-- **Not saved:** `terrain.base` is recomputed from the DWGs on load (deterministic, no change to `dancefloor.json`).
-  Manual or survey points will be the first saved terrain data.
+- **Not saved (ADR 0002):** `terrain.base` is generated from the DWGs on load (no change to `dancefloor.json`). The
+  environment editor (M4 on) edits a copy of the generated model; only the copy's edits are saved.
 - **Tp:** no Tp surface in M3. The Tp points stay as M2 markers, for reference in M4 (user, 2026-11-08).
 - **Survey points deferred** (user, 2026-11-08): no spot-height tool and no survey import in M3. Parts of the plot are
   outside the profile hull and show as uncertain until then.
