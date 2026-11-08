@@ -1,6 +1,6 @@
 # M4a task list
 
-Next: T4 (undo/redo and the Δh map). Terrain changed 2026-11-08: plot outline + 2 m mask, no "uncertain" area (IDW of the hull boundary outside the profiles); waiting for the user's check. Version files are now v2 (.bin without uncertain), v1 still loads.
+Next: T4 (undo/redo and the Δh map). Terrain (2026-11-08, user-verified): plot outline + 2 m mask, no "uncertain" area (IDW of the hull boundary outside the profiles). Version files v2 (.bin = base + outside mask), v1 still loads.
 Plan: `tasks/plan.md`. Spec: PLAN.md §5 M4a, ADR 0003. M3 task notes are in git history (`tasks/todo.md` at c477be0).
 
 Commands: `pnpm dev`, `pnpm check` (build + lint + guards). No automated tests (CLAUDE.md).
