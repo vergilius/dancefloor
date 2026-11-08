@@ -1,6 +1,10 @@
 # M2 task list
 
-Next: T5 (measure tool on horizontal sheets, Design only). T1–T4 done and verified 2026-11-08 (checkpoint A closed).
+Next: T6 (measure on vertical sheets). T1–T5 done and verified 2026-11-08 (checkpoint A closed).
+Note (T5): `MeasureTool` (`src/scene/MeasureTool.tsx`) listens on the canvas container (DOM events, not r3f), hits
+sheet planes with `hitHorizontal` and snaps in screen px over all hit sheets + markers (`nearestOnScreen`,
+`src/scene/snap.ts`). T6 adds a `hitVertical` next to it; `worldPoints` already handles vertical placements.
+Esc ends the tool (store `measure` → undefined).
 Note (T1): the worker returns both candidate points per label (`leader`, `byHeight`); `levelPoint(l, kind)` in
 `src/dwg/labels.ts` picks by sheet kind on the main thread, so a kind change needs no re-parse.
 Note (T2): reference = `useLevelReference()` / `useRefValue()` (`src/state/levels.ts`); every shown height goes
@@ -78,8 +82,8 @@ origin + x·dir, height y). Small dot + label `Tp 355.08 (−0.32)` per point. D
 planes, snap to visible segment endpoints and markers (screen-px radius). A–B line stays until Esc or the next
 measurement. Readout overlay: 3D distance, horizontal distance, Δh (3 decimals), both heights rel + abs.
 **Acceptance criteria:**
-- [ ] PZT-01 tank rectangle measures 3.00 × 2.40 m (± 1 cm); PAB-01 `A-WALL` x-extent 15.090 m (± 1 cm)
-- [ ] Esc clears; drags don't place picks
+- [x] PZT-01 tank rectangle measures 3.00 × 2.40 m (± 1 cm); PAB-01 `A-WALL` x-extent 15.090 m (± 1 cm)
+- [x] Esc clears; drags don't place picks
 **Verification:** `pnpm check`; user measures the two values.
 **Dependencies:** T4
 **Files:** `src/scene/MeasureTool.tsx`, `src/scene/snap.ts`, `src/state/store.ts`, `src/scene/Viewport.tsx`, `src/ui/strings.ts`
