@@ -28,7 +28,7 @@ type VersionsState = {
   selected?: string;
   /** 1:n for the next dragged edit (the last one set in the bar). View state, default 2. */
   newSlope: number;
-  /** Wyrównaj's height phase: the edit being placed, drawn on the surface but not in the list yet. View state. */
+  /** An edit being dragged up / down or tilted: drawn on the surface in place of its listed version. View state. */
   preview?: Edit;
   /** Edge under the pointer in the edge controls: outlined on the selected edit. View state. */
   hoverSide?: Side;
@@ -56,6 +56,8 @@ type VersionsState = {
   setEditValue(id: string, value: number): void;
   /** Sets an edit's edge modes and / or its Skarpa ratio 1:n (M4b); a run of ratio changes is one undo step. */
   setEditShape(id: string, shape: { edges?: Edges; slope?: number }): void;
+  /** Replaces the edit with the same id (a finished lift or tilt drag): one undo step. */
+  replaceEdit(edit: Edit): void;
   deleteEdit(id: string): void;
   select(id: string | undefined): void;
   setNewSlope(slope: number): void;
@@ -198,6 +200,10 @@ export const useVersions = create<VersionsState>()((set, get) => ({
   setEditValue(id, value) {
     // Typing into the field changes the value per keystroke: one undo step per run of changes to the same edit.
     command((edits) => edits.map((e) => (e.id === id ? withValue(e, value) : e)), id);
+  },
+
+  replaceEdit(edit) {
+    command((edits) => edits.map((e) => (e.id === edit.id ? edit : e)));
   },
 
   setEditShape(id, shape) {
@@ -347,10 +353,10 @@ export function useEnvSurface(): { grid?: HeightGrid; live?: HeightGrid; plot?: 
   return { grid: grid ?? live, live, plot, version };
 }
 
-/** The version's surface with the edit being placed on top. One entry: the preview changes on every mouse move. */
+/** The version's surface with the dragged edit in place of its listed one. One entry: it changes on every mouse move. */
 function previewSurface(v: Version, preview: Edit): HeightGrid {
   if (last?.edits !== v.edits || last.preview !== preview || last.base !== v.grid) {
-    last = { edits: v.edits, preview, base: v.grid, grid: { ...v.grid, base: replay(v.grid, [...v.edits, preview]).h } };
+    last = { edits: v.edits, preview, base: v.grid, grid: { ...v.grid, base: replay(v.grid, v.edits.map((e) => (e.id === preview.id ? preview : e))).h } };
   }
   return last.grid;
 }

@@ -467,12 +467,15 @@ Requirements:
   ratio **1:n** per edit (n = horizontal per 1 m vertical, default 2, n > 0) for all its sloped edges. Saved in the edit
   as optional `edges: { w, e, s, n: 'step' | 'slope' | 'wall' }` and `slope: number`; missing = all Uskok, so M4a
   files load unchanged (still `version: 2`).
-- **Sim-builder interaction (user 2026-11-08; replaces edge selects in the bar):** Wyrównaj = drag the area, release,
-  then move the mouse up / down to set the height (1 cm per screen pixel, starting at the drag's start height, shown
-  live in the bar with the slopes previewed on the surface; contours update on commit); click commits, Esc or right
-  click cancels. Podnieś / Obniż commit on release as in M4a. New edits get Skarpa on all 4 edges with the bar's 1:n
-  (default 2) and are selected. On the selected edit, hovering near an edge (≤ 0.3 m) outlines it and a click cycles it
-  Skarpa → Uskok → Mur (undoable). The bar's 1:n field acts on the selected edit (and is the default for the next).
+- **Sim-builder interaction (user 2026-11-08, second version; replaces edge selects in the bar and the
+  release-then-move height phase):** with a tool armed, drag the area; release adds the edit (Wyrównaj flat at the
+  drag's start height, Podnieś / Obniż by dz) with Skarpa on all 4 edges at the bar's 1:n (default 2), selected. On a
+  selected Wyrównaj: drag inside = the whole platform up / down; drag near an edge (≤ 0.3 m) = only that edge up / down,
+  the opposite edge kept, so the platform becomes a ramp (saved as `tilt: { x, y }` = east − west and north − south
+  height difference, `z` = centre height; missing = flat). 1 cm per screen pixel, previewed live (contours on
+  release), one undo step per drag. A click (no drag) near an edge of the selected edit cycles it Skarpa → Uskok →
+  Mur. Esc cancels a drag or clears the selection. The bar's 1:n acts on the selected edit (and is the default for the
+  next). Skarpa / Mur work the same on a ramp (top = the ramp's height along the edge).
 - **Skarpa (pure, in `replay`):** the rect is the flat top (or bottom) you dragged; the slope goes **outside** it until
   it meets the surface (daylight). For a grid corner outside the rect, p = the nearest rect-edge corner, d = distance
   to p (m), top = h(p) after the edit. Fill side (top above the corner): h = max(h, top − d/n); cut side: h =

@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { formatHeight } from '../project/levels';
 import { useRefValue } from '../state/levels';
 import { useActiveVersion, useVersions, versionSurface } from '../state/versions';
-import { edgesOf, editValue, rectSize, slopeOf, totals } from '../versions/edits';
+import { edgeHeights, edgesOf, editValue, rectSize, SIDES, slopeOf, totals } from '../versions/edits';
 import { EdgeControls } from './EdgeControls';
 import { ZInput } from './SheetList';
 import { t } from './strings';
@@ -56,6 +56,14 @@ export function VersionPanel() {
                   <span className="muted">
                     {e.tool === 'level' ? formatHeight(e.z, ref) : `${e.tool === 'raise' ? '+' : '−'}${e.dz.toFixed(2)} m`}
                   </span>
+                  {e.tool === 'level' && e.tilt && (e.tilt.x !== 0 || e.tilt.y !== 0) && (
+                    <>
+                      <br />
+                      <span className="muted">
+                        {t.versions.rampLabel}: {SIDES.map((s) => `${t.versions.sides[s]} ${formatHeight(edgeHeights(e)[s], undefined)}`).join(' · ')}
+                      </span>
+                    </>
+                  )}
                   <br />
                   <EdgeControls id={`${e.id}/list`} edges={edgesOf(e)} slope={slopeOf(e)} onChange={(shape) => setEditShape(e.id, shape)} />
                   <br />

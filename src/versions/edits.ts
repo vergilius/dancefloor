@@ -16,7 +16,7 @@ export type Draft = Rect & { z?: number };
  * down by `dz` > 0.
  */
 export type Edit = { id: string; rect: Rect; edges?: Edges; slope?: number } & (
-  | { tool: 'level'; z: number }
+  | { tool: 'level'; z: number; tilt?: Tilt }
   | { tool: 'raise' | 'lower'; dz: number }
 );
 export type Tool = Edit['tool'];
@@ -33,6 +33,30 @@ export const ALL_STEP: Edges = { w: 'step', e: 'step', s: 'step', n: 'step' };
 export const DEFAULT_SLOPE = 2;
 export const edgesOf = (e: Edit): Edges => e.edges ?? ALL_STEP;
 export const slopeOf = (e: Edit): number => e.slope ?? DEFAULT_SLOPE;
+
+/**
+ * Wyrównaj as a ramp (M4b): the rect's east edge is `x` m above its west edge, its north edge `y` m above its south
+ * edge; `z` is the height at the rect's centre. Missing = flat.
+ */
+export type Tilt = { x: number; y: number };
+
+/** Heights of the 4 edges (at their midpoints) of a Wyrównaj; flat = all z. */
+export function edgeHeights(e: Edit & { tool: 'level' }): Record<Side, number> {
+  const { x, y } = e.tilt ?? { x: 0, y: 0 };
+  return { w: e.z - x / 2, e: e.z + x / 2, s: e.z - y / 2, n: e.z + y / 2 };
+}
+
+/** A Wyrównaj with one edge moved to height `h` (1 cm), the opposite edge kept: a ramp across the rect. */
+export function withEdgeHeight(e: Edit & { tool: 'level' }, side: Side, h: number): Edit & { tool: 'level' } {
+  const eh = edgeHeights(e);
+  const t = e.tilt ?? { x: 0, y: 0 };
+  if (side === 'w' || side === 'e') {
+    const [lo, hi] = side === 'e' ? [eh.w, h] : [h, eh.e];
+    return { ...e, z: (lo + hi) / 2, tilt: { x: hi - lo, y: t.y } };
+  }
+  const [lo, hi] = side === 'n' ? [eh.s, h] : [h, eh.n];
+  return { ...e, z: (lo + hi) / 2, tilt: { x: t.x, y: hi - lo } };
+}
 
 /** Podnieś / Obniż default step (m). */
 export const DEFAULT_DZ = 0.1;
@@ -83,12 +107,24 @@ export function replay(g: HeightGrid, edits: readonly Edit[]): { h: Float32Array
       if (after > before) v.fill += (after - before) * a;
       else v.cut += (before - after) * a;
     };
+    // Wyrównaj: z at the centre plus the ramp (tilt) across the rect.
+    const t = e.tool === 'level' && e.tilt;
+    const gx = t ? t.x / (e.rect.x1 - e.rect.x0) : 0;
+    const gy = t ? t.y / (e.rect.y1 - e.rect.y0) : 0;
+    const cx = (e.rect.x0 + e.rect.x1) / 2;
+    const cy = (e.rect.y0 + e.rect.y1) / 2;
     for (let j = c.j0; j <= c.j1; j++) {
       for (let i = c.i0; i <= c.i1; i++) {
         const k = j * w + i;
         if (isOutside(g, k)) continue; // outside the modelled area: never edited
         const before = h[k]!;
-        set(k, Math.fround(e.tool === 'level' ? e.z : e.tool === 'raise' ? before + e.dz : before - e.dz));
+        const after =
+          e.tool === 'level'
+            ? e.z + gx * (g.origin.x + i * g.cell - cx) + gy * (g.origin.y + j * g.cell - cy)
+            : e.tool === 'raise'
+              ? before + e.dz
+              : before - e.dz;
+        set(k, Math.fround(after));
       }
     }
     applySlope(g, h, c, edgesOf(e), slopeOf(e), set);
@@ -170,7 +206,7 @@ const onLattice = (v: number) => Math.abs(v / LATTICE - Math.round(v / LATTICE))
 /** Strict parse of one saved edit; throws with the field at fault. */
 export function parseEdit(v: unknown, where: string): Edit {
   if (typeof v !== 'object' || v === null || Array.isArray(v)) throw new Error(`${where}: not an object`);
-  const { id, tool, rect, z, dz, edges, slope } = v as Record<string, unknown>;
+  const { id, tool, rect, z, dz, edges, slope, tilt } = v as Record<string, unknown>;
   if (typeof id !== 'string' || !id) throw new Error(`${where}.id: expected a string`);
   const r = rect as Record<string, unknown> | null;
   const ok =
@@ -194,7 +230,11 @@ export function parseEdit(v: unknown, where: string): Edit {
   }
   if (tool === 'level') {
     if (!Number.isFinite(z)) throw new Error(`${where}.z: expected a number`);
-    return { id, tool, rect: box, ...shape, z: z as number };
+    if (tilt === undefined) return { id, tool, rect: box, ...shape, z: z as number };
+    const tl = tilt as Record<string, unknown> | null;
+    if (typeof tl !== 'object' || tl === null || !Number.isFinite(tl.x) || !Number.isFinite(tl.y))
+      throw new Error(`${where}.tilt: expected { x, y } numbers`);
+    return { id, tool, rect: box, ...shape, z: z as number, tilt: { x: tl.x as number, y: tl.y as number } };
   }
   if (tool === 'raise' || tool === 'lower') {
     if (!(Number.isFinite(dz) && (dz as number) > 0)) throw new Error(`${where}.dz: expected a number > 0`);

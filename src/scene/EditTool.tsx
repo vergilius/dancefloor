@@ -1,15 +1,15 @@
 // Edit tools in the Environment viewport (PLAN.md §5 M4a, M4b), sim-builder style. With a tool armed in a version, a
-// left drag that starts on the terrain draws a rect snapped to the 0.5 m lattice (draped on the surface). Podnieś /
-// Obniż commit on release. Wyrównaj then enters its height phase: moving the mouse up / down sets z (1 cm per pixel,
-// from the drag's start height) with the slopes previewed live; a click commits, Esc or a right click cancels. A new
-// edit is selected; on the selected edit, hovering near an edge outlines it and a click cycles Skarpa → Uskok → Mur.
-// A drag that starts off the terrain orbits as usual.
+// left drag that starts on the terrain draws a rect snapped to the 0.5 m lattice and adds the edit on release
+// (Wyrównaj flat at the drag's start height, Podnieś / Obniż by dz), selected. On a selected Wyrównaj, a drag inside
+// moves it up / down and a drag near an edge moves only that edge (a ramp), 1 cm per pixel, previewed live, one undo
+// step per drag. A click near an edge of the selected edit cycles it Skarpa → Uskok → Mur. Esc cancels a drag, or
+// clears the selection. A drag that starts anywhere else orbits as usual.
 import { useEffect, useMemo, useRef } from 'react';
 import { useThree } from '@react-three/fiber';
 import { Raycaster, Vector2 } from 'three';
 import { useEnvSurface, useVersions, versionSurface } from '../state/versions';
 import { isOutside, rayGrid, sampleGrid, type HeightGrid } from '../terrain/grid';
-import { DEFAULT_DZ, edgesOf, heightAt, snapRect, type EdgeMode, type Edges, type Edit, type Rect, type Side } from '../versions/edits';
+import { DEFAULT_DZ, edgeHeights, edgesOf, heightAt, snapRect, withEdgeHeight, type EdgeMode, type Edges, type Edit, type Rect, type Side } from '../versions/edits';
 import { ENV_LAYER, halfAt } from './split';
 
 const COLOR = '#0969da';
@@ -19,8 +19,10 @@ const EDGE_COLOR = '#cf222e';
 /** Draped this far above the surface (m), sampled every STEP (m). */
 const LIFT = 0.04;
 const STEP = 0.1;
-/** Wyrównaj's height phase: metres per screen pixel of vertical mouse movement. */
+/** Lift / tilt drags: metres per screen pixel of vertical mouse movement. */
 const M_PER_PX = 0.01;
+/** A press that moves less than this (px) is a click. */
+const CLICK_PX = 3;
 /** Hover distance to an edge of the selected edit (plan m). */
 const EDGE_HIT = 0.3;
 /** New edits: Skarpa on all 4 edges (the bar's 1:n). */
@@ -76,127 +78,138 @@ export function EditTool() {
     if (!on || !el || !picked) return;
     const grid = picked;
     const st = useVersions.getState;
-    const { setDraft, setPreview, addEdit, select, setHoverSide, setEditShape } = st();
-    /** The selected edit of the active version (edge hover / click). */
+    const { setDraft, setPreview, addEdit, replaceEdit, select, setHoverSide, setEditShape } = st();
+    /** The selected edit of the active version. */
     const selectedEdit = () => {
       const s = st();
       return s.versions.find((v) => v.id === s.active)?.edits.find((e) => e.id === s.selected);
     };
-    let phase: 'idle' | 'area' | 'height' = 'idle';
-    let start: [number, number] | undefined;
-    let rect: Rect | undefined;
-    /** Wyrównaj: the start height (1 cm) and the pointer's y when the height phase began. */
-    let z0 = 0;
-    let y0 = 0;
+    /**
+     * area: dragging a new rect; lift: dragging a selected Wyrównaj up / down; edge: pressed near an edge of the
+     * selected edit (a drag tilts a Wyrównaj, a click cycles the edge's mode).
+     */
+    type Drag =
+      | { kind: 'area'; start: [number, number]; rect: Rect; z0: number }
+      | { kind: 'lift'; edit: Edit & { tool: 'level' }; y0: number; moved: boolean }
+      | { kind: 'edge'; edit: Edit; side: Side; y0: number; moved: boolean };
+    let drag: Drag | undefined;
     let placing: Edit | undefined;
     let frame = 0;
-    /** Edge of the selected edit under the pointer (from the view, not from the list). */
-    let edge: Side | undefined;
+    /** Where the pointer is over the selected edit (idle hover): an edge, its inside, or nowhere. */
+    let over: Side | 'inside' | undefined;
 
-    const setEdge = (side: Side | undefined) => {
-      if (side === edge) return;
-      edge = side;
-      setHoverSide(side);
-      el.style.cursor = side ? 'pointer' : '';
+    const setOver = (o: Side | 'inside' | undefined) => {
+      if (o === over) return;
+      over = o;
+      setHoverSide(o && o !== 'inside' ? o : undefined);
+      el.style.cursor = o === 'inside' ? 'ns-resize' : o ? 'pointer' : '';
     };
     const reset = () => {
-      phase = 'idle';
-      start = rect = placing = undefined;
+      drag = placing = undefined;
       cancelAnimationFrame(frame);
       setDraft(undefined);
       setPreview(undefined);
     };
-    const newEdit = (r: Rect): Edit | undefined => {
-      const t = st().tool;
-      const base = { id: newId(), rect: r, edges: NEW_EDGES, slope: st().newSlope };
-      if (t === 'level') return { ...base, tool: t, z: z0 };
-      if (t === 'raise' || t === 'lower') return { ...base, tool: t, dz: DEFAULT_DZ };
-      return undefined;
+    /** Shows a dragged edit on the surface (once per frame) and its height in the bar. */
+    const show = (e: Edit, z: number) => {
+      placing = e;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        setDraft({ ...e.rect, z });
+        setPreview(e);
+      });
     };
-    const commit = (e: Edit) => {
-      reset();
-      addEdit(e);
-      select(e.id); // the edge clicks and the bar's 1:n now act on it
-    };
+    const dz = (y0: number, y: number) => (y0 - y) * M_PER_PX;
+    const cm = (v: number) => Math.round(v * 100) / 100;
 
     const onMove = (e: PointerEvent) => {
-      if (phase === 'area') {
-        const p = start && pickRef.current(grid, e.clientX, e.clientY);
-        if (!start || !p) return;
-        rect = snapRect(start[0], start[1], p[0], p[1]);
-        setDraft({ ...rect, z: st().tool === 'level' ? z0 : undefined });
-      } else if (phase === 'height') {
-        const z = Math.round((z0 + (y0 - e.clientY) * M_PER_PX) * 100) / 100;
-        if (!placing || placing.tool !== 'level' || placing.z === z) return;
-        placing = { ...placing, z };
-        const shown = placing;
-        cancelAnimationFrame(frame);
-        frame = requestAnimationFrame(() => {
-          setDraft({ ...shown.rect, z: shown.z });
-          setPreview(shown);
-        });
-      } else {
+      if (!drag) {
         const sel = selectedEdit();
         const p = sel && pickRef.current(grid, e.clientX, e.clientY);
-        setEdge(sel && p ? nearSide(sel.rect, p) : undefined);
+        if (!sel || !p) return setOver(undefined);
+        const side = nearSide(sel.rect, p);
+        const inside = p[0] > sel.rect.x0 && p[0] < sel.rect.x1 && p[1] > sel.rect.y0 && p[1] < sel.rect.y1;
+        return setOver(side ?? (inside && sel.tool === 'level' ? 'inside' : undefined));
+      }
+      if (drag.kind === 'area') {
+        const p = pickRef.current(grid, e.clientX, e.clientY);
+        if (!p) return;
+        drag.rect = snapRect(drag.start[0], drag.start[1], p[0], p[1]);
+        setDraft({ ...drag.rect, z: st().tool === 'level' ? drag.z0 : undefined });
+        return;
+      }
+      if (Math.abs(e.clientY - drag.y0) > CLICK_PX) drag.moved = true;
+      if (!drag.moved) return;
+      if (drag.kind === 'lift') {
+        const z = cm(drag.edit.z + dz(drag.y0, e.clientY));
+        show({ ...drag.edit, z }, z);
+      } else if (drag.edit.tool === 'level') {
+        const h = cm(edgeHeights(drag.edit)[drag.side] + dz(drag.y0, e.clientY));
+        show(withEdgeHeight(drag.edit, drag.side, h), h);
       }
     };
-    const onUp = (e: PointerEvent) => {
-      if (phase !== 'area') return;
-      const r = rect;
-      const edit = r && newEdit(r);
-      if (!edit) return reset();
-      if (edit.tool !== 'level') return commit(edit);
-      // Wyrównaj: the height follows the mouse until the next click.
-      phase = 'height';
-      placing = edit;
-      y0 = e.clientY;
-      setPreview(edit);
+    const onUp = () => {
+      const d = drag;
+      const done = placing;
+      reset();
+      if (!d) return;
+      if (d.kind === 'area') {
+        const t = st().tool;
+        const base = { id: newId(), rect: d.rect, edges: NEW_EDGES, slope: st().newSlope };
+        const edit: Edit | undefined =
+          t === 'level' ? { ...base, tool: t, z: d.z0 } : t === 'raise' || t === 'lower' ? { ...base, tool: t, dz: DEFAULT_DZ } : undefined;
+        if (!edit) return;
+        addEdit(edit);
+        select(edit.id); // now lift it from the middle or tilt it by an edge
+      } else if (d.moved) {
+        if (done) replaceEdit(done);
+      } else if (d.kind === 'edge') {
+        const edges = edgesOf(d.edit);
+        setEditShape(d.edit.id, { edges: { ...edges, [d.side]: NEXT_MODE[edges[d.side]] } });
+      }
     };
     // Capture phase on the container: a press we handle never reaches the camera controls.
     const onDown = (e: PointerEvent) => {
-      if (phase === 'height') {
+      if (e.button !== 0 || drag) return;
+      const sel = selectedEdit();
+      const grab = () => {
         e.stopPropagation();
         e.preventDefault();
-        if (e.button === 0 && placing) commit(placing);
-        else reset();
+      };
+      if (sel && over && over !== 'inside') {
+        grab();
+        drag = { kind: 'edge', edit: sel, side: over, y0: e.clientY, moved: false };
         return;
       }
-      if (e.button !== 0) return;
-      const sel = selectedEdit();
-      if (sel && edge) {
-        e.stopPropagation();
-        e.preventDefault();
-        const edges = edgesOf(sel);
-        setEditShape(sel.id, { edges: { ...edges, [edge]: NEXT_MODE[edges[edge]] } });
+      if (sel && over === 'inside' && sel.tool === 'level') {
+        grab();
+        drag = { kind: 'lift', edit: sel, y0: e.clientY, moved: false };
         return;
       }
       if (!st().tool) return;
       const p = pickRef.current(grid, e.clientX, e.clientY);
       if (!p) return;
-      e.stopPropagation();
-      e.preventDefault();
-      setEdge(undefined);
-      phase = 'area';
-      start = p;
-      z0 = heightAt(grid, p[0], p[1]);
-      rect = snapRect(p[0], p[1], p[0], p[1]);
-      setDraft({ ...rect, z: st().tool === 'level' ? z0 : undefined });
+      grab();
+      setOver(undefined);
+      const z0 = heightAt(grid, p[0], p[1]);
+      drag = { kind: 'area', start: p, rect: snapRect(p[0], p[1], p[0], p[1]), z0 };
+      setDraft({ ...drag.rect, z: st().tool === 'level' ? z0 : undefined });
     };
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && phase !== 'idle' && reset();
-    const onMenu = (e: MouseEvent) => phase === 'height' && e.preventDefault();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (drag) reset();
+      else if (st().selected) select(undefined);
+    };
     el.addEventListener('pointerdown', onDown, { capture: true });
-    el.addEventListener('contextmenu', onMenu);
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
     window.addEventListener('keydown', onKey);
     return () => {
       el.removeEventListener('pointerdown', onDown, { capture: true });
-      el.removeEventListener('contextmenu', onMenu);
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
       window.removeEventListener('keydown', onKey);
-      setEdge(undefined);
+      setOver(undefined);
       reset();
     };
     // The tool is read from the store at each event; re-arming a tool must not drop a drag in progress.
