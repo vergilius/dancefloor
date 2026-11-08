@@ -322,9 +322,12 @@ Requirements:
   cursor (horizontal: its z; vertical: its plane) and snaps to that sheet's visible segment endpoints and to the
   markers (screen-px radius, as in M1c). Readout: 3D distance, horizontal distance, Δh (m, 3 decimals), and both
   heights as rel + abs. The A–B line stays visible until Esc or the next measurement. Not saved.
+- **Two viewports** (ADR 0001, user 2026-11-08): **Design** (everything from M1: sheets, PDF, layers, tools) and
+  **Environment** (3D volumes, from M3 on), side by side, sharing one camera. In M2: markers in both, measure tool in
+  design only, environment shows the ground grid and the markers.
 - No change to `dancefloor.json`.
 
-✅ The sheet list header shows 355.40 from 4 sheets. Counts: PZT-01 7/7, PAB-07 2/2, PAB-08 7/8, PAB-09 7/7,
+✅ The two viewports show the same camera at all times; everything from M1 still works in Design. The sheet list header shows 355.40 from 4 sheets. Counts: PZT-01 7/7, PAB-07 2/2, PAB-08 7/8, PAB-09 7/7,
 PAB-10 7/7. In 3D, the elevation markers sit on their sheet circles (< 1 cm), and the PZT-01 markers sit on
 PZT's circles (e.g. the `Tp= 355,08` circle at sheet (18.565, −11.038) is at plan (16.05, −14.46)). Measure: the
 tank rectangle on PZT-01 is 3.00 × 2.40 m (± 1 cm), PAB-01's `A-WALL` x-extent is 15.090 m (± 1 cm), and on

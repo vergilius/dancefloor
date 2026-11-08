@@ -8,6 +8,8 @@ The worker extracts the ±0.00 reference (`0,00= +355.40 m npm`) and the absolut
 with their measured point (the leader's circle, not the text). The sheet list shows the agreed reference and
 per-sheet counts; resolved points are drawn as 3D markers; one formatter shows every height as rel + abs.
 A measure tool "Pomiar" gives 3D/horizontal distance and Δh between two snapped points. Nothing is saved.
+The viewport splits into Design (today's content) and Environment (3D volumes, from M3), side by side, one camera
+(ADR 0001).
 
 ## Architecture decisions
 - **Extraction is pure and runs in the worker** (`src/dwg/labels.ts`, structural raw types from `src/dwg/types.ts`,
@@ -28,9 +30,11 @@ A measure tool "Pomiar" gives 3D/horizontal distance and Δh between two snapped
   visible drawn sheets (horizontal z / vertical plane), nearest hit wins; snap to that sheet's visible segment
   endpoints and to the markers within N screen px (same approach as `AlignTool`, generalised `endpoints()` to any
   placement). Readout in a small HTML overlay.
+- **Two viewports** (ADR 0001): one `Canvas`, two scissored renders per frame with the same camera; objects
+  assigned by three.js layer; pointer events mapped to the half under the cursor. Markers in both, measure in Design.
 
 ## Task list
-See `tasks/todo.md` (T1–T5, checkpoints A and B).
+See `tasks/todo.md` (T1–T6, checkpoints A and B).
 
 ## Risks and mitigations
 | Risk | Impact | Mitigation |
@@ -38,6 +42,7 @@ See `tasks/todo.md` (T1–T5, checkpoints A and B).
 | ARC/CIRCLE in OCS (extrusion −z mirrors x) | Med | Same OCS handling as `normalize`; counts and marker positions are visible in the browser check |
 | ARC end vs rectangle edge tolerance on PZT-01 | Med | Spec measured < 1 mm; use 5 mm, show 7/7 count |
 | Label texts may sit inside INSERTs on some sheet | Low | Spec facts say model-space entities; counts would show 0 and we look then |
+| Split view: per-half aspect, ortho frustum and pointer mapping (r3f assumes one full-canvas view) | Med | Isolated in `src/scene/split.ts`; align tool rerun as the check |
 | Ray hit on overlapping sheets in perspective view | Med | Nearest hit along the ray; snap radius in screen px; user checks the three ✅ measurements |
 
 ## Open questions
