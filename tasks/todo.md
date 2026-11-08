@@ -1,6 +1,6 @@
 # M1c task list
 
-Next: M1c complete (user browser check passed 2026-11-08). Merge `feat/m1c` into main, then start M2 (spec-driven-development on PLAN.md §5 M2).
+Next: M1c merged into main (2026-11-08). M2 spec sharpened in PLAN.md §5 M2 on `feat/m2`, awaiting user approval; then planning-and-task-breakdown → new tasks/plan.md + tasks/todo.md.
 Note (T6): tool state is `align` in the store (picks: A plan, A′ sheet, B plan, B′ sheet; user order 2026-11-08). A′ shifts the sheet at once, B′ applies the full transform, Esc restores `align.before`. Top view is forced while it runs. r3f fires onClick after drags too, so picks with `e.delta` > 4 px are ignored (`src/scene/AlignTool.tsx`).
 Note (T5): pdfjs-dist 6.x: `isEvalSupported` is gone and teardown is `loadingTask.destroy()`. pdfjs is a lazy chunk (`src/pdf/render.ts`), render state is `pdfs` in the store (not `parsed`).
 Note (T4): obstacle colour = `OBSTACLE_COLOR` via `layerColor()` in `src/project/layerGroups.ts` (lines and texts). Groups are
