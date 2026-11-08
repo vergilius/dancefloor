@@ -8,6 +8,10 @@ import { activateTool, toolsOf } from './tools';
 
 const typing = (t: EventTarget | null) =>
   t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement;
+/** Fields with their own text undo. A focused checkbox, button or select (focus stays after a click) must not block Cmd+Z. */
+const NON_TEXT = new Set(['checkbox', 'radio', 'button', 'submit', 'reset', 'range', 'color', 'file']);
+const textEntry = (t: EventTarget | null) =>
+  t instanceof HTMLTextAreaElement || (t instanceof HTMLInputElement && !NON_TEXT.has(t.type));
 
 export function enterClean() {
   useUi.getState().setClean(true);
@@ -23,19 +27,18 @@ export function exitClean() {
 export function useShortcuts() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (typing(e.target)) return;
       const ui = useUi.getState();
       const v = useVersions.getState();
       const k = e.key.toLowerCase();
       if (e.ctrlKey || e.metaKey) {
-        if (e.altKey || !v.history[v.active]) return;
+        if (e.altKey || textEntry(e.target) || !v.history[v.active]) return;
         if (k === 'z' && !e.shiftKey) v.undo();
         else if ((k === 'z' && e.shiftKey) || k === 'y') v.redo();
         else return;
         e.preventDefault();
         return;
       }
-      if (e.altKey) return;
+      if (e.altKey || typing(e.target)) return;
       if (k === 'escape') {
         if (ui.clean) return exitClean();
         // A drag in progress or a selection: the edit tool handles this Esc (cancel / deselect) first.
