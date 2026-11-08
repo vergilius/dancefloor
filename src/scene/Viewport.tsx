@@ -14,6 +14,9 @@ import { SheetObject } from './SheetObject';
 import { SheetTexts } from './SheetTexts';
 import { PdfObject } from './PdfObject';
 import { AlignTool } from './AlignTool';
+import { LevelMarkers } from './LevelMarkers';
+import { MeasureReadout, MeasureTool } from './MeasureTool';
+import { ENV_LAYER, inBothViewports, splitEvents, useSplitRender, type Half } from './split';
 import type { SheetRow } from '../state/store';
 import type { PdfRender } from '../pdf/render';
 import { t } from '../ui/strings';
@@ -142,6 +145,13 @@ function Scene({ project }: { project?: string }) {
   const ortho: Ortho | null = aligning ? 'top' : chosen;
   const top = ortho !== null;
   const [fitTick, setFitTick] = useState(0);
+  // One canvas under two halves (ADR 0001). The controls listen on the half under the pointer, so pan/zoom maths
+  // use that half's size; they switch only while no button is down, so a drag can cross the divider.
+  const container = useRef<HTMLDivElement>(null);
+  const [designEl, setDesignEl] = useState<HTMLDivElement | null>(null);
+  const [envEl, setEnvEl] = useState<HTMLDivElement | null>(null);
+  const [half, setHalf] = useState<Half>('design');
+  const hover = (h: Half) => (e: { buttons: number }) => e.buttons === 0 && setHalf(h);
   return (
     <>
       <div className="view-bar">
@@ -156,17 +166,22 @@ function Scene({ project }: { project?: string }) {
             {label}
           </button>
         ))}
+        <LevelsToggle />
+        <MeasureToggle disabled={aligning} />
         <AlignPrompt />
       </div>
-      <Canvas>
+      <div className="viewports" ref={container}>
+      <Canvas eventSource={container as RefObject<HTMLElement>} events={splitEvents}>
         {top ? (
           <OrthographicCamera makeDefault position={[0, TOP_ALTITUDE, 0]} near={0.1} far={5000} />
         ) : (
           <PerspectiveCamera makeDefault position={[20, 18, 20]} fov={45} near={0.1} far={2000} />
         )}
+        <SplitRender />
         <color attach="background" args={['#eef1f4']} />
-        <ambientLight intensity={0.8} />
+        <ambientLight intensity={0.8} ref={inBothViewports} />
         <Grid args={[100, 100]} cellSize={1} sectionSize={10} infiniteGrid fadeDistance={150} />
+        <Grid layers={ENV_LAYER} args={[100, 100]} cellSize={1} sectionSize={10} infiniteGrid fadeDistance={150} />
         <axesHelper args={[2]} />
         <PdfSheets />
         {drawn.map((d) => {
@@ -178,12 +193,48 @@ function Scene({ project }: { project?: string }) {
             </group>
           );
         })}
+        <LevelMarkers drawn={drawn} />
         <AlignTool drawn={drawn} />
-        <CameraControls makeDefault {...orthoLimits(ortho)} />
+        <MeasureTool drawn={drawn} />
+        <CameraControls makeDefault domElement={(half === 'env' ? envEl : designEl) ?? undefined} {...orthoLimits(ortho)} />
         <CameraSync view={view} ortho={ortho} project={project} />
         <FrameOnSheets sheets={drawn} ortho={ortho} auto={!saved} tick={fitTick} />
       </Canvas>
+      <div className="vp-half vp-design" ref={setDesignEl} onPointerEnter={hover('design')} onPointerMove={hover('design')}>
+        <span className="vp-caption">{t.viewports.design}</span>
+        <MeasureReadout />
+      </div>
+      <div className="vp-half vp-env" ref={setEnvEl} onPointerEnter={hover('env')} onPointerMove={hover('env')}>
+        <span className="vp-caption">{t.viewports.env}</span>
+      </div>
+      </div>
     </>
+  );
+}
+
+function SplitRender() {
+  useSplitRender();
+  return null;
+}
+
+function LevelsToggle() {
+  const show = useProject((s) => s.showLevels);
+  const setShowLevels = useProject((s) => s.setShowLevels);
+  return (
+    <button type="button" aria-pressed={show} title={t.levelMarkersTitle} onClick={() => setShowLevels(!show)}>
+      {t.levelMarkers}
+    </button>
+  );
+}
+
+function MeasureToggle({ disabled }: { disabled: boolean }) {
+  const on = useProject((s) => s.measure !== undefined);
+  const startMeasure = useProject((s) => s.startMeasure);
+  const stopMeasure = useProject((s) => s.stopMeasure);
+  return (
+    <button type="button" aria-pressed={on} disabled={disabled} title={t.measure.title} onClick={on ? stopMeasure : startMeasure}>
+      {t.measure.button}
+    </button>
   );
 }
 

@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 // The ONLY module allowed to import libredwg-web (GPL-3.0, PLAN.md §2). Enforced by ESLint.
 import { Dwg_File_Type, LibreDwg } from '@mlightcad/libredwg-web';
+import { extractLabels } from '../dwg/labels';
 import { normalize } from '../dwg/normalize';
 import type { ParseRequest, ParseResponse, ParseSummary } from './protocol';
 
@@ -17,6 +18,7 @@ async function parse({ name, bytes }: ParseRequest): Promise<ParseSummary> {
   if (dwg == null) throw new Error(`libredwg could not read ${name}`);
   try {
     const db = lib.convert(dwg);
+    const modelSpace = db.tables.BLOCK_RECORD.entries.find((b) => b.name.toUpperCase() === '*MODEL_SPACE')?.handle;
     const entityCounts: Record<string, number> = {};
     const layers = new Set(db.tables.LAYER.entries.map((l) => l.name));
     for (const e of db.entities) {
@@ -29,11 +31,8 @@ async function parse({ name, bytes }: ParseRequest): Promise<ParseSummary> {
       entityCount: db.entities.length,
       entityCounts,
       layerNames: [...layers].sort((a, b) => a.localeCompare(b, 'pl')),
-      sheet: normalize(
-        db.entities,
-        new Map(db.tables.BLOCK_RECORD.entries.map((b) => [b.name, b])),
-        db.tables.BLOCK_RECORD.entries.find((b) => b.name.toUpperCase() === '*MODEL_SPACE')?.handle,
-      ),
+      sheet: normalize(db.entities, new Map(db.tables.BLOCK_RECORD.entries.map((b) => [b.name, b])), modelSpace),
+      labels: extractLabels(db.entities, modelSpace),
       ms: Math.round(performance.now() - t0),
     };
   } finally {

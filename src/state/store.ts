@@ -38,7 +38,11 @@ export type ProjectState = {
   pdfs: Record<string, PdfState>;
   /** PDF underlay opacity per file (0–1, default 1). View setting: not saved, doesn't mark the project dirty. */
   pdfOpacity: Record<string, number>;
+  /** 3D level markers on/off (M2). View setting: not saved, doesn't mark the project dirty. */
+  showLevels: boolean;
   align?: AlignTool;
+  /** Measure tool (M2): on while set; 0–2 picked world points (x, y, z). View state: not saved. */
+  measure?: { picks: [number, number, number][] };
   /** Layer groups, project-wide (T9). */
   groups: Groups;
   open(dir: FileSystemDirectoryHandle): Promise<void>;
@@ -59,6 +63,10 @@ export type ProjectState = {
    */
   pickAlign(p: Vec2, current: Similarity2D): void;
   cancelAlign(): void;
+  startMeasure(): void;
+  /** Adds A or B; after a full measurement the next pick starts a new one. */
+  pickMeasure(p: [number, number, number]): void;
+  stopMeasure(): void;
   setGroup(group: GroupId, visible: boolean): void;
   setLayer(file: string, layer: string, visible: boolean): void;
   /** `derived`: placements of vertical sheets and transforms of site sheets with none saved yet, written with them. */
@@ -66,6 +74,7 @@ export type ProjectState = {
   parse(file: string): Promise<void>;
   renderPdf(file: string): Promise<void>;
   setPdfOpacity(file: string, opacity: number): void;
+  setShowLevels(show: boolean): void;
 };
 
 export type Derived = { placements?: Record<string, VerticalPlacement>; transforms?: Record<string, Similarity2D> };
@@ -97,6 +106,7 @@ export const useProject = create<ProjectState>()((set, get) => ({
   parsed: {},
   pdfs: {},
   pdfOpacity: {},
+  showLevels: true,
   groups: DEFAULT_GROUPS,
 
   async open(dir) {
@@ -121,7 +131,7 @@ export const useProject = create<ProjectState>()((set, get) => ({
       // Saved sheets whose file is gone stay in the project (and in the next save) so nothing is lost silently.
       ...saved.filter((s) => !present.has(s.file)).map((s) => ({ ...s, source: 'saved' as const, missing: true })),
     ];
-    set({ dir, sheets, groups, dirty: false, loadError, saveError: undefined, parsed: {}, pdfs: {}, align: undefined });
+    set({ dir, sheets, groups, dirty: false, loadError, saveError: undefined, parsed: {}, pdfs: {}, align: undefined, measure: undefined });
     // Plans and vertical sheets are placed in 3D, so parse them right away. The worker handles one file at a time.
     for (const s of sheets) if (AUTO_PARSE.has(s.kind) && s.type === 'dwg' && !s.missing) void get().parse(s.file);
     for (const s of sheets) if (s.kind === 'pdf' && s.type === 'pdf' && !s.missing) void get().renderPdf(s.file);
@@ -170,7 +180,7 @@ export const useProject = create<ProjectState>()((set, get) => ({
     get().cancelAlign();
     const { sheets, dirty } = get();
     const transform = sheets.find((r) => r.file === file)?.transform;
-    set({ align: { file, picks: [], before: { transform, dirty } } });
+    set({ measure: undefined, align: { file, picks: [], before: { transform, dirty } } });
   },
 
   pickAlign(p, current) {
@@ -197,6 +207,21 @@ export const useProject = create<ProjectState>()((set, get) => ({
     if (!align) return;
     const { transform, dirty } = align.before;
     set((st) => ({ align: undefined, dirty, sheets: edit(st.sheets, align.file, (r) => ({ ...r, transform })) }));
+  },
+
+  startMeasure() {
+    get().cancelAlign();
+    set({ measure: { picks: [] } });
+  },
+
+  pickMeasure(p) {
+    const { measure } = get();
+    if (!measure) return;
+    set({ measure: { picks: measure.picks.length >= 2 ? [p] : [...measure.picks, p] } });
+  },
+
+  stopMeasure() {
+    set({ measure: undefined });
   },
 
   setGroup(group, visible) {
@@ -271,5 +296,9 @@ export const useProject = create<ProjectState>()((set, get) => ({
 
   setPdfOpacity(file, opacity) {
     set((st) => ({ pdfOpacity: { ...st.pdfOpacity, [file]: opacity } }));
+  },
+
+  setShowLevels(showLevels) {
+    set({ showLevels });
   },
 }));
