@@ -4,7 +4,7 @@ import type { PdfRender } from '../pdf/render';
 import { sheetToWorld, toScene, type HorizontalPlacement } from './coords';
 
 /** The rendered PDF page on a quad spanning sheet (0, 0)…(w, h), drawn where its placement puts it. */
-export function PdfObject({ render, placement }: { render: PdfRender; placement: HorizontalPlacement }) {
+export function PdfObject({ render, placement, opacity }: { render: PdfRender; placement: HorizontalPlacement; opacity: number }) {
   const texture = useMemo(() => {
     const tex = new CanvasTexture(render.canvas);
     tex.colorSpace = SRGBColorSpace;
@@ -33,7 +33,7 @@ export function PdfObject({ render, placement }: { render: PdfRender; placement:
 
   return (
     <mesh geometry={geometry}>
-      <meshBasicMaterial map={texture} side={DoubleSide} toneMapped={false} />
+      <meshBasicMaterial map={texture} side={DoubleSide} toneMapped={false} transparent opacity={opacity} depthWrite={false} />
     </mesh>
   );
 }

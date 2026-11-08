@@ -103,6 +103,7 @@ function SheetItem({ sheet: s }: { sheet: SheetRow }) {
         {s.missing && <span className="error">{t.fileMissing}</span>}
       </div>
       {s.kind === 'pdf' && pdf && <PdfLine pdf={pdf} />}
+      {s.kind === 'pdf' && pdf?.status === 'done' && <OpacitySlider file={s.file} />}
       {s.kind === 'pdf' && pdf?.status === 'done' && <AlignLine row={s} />}
       {p?.status === 'parsing' && <div className="muted">{t.parsing}</div>}
       {p?.status === 'error' && <div className="error">{p.message}</div>}
@@ -256,6 +257,20 @@ function PdfLine({ pdf }: { pdf: PdfState }) {
       <span className="muted">
         ({t.pdf.page} {pagePt.w.toFixed(0)} × {pagePt.h.toFixed(0)} pt · {t.pdf.sheet} {sheetM.w.toFixed(1)} × {sheetM.h.toFixed(1)} m)
       </span>
+    </div>
+  );
+}
+
+function OpacitySlider({ file }: { file: string }) {
+  const opacity = useProject((st) => st.pdfOpacity[file] ?? 1);
+  const setPdfOpacity = useProject((st) => st.setPdfOpacity);
+  return (
+    <div>
+      <label>
+        {t.pdf.opacity}{' '}
+        <input type="range" min={0} max={100} step={5} value={Math.round(opacity * 100)} onChange={(e) => setPdfOpacity(file, Number(e.target.value) / 100)} />{' '}
+        {Math.round(opacity * 100)} %
+      </label>
     </div>
   );
 }

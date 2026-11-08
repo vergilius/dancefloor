@@ -36,6 +36,8 @@ export type ProjectState = {
   parsed: Record<string, ParseState>;
   /** PDF sheets rendered to a canvas (M1c underlay). */
   pdfs: Record<string, PdfState>;
+  /** PDF underlay opacity per file (0–1, default 1). View setting: not saved, doesn't mark the project dirty. */
+  pdfOpacity: Record<string, number>;
   align?: AlignTool;
   /** Layer groups, project-wide (T9). */
   groups: Groups;
@@ -63,6 +65,7 @@ export type ProjectState = {
   save(derived?: Derived): Promise<void>;
   parse(file: string): Promise<void>;
   renderPdf(file: string): Promise<void>;
+  setPdfOpacity(file: string, opacity: number): void;
 };
 
 export type Derived = { placements?: Record<string, VerticalPlacement>; transforms?: Record<string, Similarity2D> };
@@ -93,6 +96,7 @@ export const useProject = create<ProjectState>()((set, get) => ({
   dirty: false,
   parsed: {},
   pdfs: {},
+  pdfOpacity: {},
   groups: DEFAULT_GROUPS,
 
   async open(dir) {
@@ -263,5 +267,9 @@ export const useProject = create<ProjectState>()((set, get) => ({
     } catch (err) {
       setP({ status: 'error', message: errText(err) });
     }
+  },
+
+  setPdfOpacity(file, opacity) {
+    set((st) => ({ pdfOpacity: { ...st.pdfOpacity, [file]: opacity } }));
   },
 }));

@@ -98,6 +98,7 @@ export const t = {
     page: 'strona',
     sheet: 'w 1:500',
     clamped: 'ograniczone do max rozmiaru tekstury',
+    opacity: 'Krycie',
   },
   plane: {
     title: 'Płaszczyzna',

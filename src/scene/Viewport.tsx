@@ -71,11 +71,12 @@ function PdfSheets() {
 }
 
 function PdfSheet({ row, render }: { row: SheetRow; render: PdfRender }) {
+  const opacity = useProject((s) => s.pdfOpacity[row.file] ?? 1);
   const z = row.placement?.type === 'horizontal' ? row.placement.z : PDF_Z;
   const { transform } = row;
   // Stable while z and the stored transform don't change, so the quad isn't rebuilt on every render.
   const placement = useMemo(() => ({ type: 'horizontal' as const, z, ...(transform && { transform }) }), [z, transform]);
-  return <PdfObject render={render} placement={placement} />;
+  return opacity > 0 && <PdfObject render={render} placement={placement} opacity={opacity} />;
 }
 
 type Controls = ComponentRef<typeof CameraControls>;
